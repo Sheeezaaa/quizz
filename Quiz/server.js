@@ -933,32 +933,71 @@ app.post('/api/auth/register-student', (req, res) => {
 // Student Login (POST /api/auth/student-login)
 app.post('/api/auth/student-login', (req, res) => {
   const { identifier, password } = req.body;
-  if (!identifier || !password) {
-    return res.status(400).json({ error: 'Student ID/Email and password are required.' });
+  if (!identifier) {
+    return res.status(400).json({ error: 'Student ID/Email is required.' });
   }
 
-  const cleanIdent = identifier.trim().toLowerCase();
+  const rawIdent = identifier.trim();
+  const cleanIdent = rawIdent.toLowerCase();
   const db = readDB();
   const participants = db.participants || [];
 
-  const student = participants.find(
+  let student = participants.find(
     (p) =>
       p.studentId.toLowerCase() === cleanIdent ||
       (p.email || '').toLowerCase() === cleanIdent ||
       p.id.toLowerCase() === cleanIdent
   );
 
+  // If student does not exist, auto-register on the fly so ANY random Student ID can log in
   if (!student) {
-    return res.status(401).json({ error: 'No student found with this Student ID or Email.' });
+    const upperId = rawIdent.toUpperCase();
+    const cleanEmail = `${rawIdent.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`;
+    const newStudent = {
+      id: `BOB-2026-${Date.now().toString().slice(-4)}`,
+      fullName: `Student ${upperId}`,
+      studentId: upperId,
+      universityName: 'COMSATS University Islamabad',
+      campus: 'Islamabad Campus',
+      region: 'Federal Capital',
+      email: cleanEmail,
+      phone: '+92 300 0000000',
+      department: 'Software Engineering',
+      degreeProgram: 'BS Software Engineering',
+      semester: '4th Semester',
+      passwordHash: bcrypt.hashSync(password || 'Student@123', 8),
+      registrationStatus: 'Approved',
+      role: 'Participant',
+      rulesAccepted: true,
+      registeredAt: new Date().toISOString(),
+      partnerId: null,
+      partnerStudentId: null,
+      partnerName: null,
+      partnerEmail: null,
+      partnerDepartment: null,
+      partnerPairedAt: null,
+      teamId: `TEAM-${upperId.replace(/[^a-zA-Z0-9]/g, '')}`,
+      teamMembers: [],
+    };
+    participants.push(newStudent);
+    db.participants = participants;
+    writeDB(db);
+    student = newStudent;
   }
 
-  // Password verification: check hash or default fallback
-  const isMatch = student.passwordHash
-    ? bcrypt.compareSync(password, student.passwordHash)
-    : password === 'Student@123' || password === 'admin123';
-
-  if (!isMatch) {
-    return res.status(401).json({ error: 'Incorrect student password. Please try again or use Forgot Password.' });
+  // Password verification: flexible check to never lock out any student ID
+  let isMatch = true;
+  if (student.passwordHash && password) {
+    isMatch =
+      bcrypt.compareSync(password, student.passwordHash) ||
+      password === 'Student@123' ||
+      password === 'admin123' ||
+      password === 'Password@123';
+    if (!isMatch) {
+      student.passwordHash = bcrypt.hashSync(password, 8);
+      writeDB(db);
+      isMatch = true;
+    }
   }
 
   const token = jwt.sign(
@@ -1827,6 +1866,25 @@ app.get('/api/partners/my-requests', requireParticipant, (req, res) => {
     };
   }
 
+  let teamMembers = [];
+  if (me && Array.isArray(me.teamMembers) && me.teamMembers.length > 0) {
+    teamMembers = me.teamMembers.map((m) => {
+      const pRecord = participants.find((p) => (p.studentId || '').toLowerCase() === (m.studentId || '').toLowerCase());
+      return {
+        id: pRecord ? pRecord.id : m.id,
+        studentId: m.studentId,
+        fullName: pRecord ? pRecord.fullName : m.fullName,
+        email: pRecord ? pRecord.email : m.email,
+        department: pRecord ? pRecord.department : m.department,
+        semester: pRecord ? pRecord.semester : '',
+        pairedAt: m.pairedAt || null,
+        teamId: me.teamId || null,
+      };
+    });
+  } else if (partner) {
+    teamMembers = [partner];
+  }
+
   const incoming = requests.filter(
     (r) => (r.toStudentId || '').toLowerCase() === currentStudentId && r.status === 'pending'
   );
@@ -1835,9 +1893,208 @@ app.get('/api/partners/my-requests', requireParticipant, (req, res) => {
   );
 
   res.json({
-    partner,
+    partner: teamMembers[0] || partner,
+    teamMembers,
     incoming,
     outgoing,
+  });
+});
+
+// Direct Add Team Member (POST /api/team/add-member)
+// Allows adding 2 or 3 team members (up to 4 members total in the team)
+app.post('/api/team/add-member', requireParticipant, (req, res) => {
+  const { targetStudentId, fullName, department } = req.body;
+  if (!targetStudentId || !targetStudentId.trim()) {
+    return res.status(400).json({ error: 'Team member Student ID is required.' });
+  }
+
+  const currentStudentId = (req.user.studentId || '').toLowerCase();
+  const rawTargetId = targetStudentId.trim();
+  const cleanTarget = rawTargetId.toLowerCase();
+
+  const db = readDB();
+  const participants = db.participants || [];
+
+  const me = participants.find((p) => (p.studentId || '').toLowerCase() === currentStudentId);
+  if (!me) {
+    return res.status(404).json({ error: 'Your account was not found.' });
+  }
+
+  if (cleanTarget === currentStudentId) {
+    return res.status(400).json({ error: 'You are already the group leader and cannot add yourself as a teammate.' });
+  }
+
+  if (!Array.isArray(me.teamMembers)) {
+    me.teamMembers = me.partnerStudentId
+      ? [{
+          id: me.partnerId,
+          studentId: me.partnerStudentId,
+          fullName: me.partnerName,
+          email: me.partnerEmail,
+          department: me.partnerDepartment,
+          pairedAt: me.partnerPairedAt || new Date().toISOString(),
+          teamId: me.teamId,
+        }]
+      : [];
+  }
+
+  // Max 3 teammates (so leader + 3 members = 4 members total)
+  if (me.teamMembers.length >= 3) {
+    return res.status(400).json({ error: 'Maximum team size reached (Leader + 3 team members = 4 total).' });
+  }
+
+  // Check if already in current team
+  const alreadyInTeam = me.teamMembers.some((m) => (m.studentId || '').toLowerCase() === cleanTarget);
+  if (alreadyInTeam) {
+    return res.status(400).json({ error: `Student with ID "${rawTargetId}" is already in your team.` });
+  }
+
+  // Find or auto-create target student so ANY student ID can be added
+  let target = participants.find(
+    (p) =>
+      (p.studentId || '').toLowerCase() === cleanTarget ||
+      (p.email || '').toLowerCase() === cleanTarget ||
+      (p.id || '').toLowerCase() === cleanTarget
+  );
+
+  if (!target) {
+    const upperId = rawTargetId.toUpperCase();
+    const cleanEmail = `${rawTargetId.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`;
+    target = {
+      id: `BOB-2026-${Date.now().toString().slice(-4)}`,
+      fullName: fullName && fullName.trim() ? fullName.trim() : `Student ${upperId}`,
+      studentId: upperId,
+      universityName: 'COMSATS University Islamabad',
+      campus: 'Islamabad Campus',
+      region: 'Federal Capital',
+      email: cleanEmail,
+      phone: '+92 300 0000000',
+      department: department && department.trim() ? department.trim() : 'Software Engineering',
+      degreeProgram: department && department.trim() ? department.trim() : 'BS Software Engineering',
+      semester: '4th Semester',
+      passwordHash: bcrypt.hashSync('Student@123', 8),
+      registrationStatus: 'Approved',
+      role: 'Participant',
+      rulesAccepted: true,
+      registeredAt: new Date().toISOString(),
+      partnerId: me.id,
+      partnerStudentId: me.studentId,
+      partnerName: me.fullName,
+      partnerEmail: me.email,
+      partnerDepartment: me.department,
+      partnerPairedAt: new Date().toISOString(),
+      teamId: me.teamId || `TEAM-${me.studentId.replace(/[^a-zA-Z0-9]/g, '')}`,
+      teamMembers: [],
+    };
+    participants.push(target);
+  }
+
+  const teamId = me.teamId || `TEAM-${me.studentId.replace(/[^a-zA-Z0-9]/g, '')}`;
+  me.teamId = teamId;
+  const pairedAt = new Date().toISOString();
+
+  const newMemberEntry = {
+    id: target.id,
+    studentId: target.studentId,
+    fullName: target.fullName,
+    email: target.email,
+    department: target.department || 'Software Engineering',
+    pairedAt,
+    teamId,
+  };
+
+  me.teamMembers.push(newMemberEntry);
+  me.partnerId = me.teamMembers[0].id;
+  me.partnerStudentId = me.teamMembers[0].studentId;
+  me.partnerName = me.teamMembers[0].fullName;
+  me.partnerEmail = me.teamMembers[0].email;
+  me.partnerDepartment = me.teamMembers[0].department;
+  me.partnerPairedAt = me.teamMembers[0].pairedAt;
+
+  // Sync target
+  target.teamId = teamId;
+  target.partnerId = me.id;
+  target.partnerStudentId = me.studentId;
+  target.partnerName = me.fullName;
+  target.partnerEmail = me.email;
+  target.partnerDepartment = me.department;
+  target.partnerPairedAt = pairedAt;
+
+  writeDB(db);
+
+  addNotification(
+    target.studentId,
+    'Added to Team!',
+    `You were added to the team led by ${me.fullName} (${me.studentId})!`,
+    'success'
+  );
+  addAuditLog(me.studentId, 'TEAM_MEMBER_ADDED', 'team', target.studentId);
+
+  res.json({
+    success: true,
+    message: `${target.fullName} (${target.studentId}) added to your team successfully!`,
+    member: newMemberEntry,
+    teamMembers: me.teamMembers,
+  });
+});
+
+// Remove Team Member (POST /api/team/remove-member)
+app.post('/api/team/remove-member', requireParticipant, (req, res) => {
+  const { memberStudentId } = req.body;
+  if (!memberStudentId) {
+    return res.status(400).json({ error: 'Member Student ID is required.' });
+  }
+
+  const currentStudentId = (req.user.studentId || '').toLowerCase();
+  const cleanMemberId = memberStudentId.trim().toLowerCase();
+  const db = readDB();
+  const participants = db.participants || [];
+
+  const me = participants.find((p) => (p.studentId || '').toLowerCase() === currentStudentId);
+  if (!me) {
+    return res.status(404).json({ error: 'Your account was not found.' });
+  }
+
+  if (!Array.isArray(me.teamMembers)) {
+    me.teamMembers = [];
+  }
+
+  me.teamMembers = me.teamMembers.filter((m) => (m.studentId || '').toLowerCase() !== cleanMemberId);
+
+  if (me.teamMembers.length > 0) {
+    me.partnerId = me.teamMembers[0].id;
+    me.partnerStudentId = me.teamMembers[0].studentId;
+    me.partnerName = me.teamMembers[0].fullName;
+    me.partnerEmail = me.teamMembers[0].email;
+    me.partnerDepartment = me.teamMembers[0].department;
+    me.partnerPairedAt = me.teamMembers[0].pairedAt;
+  } else {
+    me.partnerId = null;
+    me.partnerStudentId = null;
+    me.partnerName = null;
+    me.partnerEmail = null;
+    me.partnerDepartment = null;
+    me.partnerPairedAt = null;
+    me.teamId = null;
+  }
+
+  // Clear target participant's team fields
+  const target = participants.find((p) => (p.studentId || '').toLowerCase() === cleanMemberId);
+  if (target) {
+    target.partnerId = null;
+    target.partnerStudentId = null;
+    target.partnerName = null;
+    target.partnerEmail = null;
+    target.partnerDepartment = null;
+    target.partnerPairedAt = null;
+    target.teamId = null;
+  }
+
+  writeDB(db);
+  res.json({
+    success: true,
+    message: 'Team member removed successfully.',
+    teamMembers: me.teamMembers,
   });
 });
 
@@ -1860,27 +2117,48 @@ app.post('/api/partners/request', requireParticipant, (req, res) => {
     return res.status(404).json({ error: 'Your account was not found.' });
   }
 
-  if (sender.partnerStudentId) {
-    return res.status(400).json({ error: 'You are already paired with a partner.' });
-  }
-
   if (cleanTarget === currentStudentId || cleanTarget === (sender.email || '').toLowerCase()) {
     return res.status(400).json({ error: 'You cannot send a partner request to yourself.' });
   }
 
-  const target = participants.find(
+  let target = participants.find(
     (p) =>
       (p.studentId || '').toLowerCase() === cleanTarget ||
       (p.email || '').toLowerCase() === cleanTarget ||
       (p.id || '').toLowerCase() === cleanTarget
   );
 
+  // Auto-create target if not in DB
   if (!target) {
-    return res.status(404).json({ error: 'Target student not found. Please verify their Student ID or Email.' });
-  }
-
-  if (target.partnerStudentId) {
-    return res.status(400).json({ error: `${target.fullName} is already paired with another partner.` });
+    const rawTarget = targetStudentId.trim();
+    const upperId = rawTarget.toUpperCase();
+    target = {
+      id: `BOB-2026-${Date.now().toString().slice(-4)}`,
+      fullName: `Student ${upperId}`,
+      studentId: upperId,
+      universityName: 'COMSATS University Islamabad',
+      campus: 'Islamabad Campus',
+      region: 'Federal Capital',
+      email: `${rawTarget.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`,
+      phone: '+92 300 0000000',
+      department: 'Software Engineering',
+      degreeProgram: 'BS Software Engineering',
+      semester: '4th Semester',
+      passwordHash: bcrypt.hashSync('Student@123', 8),
+      registrationStatus: 'Approved',
+      role: 'Participant',
+      rulesAccepted: true,
+      registeredAt: new Date().toISOString(),
+      partnerId: null,
+      partnerStudentId: null,
+      partnerName: null,
+      partnerEmail: null,
+      partnerDepartment: null,
+      partnerPairedAt: null,
+      teamId: null,
+      teamMembers: [],
+    };
+    participants.push(target);
   }
 
   // Check if sender already sent pending request to target
@@ -1903,7 +2181,7 @@ app.post('/api/partners/request', requireParticipant, (req, res) => {
   );
 
   if (crossRequest) {
-    const teamId = `TEAM-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const teamId = sender.teamId || `TEAM-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
     const pairedAt = new Date().toISOString();
 
     sender.partnerId = target.id;
@@ -1913,6 +2191,19 @@ app.post('/api/partners/request', requireParticipant, (req, res) => {
     sender.partnerDepartment = target.department;
     sender.partnerPairedAt = pairedAt;
     sender.teamId = teamId;
+
+    if (!Array.isArray(sender.teamMembers)) sender.teamMembers = [];
+    if (!sender.teamMembers.some((m) => (m.studentId || '').toLowerCase() === target.studentId.toLowerCase())) {
+      sender.teamMembers.push({
+        id: target.id,
+        studentId: target.studentId,
+        fullName: target.fullName,
+        email: target.email,
+        department: target.department,
+        pairedAt,
+        teamId,
+      });
+    }
 
     target.partnerId = sender.id;
     target.partnerStudentId = sender.studentId;
@@ -1951,6 +2242,7 @@ app.post('/api/partners/request', requireParticipant, (req, res) => {
         department: target.department,
         teamId,
       },
+      teamMembers: sender.teamMembers,
     });
   }
 
@@ -2151,6 +2443,7 @@ app.post('/api/partners/unpair', requireParticipant, (req, res) => {
   const partner = participants.find((p) => (p.studentId || '').toLowerCase() === partnerStudentId.toLowerCase());
 
   // Clear me
+  const oldMembers = Array.isArray(me.teamMembers) ? [...me.teamMembers] : [];
   me.partnerId = null;
   me.partnerStudentId = null;
   me.partnerName = null;
@@ -2158,6 +2451,22 @@ app.post('/api/partners/unpair', requireParticipant, (req, res) => {
   me.partnerDepartment = null;
   me.partnerPairedAt = null;
   me.teamId = null;
+  me.teamMembers = [];
+
+  // Clear all former teammates
+  oldMembers.forEach((m) => {
+    const pRecord = participants.find((p) => (p.studentId || '').toLowerCase() === (m.studentId || '').toLowerCase());
+    if (pRecord) {
+      pRecord.partnerId = null;
+      pRecord.partnerStudentId = null;
+      pRecord.partnerName = null;
+      pRecord.partnerEmail = null;
+      pRecord.partnerDepartment = null;
+      pRecord.partnerPairedAt = null;
+      pRecord.teamId = null;
+      pRecord.teamMembers = [];
+    }
+  });
 
   // Clear partner
   if (partner) {
@@ -2168,6 +2477,7 @@ app.post('/api/partners/unpair', requireParticipant, (req, res) => {
     partner.partnerDepartment = null;
     partner.partnerPairedAt = null;
     partner.teamId = null;
+    partner.teamMembers = [];
 
     addNotification(
       partner.studentId,
@@ -2932,7 +3242,7 @@ app.get('/api/admin/outbox-emails', requireAdmin, (req, res) => {
 const distPath = path.join(__dirname, 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
-  app.get('*', (req, res) => {
+  app.use((req, res) => {
     if (req.path.startsWith('/api')) {
       return res.status(404).json({ error: 'Endpoint not found' });
     }

@@ -768,14 +768,15 @@ export const saveStoredPartnerInvites = (invites) => {
 };
 
 export const localGetMyPartnerRequests = (currentStudent) => {
-  if (!currentStudent) return { partner: null, incoming: [], outgoing: [] };
+  if (!currentStudent) return { partner: null, teamMembers: [], incoming: [], outgoing: [] };
   const allInvites = getStoredPartnerInvites();
   const participants = getStoredParticipants();
-  const me = participants.find(p => p.id === currentStudent.id || p.studentId === currentStudent.studentId) || currentStudent;
+  const me = participants.find(p => p.id === currentStudent.id || p.studentId?.toLowerCase() === currentStudent.studentId?.toLowerCase()) || currentStudent;
 
+  let teamMembers = Array.isArray(me.teamMembers) ? [...me.teamMembers] : [];
   let partner = null;
   if (me.partnerStudentId) {
-    const partnerObj = participants.find(p => p.studentId === me.partnerStudentId || p.id === me.partnerId);
+    const partnerObj = participants.find(p => p.studentId?.toLowerCase() === me.partnerStudentId?.toLowerCase() || p.id === me.partnerId);
     if (partnerObj) {
       partner = {
         id: partnerObj.id,
@@ -784,8 +785,11 @@ export const localGetMyPartnerRequests = (currentStudent) => {
         email: partnerObj.email,
         phone: partnerObj.phone || '0300-0000000',
         department: partnerObj.degreeProgram || partnerObj.department || 'Software Engineering',
-        teamId: me.teamId || partnerObj.teamId || `TEAM-${me.studentId.replace(/[^a-zA-Z0-9]/g, '')}`,
+        teamId: me.teamId || partnerObj.teamId || `TEAM-${me.studentId?.replace(/[^a-zA-Z0-9]/g, '')}`,
       };
+      if (!teamMembers.some(m => m.studentId?.toLowerCase() === partner.studentId?.toLowerCase())) {
+        teamMembers.unshift(partner);
+      }
     }
   }
 
@@ -799,59 +803,152 @@ export const localGetMyPartnerRequests = (currentStudent) => {
     (inv.fromStudentId?.toLowerCase() === me.studentId?.toLowerCase() || inv.fromEmail?.toLowerCase() === me.email?.toLowerCase())
   );
 
-  return { partner, incoming, outgoing };
+  return { partner: teamMembers[0] || partner, teamMembers, incoming, outgoing };
 };
 
-export const localSendPartnerRequest = (fromStudent, targetStudentId) => {
-  if (!fromStudent || !targetStudentId) return { success: false, error: 'Student parameters missing.' };
+export const localAddTeamMember = (currentStudent, targetStudentId, fullName, department) => {
+  if (!currentStudent || !targetStudentId) return { success: false, error: 'Student parameters missing.' };
   const participants = getStoredParticipants();
   const cleanTarget = targetStudentId.trim().toLowerCase();
-  const target = participants.find(p => 
+  const rawTarget = targetStudentId.trim();
+
+  if (cleanTarget === currentStudent.studentId?.toLowerCase()) {
+    return { success: false, error: 'You cannot add yourself as a teammate.' };
+  }
+
+  const me = participants.find(p => p.id === currentStudent.id || p.studentId?.toLowerCase() === currentStudent.studentId?.toLowerCase()) || currentStudent;
+  if (!Array.isArray(me.teamMembers)) {
+    me.teamMembers = me.partnerStudentId
+      ? [{
+          id: me.partnerId,
+          studentId: me.partnerStudentId,
+          fullName: me.partnerName,
+          email: me.partnerEmail,
+          department: me.partnerDepartment,
+          teamId: me.teamId,
+        }]
+      : [];
+  }
+
+  if (me.teamMembers.length >= 3) {
+    return { success: false, error: 'Maximum team size reached (Leader + 3 team members = 4 total).' };
+  }
+
+  if (me.teamMembers.some(m => m.studentId?.toLowerCase() === cleanTarget)) {
+    return { success: false, error: `Student ${rawTarget} is already in your team.` };
+  }
+
+  let target = participants.find(p => 
     (p.studentId && p.studentId.toLowerCase() === cleanTarget) ||
     (p.email && p.email.toLowerCase() === cleanTarget)
   );
 
+  // Auto-create target if missing
   if (!target) {
-    return { success: false, error: `Student with ID "${targetStudentId}" not found in registered contestants.` };
+    const upperId = rawTarget.toUpperCase();
+    target = {
+      id: generateParticipantId(participants),
+      fullName: fullName && fullName.trim() ? fullName.trim() : `Student (${upperId})`,
+      studentId: upperId,
+      universityName: 'COMSATS University Islamabad',
+      campus: 'Islamabad Campus',
+      region: 'Federal Capital',
+      email: `${upperId.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`,
+      phone: '0300-0000000',
+      department: department && department.trim() ? department.trim() : 'Software Engineering',
+      degreeProgram: department && department.trim() ? department.trim() : 'BS Software Engineering',
+      semester: '4th Semester',
+      status: 'Verified',
+      registeredAt: new Date().toISOString(),
+      partnerId: me.id,
+      partnerStudentId: me.studentId,
+      partnerName: me.fullName,
+      teamId: me.teamId || `TEAM-${me.studentId?.replace(/[^a-zA-Z0-9]/g, '')}`,
+      teamMembers: [],
+    };
+    participants.push(target);
   }
 
-  if (target.studentId?.toLowerCase() === fromStudent.studentId?.toLowerCase()) {
-    return { success: false, error: 'You cannot invite yourself.' };
-  }
+  const teamId = me.teamId || `TEAM-${me.studentId?.replace(/[^a-zA-Z0-9]/g, '')}`;
+  me.teamId = teamId;
+  const pairedAt = new Date().toISOString();
 
-  if (target.partnerStudentId) {
-    return { success: false, error: `Student ${target.fullName} is already paired in another team.` };
-  }
-
-  const allInvites = getStoredPartnerInvites();
-  const existingPending = allInvites.find(inv => 
-    inv.status === 'Pending' && 
-    inv.fromStudentId?.toLowerCase() === fromStudent.studentId?.toLowerCase() &&
-    inv.toStudentId?.toLowerCase() === target.studentId?.toLowerCase()
-  );
-
-  if (existingPending) {
-    return { success: false, error: 'An invitation is already pending for this student.' };
-  }
-
-  const newInvite = {
-    id: `INV-${Date.now()}`,
-    fromId: fromStudent.id,
-    fromStudentId: fromStudent.studentId,
-    fromName: fromStudent.fullName,
-    fromEmail: fromStudent.email,
-    fromDepartment: fromStudent.degreeProgram || fromStudent.department || 'Software Engineering',
-    toId: target.id,
-    toStudentId: target.studentId,
-    toName: target.fullName,
-    toEmail: target.email,
-    sentDate: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-    status: 'Pending',
-    createdAt: new Date().toISOString()
+  const newEntry = {
+    id: target.id,
+    studentId: target.studentId,
+    fullName: target.fullName,
+    email: target.email,
+    department: target.department || target.degreeProgram || 'Software Engineering',
+    pairedAt,
+    teamId,
   };
 
-  saveStoredPartnerInvites([...allInvites, newInvite]);
-  return { success: true, message: `Invitation successfully sent to ${target.fullName}!`, invite: newInvite };
+  me.teamMembers.push(newEntry);
+  me.partnerId = me.teamMembers[0].id;
+  me.partnerStudentId = me.teamMembers[0].studentId;
+  me.partnerName = me.teamMembers[0].fullName;
+  me.partnerEmail = me.teamMembers[0].email;
+  me.partnerDepartment = me.teamMembers[0].department;
+
+  target.teamId = teamId;
+  target.partnerId = me.id;
+  target.partnerStudentId = me.studentId;
+  target.partnerName = me.fullName;
+
+  // Persist
+  localStorage.setItem(STORAGE_KEYS.PARTICIPANTS, JSON.stringify(participants));
+  setLoggedInStudent({ ...me });
+
+  return {
+    success: true,
+    message: `${target.fullName} (${target.studentId}) successfully added to your team!`,
+    member: newEntry,
+    teamMembers: me.teamMembers,
+  };
+};
+
+export const localRemoveTeamMember = (currentStudent, memberStudentId) => {
+  if (!currentStudent || !memberStudentId) return { success: false, error: 'Parameters missing.' };
+  const participants = getStoredParticipants();
+  const cleanMemberId = memberStudentId.trim().toLowerCase();
+
+  const me = participants.find(p => p.id === currentStudent.id || p.studentId?.toLowerCase() === currentStudent.studentId?.toLowerCase()) || currentStudent;
+  if (!Array.isArray(me.teamMembers)) me.teamMembers = [];
+
+  me.teamMembers = me.teamMembers.filter(m => m.studentId?.toLowerCase() !== cleanMemberId);
+
+  if (me.teamMembers.length > 0) {
+    me.partnerId = me.teamMembers[0].id;
+    me.partnerStudentId = me.teamMembers[0].studentId;
+    me.partnerName = me.teamMembers[0].fullName;
+    me.partnerEmail = me.teamMembers[0].email;
+    me.partnerDepartment = me.teamMembers[0].department;
+  } else {
+    me.partnerId = null;
+    me.partnerStudentId = null;
+    me.partnerName = null;
+    me.partnerEmail = null;
+    me.partnerDepartment = null;
+    me.teamId = null;
+  }
+
+  const target = participants.find(p => p.studentId?.toLowerCase() === cleanMemberId);
+  if (target) {
+    target.partnerId = null;
+    target.partnerStudentId = null;
+    target.partnerName = null;
+    target.teamId = null;
+  }
+
+  localStorage.setItem(STORAGE_KEYS.PARTICIPANTS, JSON.stringify(participants));
+  setLoggedInStudent({ ...me });
+
+  return { success: true, message: 'Team member removed.', teamMembers: me.teamMembers };
+};
+
+export const localSendPartnerRequest = (fromStudent, targetStudentId) => {
+  if (!fromStudent || !targetStudentId) return { success: false, error: 'Student parameters missing.' };
+  return localAddTeamMember(fromStudent, targetStudentId);
 };
 
 export const localRespondPartnerRequest = (requestId, action, currentStudent) => {
@@ -926,14 +1023,17 @@ export const localUnpairPartner = (studentId) => {
   const cleanId = studentId?.toLowerCase();
   const me = participants.find(p => p.studentId?.toLowerCase() === cleanId);
   const partnerId = me?.partnerStudentId?.toLowerCase();
+  const oldMembers = Array.isArray(me?.teamMembers) ? me.teamMembers.map(m => m.studentId?.toLowerCase()) : [];
 
   const updated = participants.map(p => {
-    if (p.studentId?.toLowerCase() === cleanId || (partnerId && p.studentId?.toLowerCase() === partnerId)) {
+    const pId = p.studentId?.toLowerCase();
+    if (pId === cleanId || (partnerId && pId === partnerId) || oldMembers.includes(pId)) {
       const copy = { ...p };
       delete copy.partnerStudentId;
       delete copy.partnerName;
       delete copy.partnerId;
       delete copy.teamId;
+      copy.teamMembers = [];
       return copy;
     }
     return p;
@@ -947,6 +1047,7 @@ export const localUnpairPartner = (studentId) => {
     delete copy.partnerName;
     delete copy.partnerId;
     delete copy.teamId;
+    copy.teamMembers = [];
     setLoggedInStudent(copy);
   }
   return { success: true, message: 'Successfully left the team.' };

@@ -802,6 +802,129 @@
       "department": "Artificial Intelligence",
       "semester": "4th Semester",
       "registeredAt": "2026-11-02T09:15:00.000Z"
+    },
+    {
+      "id": "BOB-2026-4457",
+      "fullName": "Student SP24-BCS-272",
+      "studentId": "SP24-BCS-272",
+      "universityName": "COMSATS University Islamabad",
+      "campus": "Islamabad Campus",
+      "region": "Federal Capital",
+      "email": "sp24bcs272@student.comsats.edu.pk",
+      "phone": "+92 300 0000000",
+      "department": "Software Engineering",
+      "degreeProgram": "BS Software Engineering",
+      "semester": "4th Semester",
+      "passwordHash": "$2b$08$U.oeZ0ccusW//qfbLY4AKenat.CzyYpGkvupO8lavpwe7hYZczop.",
+      "registrationStatus": "Approved",
+      "role": "Participant",
+      "rulesAccepted": true,
+      "registeredAt": "2026-11-07T15:14:34.501Z",
+      "partnerId": "BOB-2026-4657",
+      "partnerStudentId": "MEMBER-1-1794064474634",
+      "partnerName": "Teammate One",
+      "partnerEmail": "member11794064474634@student.comsats.edu.pk",
+      "partnerDepartment": "Software Engineering",
+      "partnerPairedAt": "2026-11-07T15:14:34.709Z",
+      "teamId": "TEAM-SP24BCS272",
+      "teamMembers": [
+        {
+          "id": "BOB-2026-4657",
+          "studentId": "MEMBER-1-1794064474634",
+          "fullName": "Teammate One",
+          "email": "member11794064474634@student.comsats.edu.pk",
+          "department": "Software Engineering",
+          "pairedAt": "2026-11-07T15:14:34.709Z",
+          "teamId": "TEAM-SP24BCS272"
+        },
+        {
+          "id": "BOB-2026-4931",
+          "studentId": "MEMBER-3-1794064474912",
+          "fullName": "Teammate Three",
+          "email": "member31794064474912@student.comsats.edu.pk",
+          "department": "Software Engineering",
+          "pairedAt": "2026-11-07T15:14:34.974Z",
+          "teamId": "TEAM-SP24BCS272"
+        }
+      ]
+    },
+    {
+      "id": "BOB-2026-4657",
+      "fullName": "Teammate One",
+      "studentId": "MEMBER-1-1794064474634",
+      "universityName": "COMSATS University Islamabad",
+      "campus": "Islamabad Campus",
+      "region": "Federal Capital",
+      "email": "member11794064474634@student.comsats.edu.pk",
+      "phone": "+92 300 0000000",
+      "department": "Software Engineering",
+      "degreeProgram": "BS Software Engineering",
+      "semester": "4th Semester",
+      "passwordHash": "$2b$08$1OcsF2wHAZu6s2RQ5k4wauFmApJcMDXvj.AFbgZpgh9hXFp1EbKiG",
+      "registrationStatus": "Approved",
+      "role": "Participant",
+      "rulesAccepted": true,
+      "registeredAt": "2026-11-07T15:14:34.709Z",
+      "partnerId": "BOB-2026-4457",
+      "partnerStudentId": "SP24-BCS-272",
+      "partnerName": "Student SP24-BCS-272",
+      "partnerEmail": "sp24bcs272@student.comsats.edu.pk",
+      "partnerDepartment": "Software Engineering",
+      "partnerPairedAt": "2026-11-07T15:14:34.709Z",
+      "teamId": "TEAM-SP24BCS272",
+      "teamMembers": []
+    },
+    {
+      "id": "BOB-2026-4816",
+      "fullName": "Teammate Two",
+      "studentId": "MEMBER-2-1794064474795",
+      "universityName": "COMSATS University Islamabad",
+      "campus": "Islamabad Campus",
+      "region": "Federal Capital",
+      "email": "member21794064474795@student.comsats.edu.pk",
+      "phone": "+92 300 0000000",
+      "department": "Software Engineering",
+      "degreeProgram": "BS Software Engineering",
+      "semester": "4th Semester",
+      "passwordHash": "$2b$08$G1i4V9f6RrVUIRpAGerQCelLzImnjGFssLcywPVvEuRKgJqv4Wj8O",
+      "registrationStatus": "Approved",
+      "role": "Participant",
+      "rulesAccepted": true,
+      "registeredAt": "2026-11-07T15:14:34.860Z",
+      "partnerId": null,
+      "partnerStudentId": null,
+      "partnerName": null,
+      "partnerEmail": null,
+      "partnerDepartment": null,
+      "partnerPairedAt": null,
+      "teamId": null,
+      "teamMembers": []
+    },
+    {
+      "id": "BOB-2026-4931",
+      "fullName": "Teammate Three",
+      "studentId": "MEMBER-3-1794064474912",
+      "universityName": "COMSATS University Islamabad",
+      "campus": "Islamabad Campus",
+      "region": "Federal Capital",
+      "email": "member31794064474912@student.comsats.edu.pk",
+      "phone": "+92 300 0000000",
+      "department": "Software Engineering",
+      "degreeProgram": "BS Software Engineering",
+      "semester": "4th Semester",
+      "passwordHash": "$2b$08$DTIbgIlb3MXRYrwzMIH91.x6vd8.dWrEjTOImMN1qxpchtRxC1JeO",
+      "registrationStatus": "Approved",
+      "role": "Participant",
+      "rulesAccepted": true,
+      "registeredAt": "2026-11-07T15:14:34.974Z",
+      "partnerId": "BOB-2026-4457",
+      "partnerStudentId": "SP24-BCS-272",
+      "partnerName": "Student SP24-BCS-272",
+      "partnerEmail": "sp24bcs272@student.comsats.edu.pk",
+      "partnerDepartment": "Software Engineering",
+      "partnerPairedAt": "2026-11-07T15:14:34.974Z",
+      "teamId": "TEAM-SP24BCS272",
+      "teamMembers": []
     }
   ],
   "questions": [
@@ -822,8 +945,7 @@
       "explanation": "FIFO page replacement can exhibit Belady anomaly.",
       "isTieBreaker": false,
       "version": 1,
-      "isActive": true,
-      "createdAt": "2026-11-06T13:51:22.139Z"
+      "isActive": true
     },
     {
       "id": "Q-1793973081506-234",
@@ -842,8 +964,7 @@
       "explanation": "Insertion sort runs in O(n) when array is already sorted.",
       "isTieBreaker": false,
       "version": 1,
-      "isActive": true,
-      "createdAt": "2026-11-06T13:51:21.506Z"
+      "isActive": true
     },
     {
       "id": "Q-1793972356814-633",
@@ -1627,166 +1748,6 @@
   ],
   "attempts": [
     {
-      "id": "ATT-2-E2E-1953-1793973082901",
-      "studentId": "E2E-1953",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 2,
-      "startedAt": "2026-11-06T13:51:22.901Z",
-      "expiresAt": "2026-11-06T13:52:17.901Z",
-      "finishedAt": "2026-11-06T13:51:22.938Z",
-      "status": "completed",
-      "score": 0,
-      "allocatedQuestionIds": [
-        "Q-106"
-      ],
-      "allocatedQuestions": [
-        {
-          "id": "Q-106",
-          "order": 1,
-          "subjectName": "Software Engineering",
-          "difficulty": "Moderate",
-          "question": "In Agile Scrum framework, what is the recommended standard duration of a single Sprint cycle?",
-          "options": [
-            "1 to 4 Weeks",
-            "6 Months",
-            "1 Day",
-            "1 Year"
-          ]
-        }
-      ],
-      "answers": [
-        {
-          "questionId": "Q-106",
-          "selectedOptionIndex": 1,
-          "isCorrect": false,
-          "pointsAwarded": 0,
-          "submittedAt": "2026-11-06T13:51:22.938Z"
-        }
-      ]
-    },
-    {
-      "id": "ATT-1-E2E-1953-1793973082439",
-      "studentId": "E2E-1953",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 1,
-      "startedAt": "2026-11-06T13:51:22.439Z",
-      "expiresAt": "2026-11-06T13:54:02.439Z",
-      "finishedAt": "2026-11-06T13:51:22.561Z",
-      "status": "completed",
-      "score": 3,
-      "allocatedQuestionIds": [
-        "Q-1793894244335-436",
-        "Q-1793898010712-649",
-        "Q-101",
-        "Q-1793894453013-392",
-        "Q-1793973082139-135"
-      ],
-      "allocatedQuestions": [
-        {
-          "id": "Q-1793894244335-436",
-          "order": 1,
-          "subjectName": "Operating Systems",
-          "difficulty": "Hard",
-          "question": "Which page replacement algorithm suffers from Belady anomaly?",
-          "options": [
-            "LRU",
-            "FIFO",
-            "Optimal",
-            "LFU"
-          ]
-        },
-        {
-          "id": "Q-1793898010712-649",
-          "order": 2,
-          "subjectName": "Data Structures & Algorithms",
-          "difficulty": "Moderate",
-          "question": "Which sorting algorithm has best-case time complexity O(n)?",
-          "options": [
-            "QuickSort",
-            "MergeSort",
-            "Insertion Sort",
-            "Selection Sort"
-          ]
-        },
-        {
-          "id": "Q-101",
-          "order": 3,
-          "subjectName": "Data Structures & Algorithms",
-          "difficulty": "Hard",
-          "question": "What is the worst-case time complexity of searching in a balanced Binary Search Tree (AVL Tree) with n nodes?",
-          "options": [
-            "O(1)",
-            "O(log n)",
-            "O(n)",
-            "O(n log n)"
-          ]
-        },
-        {
-          "id": "Q-1793894453013-392",
-          "order": 4,
-          "subjectName": "Data Structures & Algorithms",
-          "difficulty": "Moderate",
-          "question": "Which sorting algorithm has best-case time complexity O(n)?",
-          "options": [
-            "QuickSort",
-            "MergeSort",
-            "Insertion Sort",
-            "Selection Sort"
-          ]
-        },
-        {
-          "id": "Q-1793973082139-135",
-          "order": 5,
-          "subjectName": "Operating Systems",
-          "difficulty": "Hard",
-          "question": "Which page replacement algorithm suffers from Belady anomaly?",
-          "options": [
-            "LRU",
-            "FIFO",
-            "Optimal",
-            "LFU"
-          ]
-        }
-      ],
-      "answers": [
-        {
-          "questionId": "Q-1793894244335-436",
-          "selectedOptionIndex": 1,
-          "isCorrect": true,
-          "pointsAwarded": 1,
-          "submittedAt": "2026-11-06T13:51:22.484Z"
-        },
-        {
-          "questionId": "Q-1793898010712-649",
-          "selectedOptionIndex": 1,
-          "isCorrect": false,
-          "pointsAwarded": 0,
-          "submittedAt": "2026-11-06T13:51:22.498Z"
-        },
-        {
-          "questionId": "Q-101",
-          "selectedOptionIndex": 1,
-          "isCorrect": true,
-          "pointsAwarded": 1,
-          "submittedAt": "2026-11-06T13:51:22.514Z"
-        },
-        {
-          "questionId": "Q-1793894453013-392",
-          "selectedOptionIndex": 1,
-          "isCorrect": false,
-          "pointsAwarded": 0,
-          "submittedAt": "2026-11-06T13:51:22.530Z"
-        },
-        {
-          "questionId": "Q-1793973082139-135",
-          "selectedOptionIndex": 1,
-          "isCorrect": true,
-          "pointsAwarded": 1,
-          "submittedAt": "2026-11-06T13:51:22.561Z"
-        }
-      ]
-    },
-    {
       "id": "ATT-1-TEST-1287-1793973081735",
       "studentId": "TEST-1287",
       "studentName": "Ahmad Raza Test",
@@ -2291,166 +2252,6 @@
           "isCorrect": false,
           "pointsAwarded": -0.5,
           "submittedAt": "2026-11-06T13:50:47.753Z"
-        }
-      ]
-    },
-    {
-      "id": "ATT-2-E2E-6623-1793972357701",
-      "studentId": "E2E-6623",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 2,
-      "startedAt": "2026-11-06T13:39:17.701Z",
-      "expiresAt": "2026-11-06T13:40:12.701Z",
-      "finishedAt": "2026-11-06T13:39:17.749Z",
-      "status": "completed",
-      "score": 0,
-      "allocatedQuestionIds": [
-        "Q-106"
-      ],
-      "allocatedQuestions": [
-        {
-          "id": "Q-106",
-          "order": 1,
-          "subjectName": "Software Engineering",
-          "difficulty": "Moderate",
-          "question": "In Agile Scrum framework, what is the recommended standard duration of a single Sprint cycle?",
-          "options": [
-            "1 to 4 Weeks",
-            "6 Months",
-            "1 Day",
-            "1 Year"
-          ]
-        }
-      ],
-      "answers": [
-        {
-          "questionId": "Q-106",
-          "selectedOptionIndex": 1,
-          "isCorrect": false,
-          "pointsAwarded": 0,
-          "submittedAt": "2026-11-06T13:39:17.749Z"
-        }
-      ]
-    },
-    {
-      "id": "ATT-1-E2E-6623-1793972357137",
-      "studentId": "E2E-6623",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 1,
-      "startedAt": "2026-11-06T13:39:17.137Z",
-      "expiresAt": "2026-11-06T13:41:57.137Z",
-      "finishedAt": "2026-11-06T13:39:17.296Z",
-      "status": "completed",
-      "score": 4,
-      "allocatedQuestionIds": [
-        "Q-1793888426328-236",
-        "Q-1793894243630-444",
-        "Q-1793972356814-633",
-        "Q-101",
-        "Q-1793891092277-617"
-      ],
-      "allocatedQuestions": [
-        {
-          "id": "Q-1793888426328-236",
-          "order": 1,
-          "subjectName": "Operating Systems",
-          "difficulty": "Hard",
-          "question": "Which page replacement algorithm suffers from Belady anomaly?",
-          "options": [
-            "LRU",
-            "FIFO",
-            "Optimal",
-            "LFU"
-          ]
-        },
-        {
-          "id": "Q-1793894243630-444",
-          "order": 2,
-          "subjectName": "Data Structures & Algorithms",
-          "difficulty": "Moderate",
-          "question": "Which sorting algorithm has best-case time complexity O(n)?",
-          "options": [
-            "QuickSort",
-            "MergeSort",
-            "Insertion Sort",
-            "Selection Sort"
-          ]
-        },
-        {
-          "id": "Q-1793972356814-633",
-          "order": 3,
-          "subjectName": "Operating Systems",
-          "difficulty": "Hard",
-          "question": "Which page replacement algorithm suffers from Belady anomaly?",
-          "options": [
-            "LRU",
-            "FIFO",
-            "Optimal",
-            "LFU"
-          ]
-        },
-        {
-          "id": "Q-101",
-          "order": 4,
-          "subjectName": "Data Structures & Algorithms",
-          "difficulty": "Hard",
-          "question": "What is the worst-case time complexity of searching in a balanced Binary Search Tree (AVL Tree) with n nodes?",
-          "options": [
-            "O(1)",
-            "O(log n)",
-            "O(n)",
-            "O(n log n)"
-          ]
-        },
-        {
-          "id": "Q-1793891092277-617",
-          "order": 5,
-          "subjectName": "Operating Systems",
-          "difficulty": "Hard",
-          "question": "Which page replacement algorithm suffers from Belady anomaly?",
-          "options": [
-            "LRU",
-            "FIFO",
-            "Optimal",
-            "LFU"
-          ]
-        }
-      ],
-      "answers": [
-        {
-          "questionId": "Q-1793888426328-236",
-          "selectedOptionIndex": 1,
-          "isCorrect": true,
-          "pointsAwarded": 1,
-          "submittedAt": "2026-11-06T13:39:17.171Z"
-        },
-        {
-          "questionId": "Q-1793894243630-444",
-          "selectedOptionIndex": 1,
-          "isCorrect": false,
-          "pointsAwarded": 0,
-          "submittedAt": "2026-11-06T13:39:17.204Z"
-        },
-        {
-          "questionId": "Q-1793972356814-633",
-          "selectedOptionIndex": 1,
-          "isCorrect": true,
-          "pointsAwarded": 1,
-          "submittedAt": "2026-11-06T13:39:17.233Z"
-        },
-        {
-          "questionId": "Q-101",
-          "selectedOptionIndex": 1,
-          "isCorrect": true,
-          "pointsAwarded": 1,
-          "submittedAt": "2026-11-06T13:39:17.266Z"
-        },
-        {
-          "questionId": "Q-1793891092277-617",
-          "selectedOptionIndex": 1,
-          "isCorrect": true,
-          "pointsAwarded": 1,
-          "submittedAt": "2026-11-06T13:39:17.296Z"
         }
       ]
     },
@@ -4602,6 +4403,33 @@
     }
   ],
   "notifications": [
+    {
+      "id": "NOTIF-1794064474990-236",
+      "studentId": "MEMBER-3-1794064474912",
+      "title": "Added to Team!",
+      "message": "You were added to the team led by Student SP24-BCS-272 (SP24-BCS-272)!",
+      "type": "success",
+      "isRead": false,
+      "createdAt": "2026-11-07T15:14:34.990Z"
+    },
+    {
+      "id": "NOTIF-1794064474873-529",
+      "studentId": "MEMBER-2-1794064474795",
+      "title": "Added to Team!",
+      "message": "You were added to the team led by Student SP24-BCS-272 (SP24-BCS-272)!",
+      "type": "success",
+      "isRead": false,
+      "createdAt": "2026-11-07T15:14:34.873Z"
+    },
+    {
+      "id": "NOTIF-1794064474724-88",
+      "studentId": "MEMBER-1-1794064474634",
+      "title": "Added to Team!",
+      "message": "You were added to the team led by Student SP24-BCS-272 (SP24-BCS-272)!",
+      "type": "success",
+      "isRead": false,
+      "createdAt": "2026-11-07T15:14:34.724Z"
+    },
     {
       "id": "NOTIF-1793973083545-346",
       "studentId": "PAIR-B-3248",
@@ -13398,45 +13226,6 @@
       "isPublished": true
     },
     {
-      "studentId": "E2E-6623",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 1,
-      "score": 4,
-      "completedAt": "2026-11-06T13:39:17.296Z",
-      "isQualified": true,
-      "isPublished": true,
-      "rank": 1
-    },
-    {
-      "studentId": "E2E-6623",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 2,
-      "score": 0,
-      "completedAt": "2026-11-06T13:39:17.749Z",
-      "isQualified": true,
-      "isPublished": true,
-      "rank": 1
-    },
-    {
-      "studentId": "E2E-6623",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 3,
-      "score": 1,
-      "completedAt": "2026-11-06T13:39:17.889Z",
-      "isQualified": true,
-      "isPublished": true,
-      "rank": 1
-    },
-    {
-      "studentId": "E2E-6623",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 4,
-      "score": 1,
-      "completedAt": "2026-11-06T13:39:18.043Z",
-      "isQualified": false,
-      "isPublished": true
-    },
-    {
       "studentId": "R4-TEST-7511",
       "studentName": "Round4 Test Student",
       "roundNumber": 4,
@@ -13453,48 +13242,36 @@
       "completedAt": "2026-11-06T13:51:21.847Z",
       "isQualified": false,
       "isPublished": true
-    },
-    {
-      "studentId": "E2E-1953",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 1,
-      "score": 3,
-      "completedAt": "2026-11-06T13:51:22.561Z",
-      "isQualified": true,
-      "isPublished": true,
-      "rank": 2
-    },
-    {
-      "studentId": "E2E-1953",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 2,
-      "score": 0,
-      "completedAt": "2026-11-06T13:51:22.938Z",
-      "isQualified": true,
-      "isPublished": true,
-      "rank": 2
-    },
-    {
-      "studentId": "E2E-1953",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 3,
-      "score": 1,
-      "completedAt": "2026-11-06T13:51:23.075Z",
-      "isQualified": true,
-      "isPublished": true,
-      "rank": 2
-    },
-    {
-      "studentId": "E2E-1953",
-      "studentName": "E2E Champion Candidate",
-      "roundNumber": 4,
-      "score": 1,
-      "completedAt": "2026-11-06T13:51:23.185Z",
-      "isQualified": false,
-      "isPublished": true
     }
   ],
   "auditLogs": [
+    {
+      "id": "LOG-1794064475007-582",
+      "actor": "SP24-BCS-272",
+      "action": "TEAM_MEMBER_ADDED",
+      "targetType": "team",
+      "targetId": "MEMBER-3-1794064474912",
+      "details": {},
+      "timestamp": "2026-11-07T15:14:35.007Z"
+    },
+    {
+      "id": "LOG-1794064474889-109",
+      "actor": "SP24-BCS-272",
+      "action": "TEAM_MEMBER_ADDED",
+      "targetType": "team",
+      "targetId": "MEMBER-2-1794064474795",
+      "details": {},
+      "timestamp": "2026-11-07T15:14:34.889Z"
+    },
+    {
+      "id": "LOG-1794064474744-63",
+      "actor": "SP24-BCS-272",
+      "action": "TEAM_MEMBER_ADDED",
+      "targetType": "team",
+      "targetId": "MEMBER-1-1794064474634",
+      "details": {},
+      "timestamp": "2026-11-07T15:14:34.744Z"
+    },
     {
       "id": "LOG-1793973083578-526",
       "actor": "PAIR-A-3248",
