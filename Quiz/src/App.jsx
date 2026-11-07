@@ -230,6 +230,8 @@ export default function App() {
         isOpen={isStudentPortalOpen} 
         onClose={handleCloseStudentPortal} 
         onOpenRegister={handleOpenRegister} 
+        currentTheme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Full Admin Control Center Modal */}

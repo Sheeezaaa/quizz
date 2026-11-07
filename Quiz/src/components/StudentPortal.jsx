@@ -40,7 +40,11 @@ import {
   GraduationCap,
   Building2,
   ExternalLink,
-  Crown
+  Crown,
+  Sun,
+  Moon,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import { 
   apiStudentLogin, 
@@ -70,13 +74,32 @@ import { playCorrectChime, playAntiCheatBuzzer, playDisqualificationSiren } from
 export default function StudentPortal({ 
   isOpen, 
   onClose, 
-  onOpenRegister 
+  onOpenRegister,
+  currentTheme = 'dark',
+  onToggleTheme
 }) {
   const [currentUser, setCurrentUser] = useState(() => getLoggedInStudent());
   const [authMode, setAuthMode] = useState('login'); // 'login', 'forgot'
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'team', 'quiz', 'announcements', 'rules', 'admit'
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [localTheme, setLocalTheme] = useState(currentTheme || 'dark');
+  const [isGroupMode, setIsGroupMode] = useState(true);
+
+  // Sync theme
+  useEffect(() => {
+    if (currentTheme) setLocalTheme(currentTheme);
+  }, [currentTheme]);
+
+  const handleToggleThemeClick = () => {
+    if (onToggleTheme) {
+      onToggleTheme();
+    } else {
+      setLocalTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    }
+  };
+
+  const isDark = (onToggleTheme ? currentTheme : localTheme) === 'dark';
   
   // Login Form States
   const [identifier, setIdentifier] = useState('');
@@ -665,13 +688,29 @@ export default function StudentPortal({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border-slate-700/60 transition-all cursor-pointer shadow-sm"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Return to Public Website</span>
-          </button>
+          <div className="flex items-center gap-2.5">
+            {/* THEME TOGGLE (Sun / Moon) */}
+            <button
+              onClick={handleToggleThemeClick}
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+                isDark
+                  ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/20'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-600 hover:bg-amber-500/20 shadow-sm'
+              }`}
+              title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+              aria-label="Toggle Theme"
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            <button
+              onClick={onClose}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border-slate-700/60 transition-all cursor-pointer shadow-sm"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Return to Public Website</span>
+            </button>
+          </div>
         </header>
 
         {/* Centered Login Box */}
@@ -931,6 +970,20 @@ export default function StudentPortal({
         {/* Right Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
           
+          {/* THEME TOGGLE (Sun / Moon) */}
+          <button
+            onClick={handleToggleThemeClick}
+            className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+              isDark
+                ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/20'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-600 hover:bg-amber-500/20 shadow-sm'
+            }`}
+            title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            aria-label="Toggle Theme"
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+
           <button
             onClick={() => setShowPassModal(true)}
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 transition-all cursor-pointer"
@@ -1160,6 +1213,60 @@ export default function StudentPortal({
               {/* Main Team Members Section Header */}
               <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl space-y-6">
                 
+                {/* Participation Mode Toggle Switch */}
+                <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
+                      isGroupMode ? 'bg-blue-600/20 border-blue-500/40 text-blue-400' : 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
+                    }`}>
+                      {isGroupMode ? <Users className="w-5 h-5" /> : <User className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <div className="font-heading font-bold text-white text-sm flex items-center gap-2">
+                        <span>Contestant Mode:</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-mono font-bold ${
+                          isGroupMode ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        }`}>
+                          {isGroupMode ? 'Group / Duo Team Mode' : 'Solo Individual Mode'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {isGroupMode 
+                          ? 'Group pairing enabled: Invite a peer or accept invitations to compete as a 2-student team.' 
+                          : 'Individual solo competition active. Toggle to Group Mode to invite a teammate.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-heading font-semibold text-slate-400 hidden sm:inline">
+                      {isGroupMode ? 'Group Enabled' : 'Solo Only'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (partnerData.partner && isGroupMode) {
+                          if (!window.confirm('You are currently linked with a teammate. Toggling to Solo Mode will dissolve your team. Proceed?')) return;
+                          handleUnpairPartner();
+                        }
+                        setIsGroupMode(!isGroupMode);
+                      }}
+                      className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        isGroupMode ? 'bg-blue-600' : 'bg-slate-700'
+                      }`}
+                      role="switch"
+                      aria-checked={isGroupMode}
+                      title="Toggle between Solo and Group Mode"
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                          isGroupMode ? 'translate-x-7' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
                 {/* Header Row */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
                   <div className="flex items-center gap-2.5">
