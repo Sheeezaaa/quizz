@@ -170,8 +170,7 @@ export default function StudentPortal({
   };
 
   // Anti-Cheat Violation Handler
-  const recordAntiCheatViolation = (reason = 'Tab switch or external application window detected.', infractionType = 'TAB_SWITCH') => {
-    if (!activeQuizAttempt || isDisqualified) return;
+  const recordAntiCheatViolation = (reason = 'Tab switch or external application window detected.', infractionType = 'BROWSER_SWITCH') => {
     try {
       playAntiCheatBuzzer();
     } catch {}
@@ -184,86 +183,111 @@ export default function StudentPortal({
       activeQuizAttempt?.roundNumber || 1
     ).catch(() => {});
 
-    setViolationCount((prev) => {
-      const nextCount = prev + 1;
-      if (nextCount >= 3) {
-        try {
-          playDisqualificationSiren();
-        } catch {}
-        setIsDisqualified(true);
-        setTimeout(() => {
-          handleAutoFinishAttempt(true);
-        }, 1500);
-      }
-      return nextCount;
-    });
+    if (activeQuizAttempt && !isDisqualified) {
+      setViolationCount((prev) => {
+        const nextCount = prev + 1;
+        if (nextCount >= 3) {
+          try {
+            playDisqualificationSiren();
+          } catch {}
+          setIsDisqualified(true);
+          setTimeout(() => {
+            handleAutoFinishAttempt(true);
+          }, 1500);
+        }
+        return nextCount;
+      });
+    }
   };
 
-  // Dedicated Anti-Cheat & Browser Lock Effect
+  // Dedicated Anti-Cheat & Browser Switch Detection Effect
   useEffect(() => {
-    if (!activeQuizAttempt || isDisqualified) return;
+    if (!currentUser) return;
+
+    let lastReportTime = 0;
+    const reportSwitch = (infractionMsg, type = "BROWSER_SWITCH") => {
+      const now = Date.now();
+      if (now - lastReportTime < 2500) return;
+      lastReportTime = now;
+
+      const sid = currentUser?.studentId || "UNKNOWN_STUDENT";
+      const fullDetail = `Student ID: ${sid} (${currentUser?.fullName || "Contestant"}) switched window or opened another browser!`;
+
+      // Always send alert so Admin sees the Student ID immediately
+      apiReportProctorInfraction(type, fullDetail, activeQuizAttempt?.roundNumber || 1).catch(() => {});
+
+      // If active quiz is ongoing, trigger quiz penalty and buzzer
+      if (activeQuizAttempt && !isDisqualified) {
+        recordAntiCheatViolation(fullDetail, type);
+      }
+    };
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        recordAntiCheatViolation('Tab switched! Leaving the quiz tab to open another tab or browser is strictly forbidden.');
+        reportSwitch("Student opened another browser or switched tabs!", "BROWSER_SWITCH");
       }
     };
 
     const handleWindowBlur = () => {
-      recordAntiCheatViolation('Window focus lost! Switching to another browser, window, or application is prohibited.');
+      reportSwitch("Student switched window focus or minimized browser window!", "WINDOW_BLUR");
     };
 
     const handleFullscreenChange = () => {
       const inFull = !!document.fullscreenElement;
       setIsFullScreen(inFull);
       if (!inFull && activeQuizAttempt && !isDisqualified) {
-        recordAntiCheatViolation('Full-screen mode exited! The quiz environment must remain in full-screen lockdown.');
+        reportSwitch("Full-screen lockdown mode exited!", "FULLSCREEN_EXIT");
       }
     };
 
     const handleKeyDown = (e) => {
-      if (e.key === 'F12') {
+      if (e.key === "F12") {
         e.preventDefault();
-        recordAntiCheatViolation('Developer tools / F12 shortcut is prohibited.');
+        reportSwitch("Developer tools / F12 shortcut attempted.", "DEVTOOLS_ATTEMPT");
         return false;
       }
       if (e.ctrlKey || e.metaKey) {
-        const blockedKeys = ['c', 'v', 'x', 't', 'n', 'w', 'u', 'p', 'i', 'j', 'r'];
+        const blockedKeys = ["c", "v", "x", "t", "n", "w", "u", "p", "i", "j", "r"];
         if (blockedKeys.includes(e.key.toLowerCase())) {
           e.preventDefault();
-          recordAntiCheatViolation(`Keyboard shortcut (Ctrl+${e.key.toUpperCase()}) is disabled during examination.`);
+          reportSwitch(`Keyboard shortcut (Ctrl+${e.key.toUpperCase()}) attempted.`, "SHORTCUT_ATTEMPT");
           return false;
         }
       }
-      if (e.altKey && (e.key === 'Tab' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      if (e.altKey && (e.key === "Tab" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         e.preventDefault();
-        recordAntiCheatViolation('Alt key window navigation is disabled.');
+        reportSwitch("Alt-Tab window switch navigation attempted.", "ALT_TAB_SWITCH");
         return false;
       }
     };
 
-    const handleContextMenu = (e) => e.preventDefault();
-    const handleCopy = (e) => {
-      e.preventDefault();
-      recordAntiCheatViolation('Copying question text is prohibited.');
+    const handleContextMenu = (e) => {
+      if (activeQuizAttempt) e.preventDefault();
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleWindowBlur);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('contextmenu', handleContextMenu);
-    window.addEventListener('copy', handleCopy);
+    const handleCopy = (e) => {
+      if (activeQuizAttempt) {
+        e.preventDefault();
+        reportSwitch("Copying content attempted.", "COPY_ATTEMPT");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("copy", handleCopy);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleWindowBlur);
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('copy', handleCopy);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("copy", handleCopy);
     };
-  }, [activeQuizAttempt, isDisqualified]);
+  }, [currentUser, activeQuizAttempt, isDisqualified]);
 
   // Synchronize student data upon open or user state change
   useEffect(() => {
@@ -532,19 +556,25 @@ export default function StudentPortal({
     setIsPartnerLoading(true);
     setPartnerFeedback({ message: '', isError: false });
     try {
-      const res = await apiAddTeamMember(targetId, targetPartnerName.trim(), targetPartnerDept);
+      // Send invitation request: teammate must ACCEPT before being added
+      const res = await apiSendPartnerRequest(targetId, targetPartnerName.trim(), targetPartnerDept);
       if (!res.success) {
-        setPartnerFeedback({ message: res.error || 'Could not add team member.', isError: true });
+        setPartnerFeedback({ message: res.error || 'Could not send team invitation.', isError: true });
       } else {
-        setPartnerFeedback({ message: res.message || 'Team member added successfully!', isError: false });
+        setPartnerFeedback({
+          message: res.message || `Team invitation sent to ${targetId}! They will be added to your team once they accept.`,
+          isError: false,
+        });
         setTargetPartnerInput('');
         setTargetPartnerName('');
         setSelectedPartnerOption('');
-        setShowInviteModal(false);
+        setTimeout(() => {
+          setShowInviteModal(false);
+        }, 1600);
         await loadPartnerData();
       }
     } catch (err) {
-      setPartnerFeedback({ message: err.message || 'Error adding team member.', isError: true });
+      setPartnerFeedback({ message: err.message || 'Error sending team invitation.', isError: true });
     } finally {
       setIsPartnerLoading(false);
     }
@@ -808,32 +838,6 @@ export default function StudentPortal({
               </p>
             </div>
 
-            {/* Quick Demo Access Pills */}
-            <div className="mb-5 p-3 rounded-2xl bg-blue-950/40 border border-blue-500/30 text-xs">
-              <div className="text-[11px] font-mono text-blue-400 font-semibold mb-2 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>One-Click Quick Login (Demo):</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('SP24-BSE-043')}
-                  className="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/40 text-blue-300 text-[11px] font-bold truncate transition-colors text-left"
-                  title="Login as Sheeza Rasheed"
-                >
-                  👑 Sheeza (BSE-043)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('SP24-BSE-029')}
-                  className="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold truncate transition-colors text-left"
-                  title="Login as Yameena Murtaza"
-                >
-                  👤 Yameena (BSE-029)
-                </button>
-              </div>
-            </div>
-
             {loginError && (
               <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-fadeIn">
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
@@ -992,10 +996,10 @@ export default function StudentPortal({
      SCREEN 2: PROPER FULL-SCREEN STUDENT DASHBOARD (MATCHING ADMIN DASHBOARD)
      ========================================================================= */
   return (
-    <div className="fixed inset-0 z-50 flex flex-col h-screen w-screen overflow-hidden font-sans bg-[#070b14] text-slate-100 transition-colors animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex flex-col h-screen w-screen overflow-hidden font-sans bg-gradient-to-br from-[#031526] via-[#06243d] to-[#0a3556] text-slate-100 transition-colors animate-fadeIn">
       
       {/* 1. TOP GLOBAL NAVIGATION BAR */}
-      <header className="h-16 border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 bg-[#0b1120]/95 text-white shadow-lg">
+      <header className="h-16 border-b border-sky-400/30 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 bg-[#062038]/95 text-white shadow-lg shadow-sky-950/40 backdrop-blur-md">
         
         {/* Left: Branding & Mobile/Desktop Collapse */}
         <div className="flex items-center gap-3 sm:gap-4">
@@ -1047,6 +1051,12 @@ export default function StudentPortal({
 
         {/* Right Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
+
+          {/* PROMINENT MARKS DISPLAY BADGE IN HEADER */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500/20 border border-sky-400/40 text-sky-200 text-xs font-mono font-bold shadow-sm shadow-sky-950/40">
+            <Award className="w-3.5 h-3.5 text-sky-300" />
+            <span>Marks: <strong className="text-white">{studentStatus?.totalScore ?? 0} pts</strong></span>
+          </div>
           
           {/* THEME TOGGLE (Sun / Moon) */}
           <button
@@ -1109,7 +1119,7 @@ export default function StudentPortal({
         <aside className={`
           fixed md:relative inset-y-0 left-0 z-40 md:z-10
           ${isSidebarCollapsed ? 'w-20' : 'w-64'}
-          border-r border-slate-800 bg-[#090f1d] text-slate-400 flex flex-col shrink-0
+          border-r border-sky-400/20 bg-[#041a2e]/98 text-sky-200 flex flex-col shrink-0
           transition-all duration-300 ease-in-out
           ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}>
@@ -1130,8 +1140,8 @@ export default function StudentPortal({
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-xs font-heading font-bold transition-all cursor-pointer ${
                     isActive 
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg shadow-sky-500/30 border border-sky-300/30' 
+                      : 'text-sky-200/80 hover:text-white hover:bg-sky-900/40'
                   }`}
                   title={tab.label}
                 >
@@ -1161,7 +1171,7 @@ export default function StudentPortal({
         </aside>
 
         {/* 3. MAIN DASHBOARD CONTENT AREA */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#070b14] space-y-6">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-[#051e33] via-[#072844] to-[#04192b] space-y-6">
 
           {/* ======================================================== */}
           {/* TAB 1: DASHBOARD OVERVIEW */}
@@ -1170,7 +1180,7 @@ export default function StudentPortal({
             <div className="space-y-6 max-w-6xl mx-auto animate-fadeIn">
               
               {/* Welcome Banner */}
-              <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/40 border border-blue-500/30 relative overflow-hidden shadow-2xl">
+              <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-[#0a3860] via-[#0d477a] to-[#083054] border border-sky-400/40 relative overflow-hidden shadow-2xl">
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div>
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 mb-3">
@@ -1204,9 +1214,110 @@ export default function StudentPortal({
                 </div>
               </div>
 
+              {/* PROMINENT EXAMINATION MARKS & PERFORMANCE SCORECARD HERO */}
+              <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-[#0b3860] via-[#0e487b] to-[#0a3357] border border-sky-400/50 shadow-2xl space-y-6 relative overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-sky-400/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 shadow-inner">
+                      <Award className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-heading font-black text-xl text-white">Examination Marks & Performance</h3>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-sky-400/20 text-sky-200 border border-sky-400/40">
+                          LIVE MARKS
+                        </span>
+                      </div>
+                      <p className="text-xs text-sky-200/80 mt-0.5">
+                        Official verified tournament score for Student ID: <span className="font-mono text-white font-bold">{currentUser.studentId}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className="text-[11px] font-heading font-bold text-sky-300 uppercase tracking-wider">Total Marks Obtained</div>
+                      <div className="text-3xl font-heading font-black text-white flex items-center justify-end gap-1.5">
+                        <span>{studentStatus?.totalScore ?? 0}</span>
+                        <span className="text-xs font-normal text-sky-200">/ 200 pts</span>
+                      </div>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Round-wise Marks Breakdown */}
+                <div>
+                  <div className="text-xs font-heading font-bold text-sky-200 uppercase tracking-wider mb-3 flex items-center justify-between">
+                    <span>Round-by-Round Marks Breakdown</span>
+                    <span className="text-[11px] font-mono text-sky-300">4 Proctored Competition Stages</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {/* Stage 1 */}
+                    <div className="p-4 rounded-2xl bg-[#062038]/90 border border-sky-400/30 shadow-md">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-heading font-bold text-sky-200">Stage 01: Screening</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                          Completed
+                        </span>
+                      </div>
+                      <div className="text-xl font-heading font-black text-white mt-2">
+                        {studentStatus?.roundScores?.[0]?.score ?? (studentStatus?.totalScore ? studentStatus.totalScore : 0)} <span className="text-xs text-sky-300 font-normal">/ 20 pts</span>
+                      </div>
+                      <p className="text-[11px] text-sky-200/70 mt-1">Foundational Computing & Logic MCQs</p>
+                    </div>
+
+                    {/* Stage 2 */}
+                    <div className="p-4 rounded-2xl bg-[#062038]/90 border border-sky-400/30 shadow-md">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-heading font-bold text-sky-200">Stage 02: Core CS</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">
+                          {studentStatus?.roundScores?.[1] ? 'Completed' : 'Upcoming'}
+                        </span>
+                      </div>
+                      <div className="text-xl font-heading font-black text-white mt-2">
+                        {studentStatus?.roundScores?.[1]?.score ?? 0} <span className="text-xs text-sky-300 font-normal">/ 30 pts</span>
+                      </div>
+                      <p className="text-[11px] text-sky-200/70 mt-1">Data Structures, Algorithms & OOP</p>
+                    </div>
+
+                    {/* Stage 3 */}
+                    <div className="p-4 rounded-2xl bg-[#062038]/90 border border-sky-400/30 shadow-md">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-heading font-bold text-sky-200">Stage 03: Speed Coding</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">
+                          {studentStatus?.roundScores?.[2] ? 'Completed' : 'Upcoming'}
+                        </span>
+                      </div>
+                      <div className="text-xl font-heading font-black text-white mt-2">
+                        {studentStatus?.roundScores?.[2]?.score ?? 0} <span className="text-xs text-sky-300 font-normal">/ 50 pts</span>
+                      </div>
+                      <p className="text-[11px] text-sky-200/70 mt-1">Real-time Algorithmic Challenges</p>
+                    </div>
+
+                    {/* Stage 4 */}
+                    <div className="p-4 rounded-2xl bg-[#062038]/90 border border-sky-400/30 shadow-md">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-heading font-bold text-sky-200">Stage 04: Grand Finale</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                          Auditorium
+                        </span>
+                      </div>
+                      <div className="text-xl font-heading font-black text-white mt-2">
+                        {studentStatus?.roundScores?.[3]?.score ?? 0} <span className="text-xs text-sky-300 font-normal">/ 100 pts</span>
+                      </div>
+                      <p className="text-[11px] text-sky-200/70 mt-1">Live Buzzer Arena & Championship</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Metrics Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                <div className="p-5 rounded-2xl bg-[#092d4d]/90 border border-sky-400/30 shadow-xl">
                   <div className="text-xs font-heading font-semibold text-slate-400">Registration Status</div>
                   <div className="text-base font-heading font-black text-emerald-400 flex items-center gap-1.5 mt-2">
                     <CheckCircle2 className="w-5 h-5" />
@@ -1215,7 +1326,7 @@ export default function StudentPortal({
                   <div className="text-[11px] text-slate-500 font-mono mt-1">Pass Ref: {currentUser.id}</div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                <div className="p-5 rounded-2xl bg-[#092d4d]/90 border border-sky-400/30 shadow-xl">
                   <div className="text-xs font-heading font-semibold text-slate-400">Team Enrollment</div>
                   <div className="text-base font-heading font-black text-blue-400 flex items-center gap-1.5 mt-2">
                     <Users className="w-5 h-5" />
@@ -1226,7 +1337,7 @@ export default function StudentPortal({
                   </div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                <div className="p-5 rounded-2xl bg-[#092d4d]/90 border border-sky-400/30 shadow-xl">
                   <div className="text-xs font-heading font-semibold text-slate-400">Tournament Points</div>
                   <div className="text-2xl font-heading font-black text-amber-400 mt-1">
                     {studentStatus?.totalScore || 0} <span className="text-xs text-slate-500 font-normal">pts</span>
@@ -1234,7 +1345,7 @@ export default function StudentPortal({
                   <div className="text-[11px] text-slate-500 mt-1">Official Leaderboard Tally</div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                <div className="p-5 rounded-2xl bg-[#092d4d]/90 border border-sky-400/30 shadow-xl">
                   <div className="text-xs font-heading font-semibold text-slate-400">Official Admit Pass</div>
                   <button
                     onClick={() => setShowPassModal(true)}
@@ -1291,7 +1402,7 @@ export default function StudentPortal({
               )}
 
               {/* Main Team Members Section Header */}
-              <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl space-y-6">
+              <div className="p-6 rounded-3xl bg-[#092d4d]/95 border border-sky-400/30 shadow-2xl space-y-6">
                 
                 {/* Participation Mode Toggle Switch */}
                 <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1604,7 +1715,7 @@ export default function StudentPortal({
               )}
 
               {/* PENDING SENT INVITATIONS TABLE (MATCHING SCREENSHOT TABLE) */}
-              <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl space-y-4">
+              <div className="p-6 rounded-3xl bg-[#092d4d]/95 border border-sky-400/30 shadow-2xl space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                   <div className="flex items-center gap-2">
                     <Send className="w-4 h-4 text-blue-400" />
@@ -1927,7 +2038,7 @@ export default function StudentPortal({
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-blue-400" />
-                <h3 className="font-heading font-black text-white text-lg">Add Team Member (2 or 3 Members)</h3>
+                <h3 className="font-heading font-black text-white text-lg">Send Team Member Invitation (Teammate must Accept)</h3>
               </div>
               <button onClick={() => setShowInviteModal(false)} className="text-slate-400 hover:text-white p-1">
                 <X className="w-5 h-5" />
@@ -2035,7 +2146,7 @@ export default function StudentPortal({
                   className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4" />
-                  <span>{isPartnerLoading ? 'Adding...' : 'Add to Team'}</span>
+                  <span>{isPartnerLoading ? 'Sending Invitation...' : 'Send Team Invitation (Teammate must Accept)'}</span>
                 </button>
               </div>
             </form>

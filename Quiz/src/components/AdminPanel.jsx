@@ -1247,6 +1247,127 @@ export default function AdminPanel({
                 </div>
               </div>
 
+              {/* LIVE PROCTORING & BROWSER SWITCH MALPRACTICE MONITOR */}
+              <div className={`p-6 rounded-3xl border shadow-2xl space-y-4 transition-all ${
+                liveProctorAlerts.some(a => !a.acknowledged)
+                  ? 'bg-gradient-to-r from-rose-950/70 via-red-900/40 to-slate-900 border-rose-500/60 shadow-rose-950/50'
+                  : isDark
+                    ? 'bg-slate-900/90 border-slate-800'
+                    : 'bg-white border-slate-200'
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-rose-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                      liveProctorAlerts.some(a => !a.acknowledged)
+                        ? 'bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-600/40'
+                        : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                    }`}>
+                      <AlertTriangle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className={`font-heading font-black text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          Live Browser Switch & Malpractice Monitor
+                        </h3>
+                        {liveProctorAlerts.some(a => !a.acknowledged) ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/50 animate-bounce">
+                            ⚠️ ACTIVE BREACH DETECTED
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            LOCKDOWN SECURE
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Detects candidates who open another browser, minimize the quiz window, or switch application tabs.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono px-3 py-1 rounded-xl bg-slate-800 text-slate-300 border border-slate-700">
+                      Total Alerts: <strong className="text-white">{liveProctorAlerts.length}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Display Active Violations with Student ID */}
+                {liveProctorAlerts.length === 0 ? (
+                  <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>No browser-switching violations detected. All candidates are in full-screen exam lockdown.</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {liveProctorAlerts.slice(0, 5).map((alert) => (
+                      <div
+                        key={alert.id}
+                        className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 transition-all ${
+                          !alert.acknowledged
+                            ? 'bg-rose-950/40 border-rose-500/50 shadow-md shadow-rose-950/40'
+                            : isDark
+                              ? 'bg-slate-950/60 border-slate-800 text-slate-400'
+                              : 'bg-slate-50 border-slate-200 text-slate-600'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center gap-3">
+                          {/* Student ID BADGE */}
+                          <div className="px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/50 text-rose-300 font-mono font-black text-sm flex items-center gap-1.5 shadow-sm">
+                            <span className="text-[10px] text-rose-400 font-sans uppercase">STUDENT ID:</span>
+                            <span>{alert.studentId}</span>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-heading font-bold text-white text-sm">{alert.studentName}</span>
+                              <span className="text-xs font-mono text-slate-400">({alert.campus} • {alert.semester})</span>
+                            </div>
+                            <div className="text-xs text-rose-300/90 font-medium flex items-center gap-1.5 mt-0.5">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>{alert.details}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-[11px] font-mono text-slate-400">
+                            {new Date(alert.timestamp).toLocaleTimeString()}
+                          </span>
+
+                          {!alert.acknowledged ? (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleActionOnCheatingAlert(alert.id, 'DISQUALIFY_STUDENT')}
+                                className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-heading font-bold text-xs cursor-pointer shadow-md shadow-rose-600/30"
+                              >
+                                Disqualify
+                              </button>
+                              <button
+                                onClick={() => handleActionOnCheatingAlert(alert.id, 'WARN_STUDENT')}
+                                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-heading font-bold text-xs cursor-pointer"
+                              >
+                                Warn
+                              </button>
+                              <button
+                                onClick={() => handleActionOnCheatingAlert(alert.id, 'DISMISS')}
+                                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs cursor-pointer"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                              Resolved: {alert.actionTaken || 'Reviewed'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* 5 Primary Metric Stat Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 

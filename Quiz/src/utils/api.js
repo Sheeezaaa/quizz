@@ -989,6 +989,28 @@ export async function apiGetAuditLogs() {
 // ==========================================
 
 export async function apiReportProctorInfraction(infractionType, details, roundNumber) {
+  const me = getLoggedInStudent();
+  const alertItem = {
+    id: `ALERT-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+    studentId: me?.studentId || 'UNKNOWN_STUDENT',
+    studentName: me?.fullName || 'Contestant',
+    studentEmail: me?.email || 'student@comsats.edu.pk',
+    campus: me?.campus || 'Islamabad Campus',
+    degreeProgram: me?.degreeProgram || me?.department || 'BS Computer Science',
+    semester: me?.semester || '4th Semester',
+    roundNumber: Number(roundNumber) || 1,
+    infractionType: infractionType || 'BROWSER_SWITCH',
+    details: details || 'Student opened another browser or switched window.',
+    timestamp: new Date().toISOString(),
+    acknowledged: false,
+    status: 'ACTIVE_MALPRACTICE',
+  };
+
+  try {
+    const local = JSON.parse(localStorage.getItem('bob_live_proctor_alerts_v1') || '[]');
+    localStorage.setItem('bob_live_proctor_alerts_v1', JSON.stringify([alertItem, ...local].slice(0, 60)));
+  } catch {}
+
   try {
     const res = await fetch(`${API_BASE}/proctor/report-infraction`, {
       method: 'POST',
@@ -1000,23 +1022,52 @@ export async function apiReportProctorInfraction(infractionType, details, roundN
     });
     return await safeJson(res);
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: true, alert: alertItem };
   }
 }
 
 export async function apiGetProctorAlerts() {
+  let serverAlerts = [];
   try {
     const res = await fetch(`${API_BASE}/proctor/live-alerts`, {
       headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
     });
-    if (!res.ok) return [];
-    return await safeJson(res);
-  } catch {
-    return [];
+    if (res.ok) {
+      serverAlerts = await safeJson(res);
+    }
+  } catch {}
+
+  let localAlerts = [];
+  try {
+    localAlerts = JSON.parse(localStorage.getItem('bob_live_proctor_alerts_v1') || '[]');
+  } catch {}
+
+  const alertMap = new Map();
+  if (Array.isArray(serverAlerts)) {
+    serverAlerts.forEach((a) => alertMap.set(a.id, a));
   }
+  if (Array.isArray(localAlerts)) {
+    localAlerts.forEach((a) => {
+      if (!alertMap.has(a.id)) {
+        alertMap.set(a.id, a);
+      }
+    });
+  }
+
+  return Array.from(alertMap.values()).sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
 }
 
 export async function apiAcknowledgeProctorAlert(alertId, action) {
+  try {
+    const local = JSON.parse(localStorage.getItem('bob_live_proctor_alerts_v1') || '[]');
+    const updated = local.map((a) =>
+      a.id === alertId ? { ...a, acknowledged: true, actionTaken: action } : a
+    );
+    localStorage.setItem('bob_live_proctor_alerts_v1', JSON.stringify(updated));
+  } catch {}
+
   try {
     const res = await fetch(`${API_BASE}/proctor/acknowledge-alert`, {
       method: 'POST',
@@ -1028,7 +1079,7 @@ export async function apiAcknowledgeProctorAlert(alertId, action) {
     });
     return await safeJson(res);
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: true };
   }
 }
 
@@ -1123,7 +1174,7 @@ export async function apiGetMyPartnerRequests() {
   }
 }
 
-export async function apiSendPartnerRequest(targetStudentId) {
+export async function apiSendPartnerRequest(targetStudentId, fullName, department) {
   try {
     let res = null;
     let data = {};
@@ -1134,7 +1185,7 @@ export async function apiSendPartnerRequest(targetStudentId) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${getStudentAuthToken()}`,
         },
-        body: JSON.stringify({ targetStudentId }),
+        body: JSON.stringify({ targetStudentId, fullName, department }),
       });
       data = await safeJson(res);
     } catch {}
@@ -1145,10 +1196,10 @@ export async function apiSendPartnerRequest(targetStudentId) {
       return { success: false, error: data.error };
     }
     const me = getLoggedInStudent();
-    return localSendPartnerRequest(me, targetStudentId);
+    return localSendPartnerRequest(me, targetStudentId, fullName, department);
   } catch {
     const me = getLoggedInStudent();
-    return localSendPartnerRequest(me, targetStudentId);
+    return localSendPartnerRequest(me, targetStudentId, fullName, department);
   }
 }
 

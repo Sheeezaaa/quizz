@@ -2326,33 +2326,63 @@ app.post('/api/partners/respond', requireParticipant, (req, res) => {
   }
 
   if (action === 'accept') {
-    if (receiver.partnerStudentId) {
-      return res.status(400).json({ error: 'You are already paired with another partner.' });
-    }
-    if (sender.partnerStudentId) {
+    const senderMembers = Array.isArray(sender.teamMembers) ? sender.teamMembers : (sender.partnerStudentId ? [{ id: sender.partnerId, studentId: sender.partnerStudentId, fullName: sender.partnerName, email: sender.partnerEmail, department: sender.partnerDepartment }] : []);
+    const receiverMembers = Array.isArray(receiver.teamMembers) ? receiver.teamMembers : (receiver.partnerStudentId ? [{ id: receiver.partnerId, studentId: receiver.partnerStudentId, fullName: receiver.partnerName, email: receiver.partnerEmail, department: receiver.partnerDepartment }] : []);
+
+    if (senderMembers.length >= 3) {
       request.status = 'expired';
       writeDB(db);
-      return res.status(400).json({ error: `${sender.fullName} has already paired with someone else.` });
+      return res.status(400).json({ error: `${sender.fullName}'s team is already full (maximum 4 members).` });
     }
 
-    const teamId = `TEAM-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    if (receiverMembers.length >= 3) {
+      return res.status(400).json({ error: 'Your team is already full (maximum 4 members).' });
+    }
+
+    const teamId = sender.teamId || receiver.teamId || `TEAM-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
     const pairedAt = new Date().toISOString();
 
-    receiver.partnerId = sender.id;
-    receiver.partnerStudentId = sender.studentId;
-    receiver.partnerName = sender.fullName;
-    receiver.partnerEmail = sender.email;
-    receiver.partnerDepartment = sender.department;
-    receiver.partnerPairedAt = pairedAt;
-    receiver.teamId = teamId;
-
-    sender.partnerId = receiver.id;
-    sender.partnerStudentId = receiver.studentId;
-    sender.partnerName = receiver.fullName;
-    sender.partnerEmail = receiver.email;
-    sender.partnerDepartment = receiver.department;
-    sender.partnerPairedAt = pairedAt;
+    // Add receiver to sender's teamMembers
+    if (!Array.isArray(sender.teamMembers)) sender.teamMembers = [...senderMembers];
+    if (!sender.teamMembers.some((m) => (m.studentId || '').toLowerCase() === receiver.studentId.toLowerCase())) {
+      sender.teamMembers.push({
+        id: receiver.id,
+        studentId: receiver.studentId,
+        fullName: receiver.fullName,
+        email: receiver.email,
+        department: receiver.department || 'Software Engineering',
+        pairedAt,
+        teamId,
+      });
+    }
     sender.teamId = teamId;
+    sender.partnerId = sender.teamMembers[0].id;
+    sender.partnerStudentId = sender.teamMembers[0].studentId;
+    sender.partnerName = sender.teamMembers[0].fullName;
+    sender.partnerEmail = sender.teamMembers[0].email;
+    sender.partnerDepartment = sender.teamMembers[0].department;
+    sender.partnerPairedAt = pairedAt;
+
+    // Add sender to receiver's teamMembers
+    if (!Array.isArray(receiver.teamMembers)) receiver.teamMembers = [...receiverMembers];
+    if (!receiver.teamMembers.some((m) => (m.studentId || '').toLowerCase() === sender.studentId.toLowerCase())) {
+      receiver.teamMembers.push({
+        id: sender.id,
+        studentId: sender.studentId,
+        fullName: sender.fullName,
+        email: sender.email,
+        department: sender.department || 'Software Engineering',
+        pairedAt,
+        teamId,
+      });
+    }
+    receiver.teamId = teamId;
+    receiver.partnerId = receiver.teamMembers[0].id;
+    receiver.partnerStudentId = receiver.teamMembers[0].studentId;
+    receiver.partnerName = receiver.teamMembers[0].fullName;
+    receiver.partnerEmail = receiver.teamMembers[0].email;
+    receiver.partnerDepartment = receiver.teamMembers[0].department;
+    receiver.partnerPairedAt = pairedAt;
 
     request.status = 'accepted';
     request.respondedAt = pairedAt;
