@@ -10,7 +10,12 @@ import {
   getStoredQuestions,
   getLoggedInStudent,
   setLoggedInStudent,
-  setAdminAuth
+  setAdminAuth,
+  localGetMyPartnerRequests,
+  localSendPartnerRequest,
+  localRespondPartnerRequest,
+  localCancelPartnerRequest,
+  localUnpairPartner
 } from './storage';
 
 // Centralized API Client for Battle of Brains 2026
@@ -1059,11 +1064,22 @@ export async function apiGetOutboxEmails() {
 
 export async function apiGetAvailablePartners() {
   try {
-    const res = await fetch(`${API_BASE}/partners/available`, {
-      headers: { Authorization: `Bearer ${getStudentAuthToken()}` },
-    });
-    if (!res.ok) return [];
-    return await safeJson(res);
+    let res = null;
+    try {
+      res = await fetch(`${API_BASE}/partners/available`, {
+        headers: { Authorization: `Bearer ${getStudentAuthToken()}` },
+      });
+    } catch {}
+    if (res && res.ok) {
+      const data = await safeJson(res);
+      if (Array.isArray(data)) return data;
+    }
+    const me = getLoggedInStudent();
+    const all = getStoredParticipants() || [];
+    return all.filter(p => 
+      (!me || p.studentId?.toLowerCase() !== me.studentId?.toLowerCase()) &&
+      !p.partnerStudentId
+    );
   } catch {
     return [];
   }
@@ -1071,83 +1087,125 @@ export async function apiGetAvailablePartners() {
 
 export async function apiGetMyPartnerRequests() {
   try {
-    const res = await fetch(`${API_BASE}/partners/my-requests`, {
-      headers: { Authorization: `Bearer ${getStudentAuthToken()}` },
-    });
-    if (!res.ok) return { partner: null, incoming: [], outgoing: [] };
-    return await safeJson(res);
+    let res = null;
+    try {
+      res = await fetch(`${API_BASE}/partners/my-requests`, {
+        headers: { Authorization: `Bearer ${getStudentAuthToken()}` },
+      });
+    } catch {}
+    if (res && res.ok) {
+      const data = await safeJson(res);
+      if (data && (data.partner || data.incoming || data.outgoing)) return data;
+    }
+    const me = getLoggedInStudent();
+    return localGetMyPartnerRequests(me);
   } catch {
-    return { partner: null, incoming: [], outgoing: [] };
+    const me = getLoggedInStudent();
+    return localGetMyPartnerRequests(me);
   }
 }
 
 export async function apiSendPartnerRequest(targetStudentId) {
   try {
-    const res = await fetch(`${API_BASE}/partners/request`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getStudentAuthToken()}`,
-      },
-      body: JSON.stringify({ targetStudentId }),
-    });
-    const data = await safeJson(res);
-    if (!res.ok) throw new Error(data.error || 'Failed to send partner request.');
-    return { success: true, ...data };
-  } catch (err) {
-    return { success: false, error: err.message };
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/partners/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getStudentAuthToken()}`,
+        },
+        body: JSON.stringify({ targetStudentId }),
+      });
+      data = await safeJson(res);
+    } catch {}
+    if (res && res.ok) {
+      return { success: true, ...data };
+    }
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+    const me = getLoggedInStudent();
+    return localSendPartnerRequest(me, targetStudentId);
+  } catch {
+    const me = getLoggedInStudent();
+    return localSendPartnerRequest(me, targetStudentId);
   }
 }
 
 export async function apiRespondPartnerRequest(requestId, action) {
   try {
-    const res = await fetch(`${API_BASE}/partners/respond`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getStudentAuthToken()}`,
-      },
-      body: JSON.stringify({ requestId, action }),
-    });
-    const data = await safeJson(res);
-    if (!res.ok) throw new Error(data.error || 'Failed to respond to partner request.');
-    return { success: true, ...data };
-  } catch (err) {
-    return { success: false, error: err.message };
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/partners/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getStudentAuthToken()}`,
+        },
+        body: JSON.stringify({ requestId, action }),
+      });
+      data = await safeJson(res);
+    } catch {}
+    if (res && res.ok) {
+      return { success: true, ...data };
+    }
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+    const me = getLoggedInStudent();
+    return localRespondPartnerRequest(requestId, action, me);
+  } catch {
+    const me = getLoggedInStudent();
+    return localRespondPartnerRequest(requestId, action, me);
   }
 }
 
 export async function apiCancelPartnerRequest(requestId) {
   try {
-    const res = await fetch(`${API_BASE}/partners/cancel-request`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getStudentAuthToken()}`,
-      },
-      body: JSON.stringify({ requestId }),
-    });
-    const data = await safeJson(res);
-    if (!res.ok) throw new Error(data.error || 'Failed to cancel partner request.');
-    return { success: true, ...data };
-  } catch (err) {
-    return { success: false, error: err.message };
+    let res = null;
+    try {
+      res = await fetch(`${API_BASE}/partners/cancel-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getStudentAuthToken()}`,
+        },
+        body: JSON.stringify({ requestId }),
+      });
+    } catch {}
+    if (res && res.ok) {
+      const data = await safeJson(res);
+      return { success: true, ...data };
+    }
+    return localCancelPartnerRequest(requestId);
+  } catch {
+    return localCancelPartnerRequest(requestId);
   }
 }
 
 export async function apiUnpairPartner() {
   try {
-    const res = await fetch(`${API_BASE}/partners/unpair`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getStudentAuthToken()}`,
-      },
-    });
-    const data = await safeJson(res);
-    if (!res.ok) throw new Error(data.error || 'Failed to unpair partner.');
-    return { success: true, ...data };
-  } catch (err) {
-    return { success: false, error: err.message };
+    let res = null;
+    try {
+      res = await fetch(`${API_BASE}/partners/unpair`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getStudentAuthToken()}`,
+        },
+      });
+    } catch {}
+    if (res && res.ok) {
+      const data = await safeJson(res);
+      return { success: true, ...data };
+    }
+    const me = getLoggedInStudent();
+    return localUnpairPartner(me?.studentId);
+  } catch {
+    const me = getLoggedInStudent();
+    return localUnpairPartner(me?.studentId);
   }
 }

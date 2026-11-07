@@ -742,3 +742,212 @@ export const parseQuestionsFile = async (file, defaultSubject = '') => {
     reader.readAsArrayBuffer(file);
   });
 };
+
+// ==========================================
+// PARTNER / TEAM MANAGEMENT HELPERS (OFFLINE / LOCAL STORAGE)
+// ==========================================
+
+const STORAGE_PARTNER_INVITES_KEY = 'bob_partner_invites_v1';
+
+export const getStoredPartnerInvites = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_PARTNER_INVITES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveStoredPartnerInvites = (invites) => {
+  try {
+    localStorage.setItem(STORAGE_PARTNER_INVITES_KEY, JSON.stringify(invites));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const localGetMyPartnerRequests = (currentStudent) => {
+  if (!currentStudent) return { partner: null, incoming: [], outgoing: [] };
+  const allInvites = getStoredPartnerInvites();
+  const participants = getStoredParticipants();
+  const me = participants.find(p => p.id === currentStudent.id || p.studentId === currentStudent.studentId) || currentStudent;
+
+  let partner = null;
+  if (me.partnerStudentId) {
+    const partnerObj = participants.find(p => p.studentId === me.partnerStudentId || p.id === me.partnerId);
+    if (partnerObj) {
+      partner = {
+        id: partnerObj.id,
+        fullName: partnerObj.fullName,
+        studentId: partnerObj.studentId,
+        email: partnerObj.email,
+        phone: partnerObj.phone || '0300-0000000',
+        department: partnerObj.degreeProgram || partnerObj.department || 'Software Engineering',
+        teamId: me.teamId || partnerObj.teamId || `TEAM-${me.studentId.replace(/[^a-zA-Z0-9]/g, '')}`,
+      };
+    }
+  }
+
+  const incoming = allInvites.filter(inv => 
+    inv.status === 'Pending' && 
+    (inv.toStudentId?.toLowerCase() === me.studentId?.toLowerCase() || inv.toEmail?.toLowerCase() === me.email?.toLowerCase())
+  );
+
+  const outgoing = allInvites.filter(inv => 
+    inv.status === 'Pending' && 
+    (inv.fromStudentId?.toLowerCase() === me.studentId?.toLowerCase() || inv.fromEmail?.toLowerCase() === me.email?.toLowerCase())
+  );
+
+  return { partner, incoming, outgoing };
+};
+
+export const localSendPartnerRequest = (fromStudent, targetStudentId) => {
+  if (!fromStudent || !targetStudentId) return { success: false, error: 'Student parameters missing.' };
+  const participants = getStoredParticipants();
+  const cleanTarget = targetStudentId.trim().toLowerCase();
+  const target = participants.find(p => 
+    (p.studentId && p.studentId.toLowerCase() === cleanTarget) ||
+    (p.email && p.email.toLowerCase() === cleanTarget)
+  );
+
+  if (!target) {
+    return { success: false, error: `Student with ID "${targetStudentId}" not found in registered contestants.` };
+  }
+
+  if (target.studentId?.toLowerCase() === fromStudent.studentId?.toLowerCase()) {
+    return { success: false, error: 'You cannot invite yourself.' };
+  }
+
+  if (target.partnerStudentId) {
+    return { success: false, error: `Student ${target.fullName} is already paired in another team.` };
+  }
+
+  const allInvites = getStoredPartnerInvites();
+  const existingPending = allInvites.find(inv => 
+    inv.status === 'Pending' && 
+    inv.fromStudentId?.toLowerCase() === fromStudent.studentId?.toLowerCase() &&
+    inv.toStudentId?.toLowerCase() === target.studentId?.toLowerCase()
+  );
+
+  if (existingPending) {
+    return { success: false, error: 'An invitation is already pending for this student.' };
+  }
+
+  const newInvite = {
+    id: `INV-${Date.now()}`,
+    fromId: fromStudent.id,
+    fromStudentId: fromStudent.studentId,
+    fromName: fromStudent.fullName,
+    fromEmail: fromStudent.email,
+    fromDepartment: fromStudent.degreeProgram || fromStudent.department || 'Software Engineering',
+    toId: target.id,
+    toStudentId: target.studentId,
+    toName: target.fullName,
+    toEmail: target.email,
+    sentDate: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+    status: 'Pending',
+    createdAt: new Date().toISOString()
+  };
+
+  saveStoredPartnerInvites([...allInvites, newInvite]);
+  return { success: true, message: `Invitation successfully sent to ${target.fullName}!`, invite: newInvite };
+};
+
+export const localRespondPartnerRequest = (requestId, action, currentStudent) => {
+  const allInvites = getStoredPartnerInvites();
+  const invite = allInvites.find(i => i.id === requestId);
+  if (!invite) return { success: false, error: 'Invitation not found.' };
+
+  if (action === 'accept') {
+    const participants = getStoredParticipants();
+    const teamId = `TEAM-${Date.now().toString().slice(-4)}`;
+
+    const updated = participants.map(p => {
+      if (p.studentId?.toLowerCase() === invite.fromStudentId?.toLowerCase()) {
+        return {
+          ...p,
+          partnerStudentId: invite.toStudentId,
+          partnerName: invite.toName,
+          partnerId: invite.toId,
+          teamId,
+        };
+      }
+      if (p.studentId?.toLowerCase() === invite.toStudentId?.toLowerCase()) {
+        return {
+          ...p,
+          partnerStudentId: invite.fromStudentId,
+          partnerName: invite.fromName,
+          partnerId: invite.fromId,
+          teamId,
+        };
+      }
+      return p;
+    });
+
+    localStorage.setItem(STORAGE_KEYS.PARTICIPANTS, JSON.stringify(updated));
+
+    // Update invite status
+    const updatedInvites = allInvites.map(i => i.id === requestId ? { ...i, status: 'Accepted' } : i);
+    saveStoredPartnerInvites(updatedInvites);
+
+    // Update current session if matching
+    const current = getLoggedInStudent();
+    if (current && (current.studentId?.toLowerCase() === invite.toStudentId?.toLowerCase() || current.studentId?.toLowerCase() === invite.fromStudentId?.toLowerCase())) {
+      const isSender = current.studentId?.toLowerCase() === invite.fromStudentId?.toLowerCase();
+      const meUpdated = {
+        ...current,
+        partnerStudentId: isSender ? invite.toStudentId : invite.fromStudentId,
+        partnerName: isSender ? invite.toName : invite.fromName,
+        partnerId: isSender ? invite.toId : invite.fromId,
+        teamId,
+      };
+      setLoggedInStudent(meUpdated);
+    }
+
+    return { success: true, message: `Successfully formed team with ${invite.fromName}!` };
+  } else {
+    // Decline
+    const updatedInvites = allInvites.map(i => i.id === requestId ? { ...i, status: 'Declined' } : i);
+    saveStoredPartnerInvites(updatedInvites);
+    return { success: true, message: 'Invitation declined.' };
+  }
+};
+
+export const localCancelPartnerRequest = (requestId) => {
+  const allInvites = getStoredPartnerInvites();
+  const filtered = allInvites.filter(i => i.id !== requestId);
+  saveStoredPartnerInvites(filtered);
+  return { success: true, message: 'Invitation cancelled.' };
+};
+
+export const localUnpairPartner = (studentId) => {
+  const participants = getStoredParticipants();
+  const cleanId = studentId?.toLowerCase();
+  const me = participants.find(p => p.studentId?.toLowerCase() === cleanId);
+  const partnerId = me?.partnerStudentId?.toLowerCase();
+
+  const updated = participants.map(p => {
+    if (p.studentId?.toLowerCase() === cleanId || (partnerId && p.studentId?.toLowerCase() === partnerId)) {
+      const copy = { ...p };
+      delete copy.partnerStudentId;
+      delete copy.partnerName;
+      delete copy.partnerId;
+      delete copy.teamId;
+      return copy;
+    }
+    return p;
+  });
+
+  localStorage.setItem(STORAGE_KEYS.PARTICIPANTS, JSON.stringify(updated));
+  const current = getLoggedInStudent();
+  if (current) {
+    const copy = { ...current };
+    delete copy.partnerStudentId;
+    delete copy.partnerName;
+    delete copy.partnerId;
+    delete copy.teamId;
+    setLoggedInStudent(copy);
+  }
+  return { success: true, message: 'Successfully left the team.' };
+};

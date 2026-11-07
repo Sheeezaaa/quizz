@@ -25,6 +25,7 @@ import {
   BookOpen, 
   Award, 
   ChevronRight, 
+  ChevronLeft,
   ShieldAlert, 
   AlertTriangle, 
   Maximize2, 
@@ -33,7 +34,13 @@ import {
   UserPlus,
   UserCheck,
   Send,
-  Check
+  Check,
+  LayoutDashboard,
+  Menu,
+  GraduationCap,
+  Building2,
+  ExternalLink,
+  Crown
 } from 'lucide-react';
 import { 
   apiStudentLogin, 
@@ -57,7 +64,7 @@ import {
   setStudentAuthToken,
   getStudentAuthToken
 } from '../utils/api';
-import { getLoggedInStudent, setLoggedInStudent } from '../utils/storage';
+import { getLoggedInStudent, setLoggedInStudent, getStoredParticipants } from '../utils/storage';
 import { playCorrectChime, playAntiCheatBuzzer, playDisqualificationSiren } from '../utils/soundEffects';
 
 export default function StudentPortal({ 
@@ -67,6 +74,9 @@ export default function StudentPortal({
 }) {
   const [currentUser, setCurrentUser] = useState(() => getLoggedInStudent());
   const [authMode, setAuthMode] = useState('login'); // 'login', 'forgot'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'team', 'quiz', 'announcements', 'rules', 'admit'
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // Login Form States
   const [identifier, setIdentifier] = useState('');
@@ -95,6 +105,7 @@ export default function StudentPortal({
   const [selectedPartnerOption, setSelectedPartnerOption] = useState('');
   const [isPartnerLoading, setIsPartnerLoading] = useState(false);
   const [partnerFeedback, setPartnerFeedback] = useState({ message: '', isError: false });
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // Active Quiz Attempt Engine States
   const [activeQuizAttempt, setActiveQuizAttempt] = useState(null);
@@ -140,7 +151,6 @@ export default function StudentPortal({
     setViolationReason(reason);
     setShowViolationModal(true);
 
-    // Report infraction live to Admin (Triggers Admin Siren & Alert with Student Name and Email)
     apiReportProctorInfraction(
       infractionType,
       reason,
@@ -166,19 +176,16 @@ export default function StudentPortal({
   useEffect(() => {
     if (!activeQuizAttempt || isDisqualified) return;
 
-    // 1. Detect Tab Switch (Visibility API)
     const handleVisibilityChange = () => {
       if (document.hidden) {
         recordAntiCheatViolation('Tab switched! Leaving the quiz tab to open another tab or browser is strictly forbidden.');
       }
     };
 
-    // 2. Detect Window Focus Loss (Clicking on another window/app/browser)
     const handleWindowBlur = () => {
       recordAntiCheatViolation('Window focus lost! Switching to another browser, window, or application is prohibited.');
     };
 
-    // 3. Detect Fullscreen Exit
     const handleFullscreenChange = () => {
       const inFull = !!document.fullscreenElement;
       setIsFullScreen(inFull);
@@ -187,7 +194,6 @@ export default function StudentPortal({
       }
     };
 
-    // 4. Block Navigation & DevTools Shortcuts
     const handleKeyDown = (e) => {
       if (e.key === 'F12') {
         e.preventDefault();
@@ -209,10 +215,7 @@ export default function StudentPortal({
       }
     };
 
-    // 5. Block Context Menu & Selection Copy
-    const handleContextMenu = (e) => {
-      e.preventDefault();
-    };
+    const handleContextMenu = (e) => e.preventDefault();
     const handleCopy = (e) => {
       e.preventDefault();
       recordAntiCheatViolation('Copying question text is prohibited.');
@@ -321,163 +324,78 @@ export default function StudentPortal({
     return () => clearInterval(interval);
   }, [isOpen, currentUser, activeQuizAttempt]);
 
-  // Send Partner Request
-  const handleSendPartnerRequest = async (e) => {
-    if (e) e.preventDefault();
-    const target = (targetPartnerInput.trim() || selectedPartnerOption).trim();
-    if (!target) {
-      setPartnerFeedback({ message: 'Please enter or select a partner Student ID / Email.', isError: true });
+  // Timer countdown for active quiz attempt
+  useEffect(() => {
+    if (!activeQuizAttempt || isDisqualified) return;
+
+    if (quizTimeRemaining <= 0) {
+      handleAutoAdvanceQuestion();
       return;
     }
 
-    setIsPartnerLoading(true);
-    setPartnerFeedback({ message: '', isError: false });
-    try {
-      const res = await apiSendPartnerRequest(target);
-      if (res.success) {
-        setPartnerFeedback({ message: res.message || 'Partner request sent successfully!', isError: false });
-        setTargetPartnerInput('');
-        setSelectedPartnerOption('');
-        await loadPartnerData();
-      } else {
-        setPartnerFeedback({ message: res.error || 'Failed to send partner request.', isError: true });
-      }
-    } catch (err) {
-      setPartnerFeedback({ message: err.message, isError: true });
-    } finally {
-      setIsPartnerLoading(false);
-    }
-  };
-
-  // Respond to Partner Request (Accept or Reject)
-  const handleRespondPartnerRequest = async (requestId, action) => {
-    setIsPartnerLoading(true);
-    setPartnerFeedback({ message: '', isError: false });
-    try {
-      const res = await apiRespondPartnerRequest(requestId, action);
-      if (res.success) {
-        setPartnerFeedback({ message: res.message, isError: false });
-        if (action === 'accept') {
-          try { playCorrectChime(); } catch {}
-        }
-        await loadPartnerData();
-        await loadStudentDashboardData();
-      } else {
-        setPartnerFeedback({ message: res.error || 'Failed to process request.', isError: true });
-      }
-    } catch (err) {
-      setPartnerFeedback({ message: err.message, isError: true });
-    } finally {
-      setIsPartnerLoading(false);
-    }
-  };
-
-  // Cancel Outgoing Partner Request
-  const handleCancelPartnerRequest = async (requestId) => {
-    setIsPartnerLoading(true);
-    setPartnerFeedback({ message: '', isError: false });
-    try {
-      const res = await apiCancelPartnerRequest(requestId);
-      if (res.success) {
-        setPartnerFeedback({ message: 'Partner request cancelled.', isError: false });
-        await loadPartnerData();
-      } else {
-        setPartnerFeedback({ message: res.error || 'Failed to cancel request.', isError: true });
-      }
-    } catch (err) {
-      setPartnerFeedback({ message: err.message, isError: true });
-    } finally {
-      setIsPartnerLoading(false);
-    }
-  };
-
-  // Unpair / Disband Team
-  const handleUnpairPartner = async () => {
-    if (!window.confirm('Are you sure you want to disband your partner team? Both members will return to individual status.')) return;
-    setIsPartnerLoading(true);
-    setPartnerFeedback({ message: '', isError: false });
-    try {
-      const res = await apiUnpairPartner();
-      if (res.success) {
-        setPartnerFeedback({ message: res.message || 'You have left the team.', isError: false });
-        await loadPartnerData();
-        await loadStudentDashboardData();
-      } else {
-        setPartnerFeedback({ message: res.error || 'Failed to leave team.', isError: true });
-      }
-    } catch (err) {
-      setPartnerFeedback({ message: err.message, isError: true });
-    } finally {
-      setIsPartnerLoading(false);
-    }
-  };
-
-  // Timer countdown for active quiz
-  useEffect(() => {
-    if (!activeQuizAttempt || activeQuizAttempt.status !== 'in_progress') return;
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const deadline = new Date(activeQuizAttempt.expiresAt).getTime();
-      const diffSeconds = Math.max(0, Math.floor((deadline - now) / 1000));
-
-      setQuizTimeRemaining(diffSeconds);
-
-      if (diffSeconds <= 0) {
-        clearInterval(interval);
-        handleAutoFinishAttempt();
-      }
+    const timer = setInterval(() => {
+      setQuizTimeRemaining((prev) => prev - 1);
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [activeQuizAttempt]);
+    return () => clearInterval(timer);
+  }, [activeQuizAttempt, quizTimeRemaining, isDisqualified]);
 
-  if (!isOpen) return null;
+  // One-click quick login for testing/demo
+  const handleQuickLogin = (demoStudentId, demoPassword = 'password123') => {
+    setIdentifier(demoStudentId);
+    setPassword(demoPassword);
+    setLoginError('');
+    setIsLoggingIn(true);
+    apiStudentLogin(demoStudentId, demoPassword).then((res) => {
+      setIsLoggingIn(false);
+      if (res.success && res.user) {
+        setCurrentUser(res.user);
+        setLoggedInStudent(res.user);
+        if (res.token) setStudentAuthToken(res.token);
+      } else {
+        // Fallback directly to storage
+        const all = getStoredParticipants();
+        const found = all.find(p => p.studentId === demoStudentId);
+        if (found) {
+          setCurrentUser(found);
+          setLoggedInStudent(found);
+        }
+      }
+    }).catch(() => {
+      setIsLoggingIn(false);
+      const all = getStoredParticipants();
+      const found = all.find(p => p.studentId === demoStudentId);
+      if (found) {
+        setCurrentUser(found);
+        setLoggedInStudent(found);
+      }
+    });
+  };
 
-  // Handle Login
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
     if (!identifier.trim() || !password) {
-      setLoginError('Student Registration ID / Email and password are required.');
+      setLoginError('Please enter both your Student Registration ID and account password.');
       return;
     }
 
     setIsLoggingIn(true);
     try {
       const res = await apiStudentLogin(identifier.trim(), password);
-      if (res.success && res.user) {
-        setCurrentUser(res.user);
-        setLoggedInStudent(res.user);
-        setIdentifier('');
-        setPassword('');
-      } else {
+      if (!res.success) {
         setLoginError(res.error || 'Invalid credentials.');
+        return;
       }
+      setCurrentUser(res.user);
+      setLoggedInStudent(res.user);
+      if (res.token) setStudentAuthToken(res.token);
+      setIdentifier('');
+      setPassword('');
     } catch (err) {
       setLoginError(err.message || 'Login connection failed.');
     } finally {
       setIsLoggingIn(false);
-    }
-  };
-
-  // Handle Reset Password
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    setResetMessage({ text: '', isError: false });
-    try {
-      const res = await apiStudentResetPassword(resetId, resetEmail, resetPass);
-      if (res.success) {
-        setResetMessage({ text: res.message, isError: false });
-        setTimeout(() => {
-          setAuthMode('login');
-          setResetMessage({ text: '', isError: false });
-        }, 2000);
-      } else {
-        setResetMessage({ text: res.error, isError: true });
-      }
-    } catch (err) {
-      setResetMessage({ text: err.message, isError: true });
     }
   };
 
@@ -486,86 +404,208 @@ export default function StudentPortal({
     setLoggedInStudent(null);
     setStudentAuthToken('');
     setStudentStatus(null);
+    setAnnouncements([]);
+    setNotifications([]);
+    setMyLeaderboardRank(null);
     setActiveQuizAttempt(null);
+    setPartnerData({ partner: null, incoming: [], outgoing: [] });
+    setActiveTab('overview');
   };
 
-  // Start Official Quiz Attempt
-  const handleStartQuiz = async (roundNumber = 1) => {
-    setQuizError('');
-    setQuizResultSummary(null);
-    setViolationCount(0);
-    setShowViolationModal(false);
-    setIsDisqualified(false);
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetMessage({ text: '', isError: false });
+    if (!resetId.trim() || !resetEmail.trim() || !resetPass.trim()) {
+      setResetMessage({ text: 'All fields are required.', isError: true });
+      return;
+    }
+    if (resetPass.length < 6) {
+      setResetMessage({ text: 'New password must be at least 6 characters.', isError: true });
+      return;
+    }
+
     try {
-      const res = await apiStartQuizAttempt(roundNumber);
-      if (res.success && res.attempt) {
-        setActiveQuizAttempt(res.attempt);
-        setCurrentQIndex(0);
-        setSelectedOption(null);
-        setQuizTimeRemaining(res.attempt.timeLimitSeconds || 30);
-        requestFullScreen();
-      } else {
-        setQuizError(res.error || 'Failed to start quiz attempt.');
+      const res = await apiStudentResetPassword(resetId.trim(), resetEmail.trim(), resetPass.trim());
+      if (!res.success) {
+        setResetMessage({ text: res.error || 'Password reset failed.', isError: true });
+        return;
       }
+      setResetMessage({ text: 'Password reset successfully! You can now log in.', isError: false });
+      setResetId('');
+      setResetEmail('');
+      setResetPass('');
+      setTimeout(() => {
+        setAuthMode('login');
+        setResetMessage({ text: '', isError: false });
+      }, 2000);
     } catch (err) {
-      setQuizError(err.message || 'Error initializing round attempt.');
+      setResetMessage({ text: err.message || 'Error connecting to reset service.', isError: true });
     }
   };
 
-  // Submit Answer to Active Question
+  // Partner Handlers
+  const handleSendPartnerRequest = async (e) => {
+    e?.preventDefault();
+    const targetId = targetPartnerInput.trim() || selectedPartnerOption;
+    if (!targetId) {
+      setPartnerFeedback({ message: 'Please select or type a student registration ID.', isError: true });
+      return;
+    }
+
+    setIsPartnerLoading(true);
+    setPartnerFeedback({ message: '', isError: false });
+    try {
+      const res = await apiSendPartnerRequest(targetId);
+      if (!res.success) {
+        setPartnerFeedback({ message: res.error || 'Could not send partner request.', isError: true });
+      } else {
+        setPartnerFeedback({ message: res.message || 'Partner request sent successfully!', isError: false });
+        setTargetPartnerInput('');
+        setSelectedPartnerOption('');
+        setShowInviteModal(false);
+        loadPartnerData();
+      }
+    } catch (err) {
+      setPartnerFeedback({ message: err.message || 'Error sending request.', isError: true });
+    } finally {
+      setIsPartnerLoading(false);
+    }
+  };
+
+  const handleRespondPartnerRequest = async (requestId, action) => {
+    setIsPartnerLoading(true);
+    setPartnerFeedback({ message: '', isError: false });
+    try {
+      const res = await apiRespondPartnerRequest(requestId, action);
+      if (!res.success) {
+        setPartnerFeedback({ message: res.error || 'Action failed.', isError: true });
+      } else {
+        setPartnerFeedback({ message: res.message || `Request ${action}ed!`, isError: false });
+        loadPartnerData();
+      }
+    } catch (err) {
+      setPartnerFeedback({ message: err.message || 'Error processing request.', isError: true });
+    } finally {
+      setIsPartnerLoading(false);
+    }
+  };
+
+  const handleCancelPartnerRequest = async (requestId) => {
+    setIsPartnerLoading(true);
+    try {
+      const res = await apiCancelPartnerRequest(requestId);
+      if (res.success) {
+        setPartnerFeedback({ message: 'Partner request cancelled.', isError: false });
+        loadPartnerData();
+      }
+    } catch {} finally {
+      setIsPartnerLoading(false);
+    }
+  };
+
+  const handleUnpairPartner = async () => {
+    if (!window.confirm('Are you sure you want to dissolve your competition team? Both participants will revert to individual solo status.')) return;
+    setIsPartnerLoading(true);
+    try {
+      const res = await apiUnpairPartner();
+      if (res.success) {
+        setPartnerFeedback({ message: 'Successfully separated team. You are now competing solo.', isError: false });
+        loadPartnerData();
+      }
+    } catch {} finally {
+      setIsPartnerLoading(false);
+    }
+  };
+
+  // Quiz Attempt Engine Handlers
+  const handleStartAttempt = async (roundNumber = 1) => {
+    setQuizError('');
+    setQuizResultSummary(null);
+    setViolationCount(0);
+    setIsDisqualified(false);
+    setShowViolationModal(false);
+
+    try {
+      const res = await apiStartQuizAttempt(roundNumber);
+      if (!res.success) {
+        setQuizError(res.error || 'Cannot start quiz round.');
+        return;
+      }
+      setActiveQuizAttempt(res.attempt);
+      setCurrentQIndex(0);
+      setSelectedOption(null);
+      setQuizTimeRemaining(res.attempt.timeLimitSeconds || 30);
+      requestFullScreen();
+    } catch (err) {
+      setQuizError(err.message || 'Server error starting round.');
+    }
+  };
+
+  const handleSelectOption = (idx) => {
+    if (isSubmittingAnswer) return;
+    setSelectedOption(idx);
+  };
+
   const handleSubmitAnswer = async () => {
-    if (!activeQuizAttempt || selectedOption === null) return;
+    if (selectedOption === null || !activeQuizAttempt || isSubmittingAnswer) return;
     const currentQ = activeQuizAttempt.questions[currentQIndex];
     if (!currentQ) return;
 
     setIsSubmittingAnswer(true);
     try {
-      const res = await apiSubmitQuizAnswer(activeQuizAttempt.id, currentQ.id, selectedOption);
-      if (res.success) {
-        playCorrectChime();
-        if (res.isFinished || currentQIndex + 1 >= activeQuizAttempt.questions.length) {
-          // Attempt finalized
-          exitFullScreen();
-          setQuizResultSummary({
-            score: res.currentScore,
-            totalQuestions: activeQuizAttempt.questions.length,
-          });
-          setActiveQuizAttempt(null);
-          loadStudentDashboardData();
-        } else {
-          // Advance to next question
-          setCurrentQIndex((prev) => prev + 1);
-          setSelectedOption(null);
-        }
-      } else {
-        setQuizError(res.error || 'Answer submission failed.');
+      const res = await apiSubmitQuizAnswer(
+        activeQuizAttempt.id,
+        currentQ.id,
+        selectedOption,
+        (activeQuizAttempt.timeLimitSeconds || 30) - quizTimeRemaining
+      );
+
+      if (res.isCorrect) {
+        try { playCorrectChime(); } catch {}
       }
+
+      advanceToNextQuestionOrFinish();
     } catch (err) {
-      setQuizError(err.message || 'Submission error.');
+      advanceToNextQuestionOrFinish();
     } finally {
       setIsSubmittingAnswer(false);
     }
   };
 
-  // Skip Question
   const handleSkipQuestion = async () => {
-    if (!activeQuizAttempt) return;
+    if (!activeQuizAttempt || isSubmittingAnswer) return;
     const currentQ = activeQuizAttempt.questions[currentQIndex];
     if (!currentQ) return;
 
+    setIsSubmittingAnswer(true);
     try {
       await apiSkipQuizQuestion(activeQuizAttempt.id, currentQ.id);
-      if (currentQIndex + 1 >= activeQuizAttempt.questions.length) {
-        handleAutoFinishAttempt();
-      } else {
-        setCurrentQIndex((prev) => prev + 1);
-        setSelectedOption(null);
-      }
-    } catch {}
+      advanceToNextQuestionOrFinish();
+    } catch {
+      advanceToNextQuestionOrFinish();
+    } finally {
+      setIsSubmittingAnswer(false);
+    }
   };
 
-  // Auto Finish Attempt on Timer Expiry or Disqualification
-  const handleAutoFinishAttempt = async (disqualified = false) => {
+  const handleAutoAdvanceQuestion = () => {
+    if (!activeQuizAttempt) return;
+    handleSkipQuestion();
+  };
+
+  const advanceToNextQuestionOrFinish = () => {
+    if (!activeQuizAttempt) return;
+    setSelectedOption(null);
+
+    if (currentQIndex + 1 < activeQuizAttempt.questions.length) {
+      setCurrentQIndex((prev) => prev + 1);
+      setQuizTimeRemaining(activeQuizAttempt.timeLimitSeconds || 30);
+    } else {
+      handleFinishAttempt(false);
+    }
+  };
+
+  const handleFinishAttempt = async (disqualified = false) => {
     if (!activeQuizAttempt) return;
     exitFullScreen();
     try {
@@ -580,990 +620,1254 @@ export default function StudentPortal({
     } catch {}
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleAutoFinishAttempt = (disqualified = true) => {
+    handleFinishAttempt(disqualified);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn">
-      <div className="bg-[#0b1020] border border-blue-500/40 w-full max-w-4xl max-h-[92vh] rounded-2xl flex flex-col relative shadow-2xl overflow-hidden">
+  if (!isOpen) return null;
+
+  // Navigation Tabs for Student Dashboard
+  const enrolledCount = partnerData.partner ? '2/2' : '1/2';
+  const navTabs = [
+    { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null },
+    { id: 'team', label: 'My Group & Team', icon: Users, badge: enrolledCount },
+    { id: 'quiz', label: 'Quiz Arena (Exam)', icon: Zap, badge: 'Live' },
+    { id: 'announcements', label: 'Announcements', icon: Bell, badge: announcements.length ? `${announcements.length}` : null },
+    { id: 'rules', label: 'Rules & Conduct', icon: BookOpen, badge: null },
+    { id: 'admit', label: 'My Admit Pass', icon: Printer, badge: null },
+  ];
+
+  /* =========================================================================
+     SCREEN 1: FULL SCREEN PROPER DEDICATED STUDENT LOGIN
+     ========================================================================= */
+  if (!currentUser) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col justify-between overflow-y-auto min-h-screen bg-[#070b14] text-slate-100 font-sans transition-colors animate-fadeIn">
         
-        {/* Top Header */}
-        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-black/60 shrink-0">
+        {/* Ambient Top Glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(37,99,235,0.25),rgba(255,255,255,0))] pointer-events-none" />
+
+        {/* Top Minimal Bar */}
+        <header className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-              <IdCard className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/10">
+              <GraduationCap className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-heading font-black text-white flex items-center gap-2">
-                <span>Contestant Dashboard</span>
-                {currentUser && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                    {currentUser.id}
-                  </span>
+              <div className="flex items-center gap-2">
+                <span className="font-heading font-black text-lg tracking-tight text-blue-500">BATTLE</span>
+                <span className="font-heading font-black text-lg tracking-tight text-white">OF BRAINS</span>
+                <span className="text-[10px] uppercase tracking-widest font-mono bg-blue-500/15 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-bold">
+                  STUDENT PORTAL
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">Department of Computer Science • COMSATS University Islamabad</p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border-slate-700/60 transition-all cursor-pointer shadow-sm"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Return to Public Website</span>
+          </button>
+        </header>
+
+        {/* Centered Login Box */}
+        <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
+          <div className="w-full max-w-md rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden bg-slate-900/90 border border-blue-500/30 shadow-blue-950/60 backdrop-blur-xl">
+            
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600/30 via-indigo-600/20 to-cyan-500/30 border border-blue-500/40 flex items-center justify-center text-blue-400 mx-auto mb-3 shadow-xl shadow-blue-600/20">
+                <IdCard className="w-8 h-8" />
+              </div>
+
+              <h2 className="text-2xl sm:text-3xl font-heading font-black tracking-tight text-white">
+                Contestant Sign In
+              </h2>
+              <p className="text-xs mt-1.5 text-slate-400 max-w-xs mx-auto leading-relaxed">
+                Log in to your authorized contestant dashboard, form teams, and access live examination arenas.
+              </p>
+            </div>
+
+            {/* Quick Demo Access Pills */}
+            <div className="mb-5 p-3 rounded-2xl bg-blue-950/40 border border-blue-500/30 text-xs">
+              <div className="text-[11px] font-mono text-blue-400 font-semibold mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>One-Click Quick Login (Demo):</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('SP24-BSE-043')}
+                  className="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/40 text-blue-300 text-[11px] font-bold truncate transition-colors text-left"
+                  title="Login as Sheeza Rasheed"
+                >
+                  👑 Sheeza (BSE-043)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('SP24-BSE-029')}
+                  className="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold truncate transition-colors text-left"
+                  title="Login as Yameena Murtaza"
+                >
+                  👤 Yameena (BSE-029)
+                </button>
+              </div>
+            </div>
+
+            {loginError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-fadeIn">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            {authMode === 'login' ? (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Student Registration ID or Email</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="e.g. SP24-BSE-043"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm font-medium focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Account Password</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode('forgot')}
+                      className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      Forgot?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-4 pr-11 py-3 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm font-medium focus:border-blue-500 focus:outline-none transition-all pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoggingIn}
+                  className="w-full mt-2 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-sm shadow-lg shadow-blue-600/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>{isLoggingIn ? 'Authenticating...' : 'Sign In to Student Dashboard'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+            ) : (
+              /* Forgot Password Form */
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                {resetMessage.text && (
+                  <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                    resetMessage.isError ? 'bg-rose-500/15 border border-rose-500/30 text-rose-300' : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                  }`}>
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{resetMessage.text}</span>
+                  </div>
                 )}
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                {currentUser ? `Enrolled: ${currentUser.fullName} (${currentUser.studentId})` : 'Individual Student Authentication & Tournament Arena'}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Student Registration ID</label>
+                  <input
+                    type="text"
+                    value={resetId}
+                    onChange={(e) => setResetId(e.target.value)}
+                    placeholder="e.g. SP24-BSE-043"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Registered University Email</label>
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="e.g. sheezar86@gmail.com"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">New Strong Password</label>
+                  <input
+                    type="password"
+                    value={resetPass}
+                    onChange={(e) => setResetPass(e.target.value)}
+                    placeholder="Min 6 characters"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('login')}
+                    className="w-1/2 py-2.5 rounded-xl bg-white/10 text-slate-300 text-xs font-bold hover:bg-white/20"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="w-1/2 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-500"
+                  >
+                    Save Password
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <div className="mt-6 pt-5 border-t border-slate-800 text-center">
+              <p className="text-xs text-slate-400">
+                Not registered yet?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenRegister && onOpenRegister();
+                  }}
+                  className="text-blue-400 hover:text-blue-300 font-bold underline cursor-pointer"
+                >
+                  Register Solo Now
+                </button>
               </p>
             </div>
           </div>
+        </main>
 
-          <div className="flex items-center gap-2">
-            {currentUser && (
-              <button
-                onClick={handleLogout}
-                className="px-3 py-1.5 rounded-lg text-xs font-heading font-semibold text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 flex items-center gap-1.5 transition-colors cursor-pointer"
-                title="Log Out Contestant"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer"
-              aria-label="Close Portal"
-            >
-              <X className="w-5 h-5" />
-            </button>
+        <footer className="relative z-10 w-full py-4 px-6 border-t border-slate-800/80 text-center text-xs text-slate-500">
+          COMSATS University Islamabad • Official Computing Championship 2026 • Student Portal
+        </footer>
+      </div>
+    );
+  }
+
+  /* =========================================================================
+     SCREEN 2: PROPER FULL-SCREEN STUDENT DASHBOARD (MATCHING ADMIN DASHBOARD)
+     ========================================================================= */
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col h-screen w-screen overflow-hidden font-sans bg-[#070b14] text-slate-100 transition-colors animate-fadeIn">
+      
+      {/* 1. TOP GLOBAL NAVIGATION BAR */}
+      <header className="h-16 border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 bg-[#0b1120]/95 text-white shadow-lg">
+        
+        {/* Left: Branding & Mobile/Desktop Collapse */}
+        <div className="flex items-center gap-3 sm:gap-4">
+          <button
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="md:hidden p-2 rounded-lg bg-slate-800 text-slate-300"
+            aria-label="Toggle Navigation Sidebar"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="hidden md:flex p-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer"
+            title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-600/30">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-heading font-black text-base tracking-tight text-blue-500">BATTLE</span>
+                <span className="font-heading font-black text-base tracking-tight text-white">OF BRAINS</span>
+                <span className="hidden sm:inline-block text-[10px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded">
+                  STUDENT PORTAL
+                </span>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Enrolled: {currentUser.fullName} ({currentUser.studentId})</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Scrollable Modal Content */}
-        <div className="p-5 sm:p-7 overflow-y-auto flex-1 space-y-6">
+        {/* Center: Live Enrolled Team Badge */}
+        <div className="hidden lg:flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-900 text-slate-300 text-xs font-mono">
+            <Users className="w-3.5 h-3.5 text-blue-400" />
+            <span>Group Status: <strong className={partnerData.partner ? 'text-emerald-400' : 'text-blue-400'}>
+              {partnerData.partner ? '2 of 2 Enrolled (Paired)' : '1 of 2 Enrolled (Solo)'}
+            </strong></span>
+          </div>
+        </div>
 
-          {/* ======================================================== */}
-          {/* SECTION 1: AUTHENTICATION (IF NOT LOGGED IN) */}
-          {/* ======================================================== */}
-          {!currentUser ? (
-            <div className="max-w-md mx-auto py-6">
-              
-              {authMode === 'login' ? (
-                <div>
-                  <div className="text-center mb-6">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 mx-auto mb-3">
-                      <Lock className="w-6 h-6" />
-                    </div>
-                    <h4 className="text-xl font-heading font-bold text-white">
-                      Contestant Portal Login
-                    </h4>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Enter your Student Registration ID and account password to enter your tournament console.
-                    </p>
-                  </div>
+        {/* Right Action Buttons */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          
+          <button
+            onClick={() => setShowPassModal(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 transition-all cursor-pointer"
+            title="View Official Admit Card Pass"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Admit Card Pass</span>
+          </button>
 
-                  {loginError && (
-                    <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                      <span>{loginError}</span>
-                    </div>
-                  )}
+          <button
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-700/80 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 transition-all cursor-pointer"
+            title="Return to Public Website"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden md:inline">Public Website</span>
+          </button>
 
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-heading font-semibold text-slate-300 mb-1.5">
-                        Student Registration ID or Email
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. FA21-BCS-042"
-                        value={identifier}
-                        onChange={(e) => setIdentifier(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/15 text-white text-sm font-medium focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-heading font-semibold text-slate-300">
-                          Password
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setAuthMode('forgot')}
-                          className="text-[11px] text-blue-400 hover:text-blue-300"
-                        >
-                          Forgot Password?
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/15 text-white text-sm font-medium focus:border-blue-500 focus:outline-none pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isLoggingIn}
-                      className="w-full py-3 rounded-xl bg-[#2563eb] hover:bg-blue-600 text-white font-heading font-bold text-sm shadow-lg hover:shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      {isLoggingIn ? <span>Authenticating...</span> : <span>Login to Dashboard</span>}
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </form>
-
-                  <div className="mt-6 pt-5 border-t border-white/10 text-center">
-                    <p className="text-xs text-slate-400">
-                      Not registered yet for the 2026 Championship?{' '}
-                      <button
-                        onClick={() => {
-                          onClose();
-                          onOpenRegister && onOpenRegister();
-                        }}
-                        className="text-blue-400 hover:text-blue-300 font-bold underline"
-                      >
-                        Register Solo Now
-                      </button>
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                /* FORGOT PASSWORD FORM */
-                <div>
-                  <div className="text-center mb-6">
-                    <h4 className="text-xl font-heading font-bold text-white">
-                      Reset Contestant Password
-                    </h4>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Verify your Student Registration ID and registered university email to set a new password.
-                    </p>
-                  </div>
-
-                  {resetMessage.text && (
-                    <div className={`mb-4 p-3 rounded-xl text-xs flex items-center gap-2 ${
-                      resetMessage.isError 
-                        ? 'bg-rose-500/15 border border-rose-500/30 text-rose-300' 
-                        : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
-                    }`}>
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{resetMessage.text}</span>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleResetPassword} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-heading font-semibold text-slate-300 mb-1">
-                        Student Registration ID
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. FA21-BCS-042"
-                        value={resetId}
-                        onChange={(e) => setResetId(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-black/50 border border-white/15 text-white text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-heading font-semibold text-slate-300 mb-1">
-                        Registered University Email
-                      </label>
-                      <input
-                        type="email"
-                        placeholder="e.g. hamza@student.comsats.edu.pk"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-black/50 border border-white/15 text-white text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-heading font-semibold text-slate-300 mb-1">
-                        New Password (min 6 characters)
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="New strong password"
-                        value={resetPass}
-                        onChange={(e) => setResetPass(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-black/50 border border-white/15 text-white text-sm"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setAuthMode('login')}
-                        className="px-4 py-2.5 rounded-xl bg-white/10 text-slate-300 text-xs font-heading font-semibold hover:bg-white/20"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-6 py-2.5 rounded-xl bg-[#2563eb] text-white text-xs font-heading font-bold hover:bg-blue-600"
-                      >
-                        Update Password
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
+          {/* User Profile Pill */}
+          <div className="hidden xl:flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/80 text-xs">
+            <div className="w-6 h-6 rounded-full bg-blue-600/30 text-blue-400 font-bold flex items-center justify-center text-[10px] border border-blue-500/40">
+              {currentUser.fullName ? currentUser.fullName.slice(0, 2).toUpperCase() : 'ST'}
             </div>
-          ) : (
-            /* ======================================================== */
-            /* SECTION 2: CONTESTANT DASHBOARD (LOGGED IN) */
-            /* ======================================================== */
-            <div className="space-y-6">
+            <div className="text-left">
+              <div className="font-bold leading-tight text-white">{currentUser.fullName}</div>
+              <div className="text-[10px] text-slate-400 leading-tight font-mono">{currentUser.studentId}</div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Sign Out of Student Portal"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+        </div>
+      </header>
+
+      {/* 2. MAIN BODY (SIDEBAR + CONTENT VIEWPORT) */}
+      <div className="flex-1 flex overflow-hidden relative">
+
+        {/* LEFT SIDEBAR NAVIGATION */}
+        <aside className={`
+          fixed md:relative inset-y-0 left-0 z-40 md:z-10
+          ${isSidebarCollapsed ? 'w-20' : 'w-64'}
+          border-r border-slate-800 bg-[#090f1d] text-slate-400 flex flex-col shrink-0
+          transition-all duration-300 ease-in-out
+          ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
+          <div className="p-4 flex-1 overflow-y-auto space-y-1">
+            <div className="text-[10px] font-heading font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">
+              {isSidebarCollapsed ? '•••' : 'Student Navigation'}
+            </div>
+
+            {navTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-xs font-heading font-bold transition-all cursor-pointer ${
+                    isActive 
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                  title={tab.label}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  {!isSidebarCollapsed && (
+                    <span className="flex-1 text-left truncate">{tab.label}</span>
+                  )}
+                  {!isSidebarCollapsed && tab.badge && (
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                      isActive ? 'bg-black/30 text-white' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                    }`}>
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sidebar Footer info */}
+          {!isSidebarCollapsed && (
+            <div className="p-4 border-t border-slate-800/80 text-[11px] text-slate-500">
+              <div className="font-bold text-slate-300">Department of CS</div>
+              <div>COMSATS University Islamabad</div>
+            </div>
+          )}
+        </aside>
+
+        {/* 3. MAIN DASHBOARD CONTENT AREA */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#070b14] space-y-6">
+
+          {/* ======================================================== */}
+          {/* TAB 1: DASHBOARD OVERVIEW */}
+          {/* ======================================================== */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6 max-w-6xl mx-auto animate-fadeIn">
               
-              {/* Top Metrics Row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                
-                <div className="p-4 rounded-xl bg-black/40 border border-white/10">
-                  <div className="text-[11px] font-heading font-semibold text-slate-400">
-                    Registration Status
+              {/* Welcome Banner */}
+              <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/40 border border-blue-500/30 relative overflow-hidden shadow-2xl">
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 mb-3">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>COMSATS Computing Championship 2026</span>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-heading font-black text-white">
+                      Welcome, {currentUser.fullName}!
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
+                      Student ID: <span className="font-mono text-blue-400 font-bold">{currentUser.studentId}</span> • {currentUser.degreeProgram || currentUser.department} ({currentUser.semester || '4th Semester'})
+                    </p>
                   </div>
-                  <div className="text-sm font-heading font-bold text-emerald-400 flex items-center gap-1.5 mt-1">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>{currentUser.registrationStatus || 'Approved'}</span>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => setActiveTab('team')}
+                      className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>Manage My Group ({enrolledCount})</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('quiz')}
+                      className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
+                    >
+                      <Zap className="w-4 h-4" />
+                      <span>Open Quiz Arena</span>
+                    </button>
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">Ref: {currentUser.id}</div>
+                </div>
+              </div>
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                  <div className="text-xs font-heading font-semibold text-slate-400">Registration Status</div>
+                  <div className="text-base font-heading font-black text-emerald-400 flex items-center gap-1.5 mt-2">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>Verified Active</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-mono mt-1">Pass Ref: {currentUser.id}</div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-black/40 border border-white/10">
-                  <div className="text-[11px] font-heading font-semibold text-slate-400">
-                    Tournament Points
+                <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                  <div className="text-xs font-heading font-semibold text-slate-400">Team Enrollment</div>
+                  <div className="text-base font-heading font-black text-blue-400 flex items-center gap-1.5 mt-2">
+                    <Users className="w-5 h-5" />
+                    <span>{partnerData.partner ? '2 of 2 Enrolled' : '1 of 2 Enrolled'}</span>
                   </div>
-                  <div className="text-xl font-heading font-black text-blue-400 mt-0.5">
-                    {studentStatus?.totalScore || 0} <span className="text-xs text-slate-400 font-normal">pts</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500">Verified server tally</div>
+                  <div className="text-[11px] text-slate-500 mt-1">{partnerData.partner ? `With ${partnerData.partner.fullName}` : 'Teammate slot open'}</div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-black/40 border border-white/10">
-                  <div className="text-[11px] font-heading font-semibold text-slate-400">
-                    Leaderboard Rank
+                <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                  <div className="text-xs font-heading font-semibold text-slate-400">Tournament Points</div>
+                  <div className="text-2xl font-heading font-black text-amber-400 mt-1">
+                    {studentStatus?.totalScore || 0} <span className="text-xs text-slate-500 font-normal">pts</span>
                   </div>
-                  <div className="text-xl font-heading font-black text-amber-400 mt-0.5 flex items-center gap-1">
-                    <Trophy className="w-4 h-4 text-amber-400" />
-                    <span>{myLeaderboardRank ? `#${myLeaderboardRank}` : '--'}</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500">Across all contenders</div>
+                  <div className="text-[11px] text-slate-500 mt-1">Official Leaderboard Tally</div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-black/40 border border-white/10">
-                  <div className="text-[11px] font-heading font-semibold text-slate-400">
-                    Admit Card Pass
-                  </div>
+                <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                  <div className="text-xs font-heading font-semibold text-slate-400">Official Admit Pass</div>
                   <button
                     onClick={() => setShowPassModal(true)}
-                    className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-heading font-bold text-blue-400 hover:text-blue-300"
+                    className="mt-2 text-xs font-heading font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Printer className="w-3.5 h-3.5" />
+                    <Printer className="w-4 h-4" />
                     <span>View / Print Pass</span>
                   </button>
-                  <div className="text-[10px] text-slate-500">Official Exam Admit</div>
+                  <div className="text-[11px] text-slate-500 mt-1">Exam Hall Clearance</div>
                 </div>
-
               </div>
 
-              {/* ======================================================== */}
-              {/* SECTION: TEAM & PARTNER PAIRING (REQUEST & ACCEPTANCE) */}
-              {/* ======================================================== */}
-              <div className="rounded-2xl border transition-all overflow-hidden bg-gradient-to-br from-[#0c1426] via-[#090f1d] to-[#060a14] p-5 sm:p-6 shadow-xl border-blue-500/30">
-                
-                {/* Section Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
-                      partnerData.partner 
-                        ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400' 
-                        : 'bg-blue-600/20 border-blue-500/40 text-blue-400'
-                    }`}>
-                      {partnerData.partner ? <Users className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
-                    </div>
-                    <div>
-                      <h4 className="text-base font-heading font-bold text-white flex items-center gap-2">
-                        <span>Partner & Team Member Hub</span>
-                        {partnerData.partner ? (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                            Team Paired
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                            Solo • Pairing Available
-                          </span>
-                        )}
-                      </h4>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {partnerData.partner 
-                          ? 'You are officially teamed up with your partner for the championship.' 
-                          : 'Pair up with a partner: send a request or accept incoming partner requests.'}
-                      </p>
-                    </div>
+              {/* Tournament Schedule Card */}
+              <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+                    <Calendar className="w-6 h-6" />
                   </div>
-
-                  {partnerData.partner && (
-                    <button
-                      type="button"
-                      onClick={handleUnpairPartner}
-                      disabled={isPartnerLoading}
-                      className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>Leave Team</span>
-                    </button>
-                  )}
+                  <div>
+                    <h4 className="font-heading font-bold text-white text-base">Grand Championship: November 20, 2026</h4>
+                    <p className="text-xs text-slate-400 mt-0.5">Venue: Main University Auditorium & CS Computing Complex, COMSATS Islamabad</p>
+                  </div>
                 </div>
-
-                {/* Inline Feedback Banner */}
-                {partnerFeedback.message && (
-                  <div className={`mt-4 p-3 rounded-xl text-xs flex items-center justify-between gap-2 animate-fadeIn ${
-                    partnerFeedback.isError
-                      ? 'bg-rose-500/15 border border-rose-500/30 text-rose-300'
-                      : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      {partnerFeedback.isError ? (
-                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                      )}
-                      <span>{partnerFeedback.message}</span>
-                    </div>
-                    <button
-                      onClick={() => setPartnerFeedback({ message: '', isError: false })}
-                      className="text-slate-400 hover:text-white p-1"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-
-                {/* PARTNER CONTENT: CASE 1 — ALREADY PAIRED */}
-                {partnerData.partner ? (
-                  <div className="mt-4 p-4 sm:p-5 rounded-xl bg-gradient-to-r from-emerald-950/30 via-slate-900/40 to-emerald-950/20 border border-emerald-500/30">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider font-semibold">
-                          Official Team Partner
-                        </div>
-                        <h5 className="text-lg font-heading font-black text-white flex items-center gap-2">
-                          <span>{partnerData.partner.fullName}</span>
-                          <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                            {partnerData.partner.studentId}
-                          </span>
-                        </h5>
-                        <p className="text-xs text-slate-300">
-                          {partnerData.partner.department} • {partnerData.partner.email}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-3 text-xs">
-                        {partnerData.partner.teamId && (
-                          <div className="px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-slate-400">
-                            Team Ref: <span className="font-mono text-emerald-300 font-bold">{partnerData.partner.teamId}</span>
-                          </div>
-                        )}
-                        <div className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Team Members Linked</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* PARTNER CONTENT: CASE 2 — NOT PAIRED */
-                  <div className="mt-4 space-y-4">
-                    
-                    {/* INCOMING REQUESTS BOX */}
-                    {partnerData.incoming && partnerData.incoming.length > 0 && (
-                      <div className="space-y-2.5">
-                        <div className="text-xs font-heading font-bold text-amber-300 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-                          <span>Incoming Partner Requests ({partnerData.incoming.length})</span>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          {partnerData.incoming.map((req) => (
-                            <div
-                              key={req.id}
-                              className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn"
-                            >
-                              <div className="space-y-0.5">
-                                <div className="text-xs font-bold text-white flex items-center gap-2">
-                                  <span>{req.fromName}</span>
-                                  <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                    {req.fromStudentId}
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-slate-400">
-                                  {req.fromDepartment || 'Computing'} • Wants to partner with you for the tournament!
-                                </p>
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRespondPartnerRequest(req.id, 'accept')}
-                                  disabled={isPartnerLoading}
-                                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950 transition-all cursor-pointer disabled:opacity-50"
-                                >
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>Accept Request</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRespondPartnerRequest(req.id, 'reject')}
-                                  disabled={isPartnerLoading}
-                                  className="px-3 py-2 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/30 text-slate-400 hover:text-rose-300 font-heading text-xs transition-colors cursor-pointer disabled:opacity-50"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                  <span>Decline</span>
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* OUTGOING PENDING REQUEST */}
-                    {partnerData.outgoing && partnerData.outgoing.length > 0 && (
-                      <div className="p-3.5 rounded-xl bg-blue-950/30 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <Clock className="w-4 h-4 text-amber-400 animate-spin shrink-0" style={{ animationDuration: '4s' }} />
-                          <div className="text-xs">
-                            <span className="text-slate-300">Partner Request Pending: </span>
-                            <strong className="text-white">{partnerData.outgoing[0].toName}</strong>
-                            <span className="text-blue-300 font-mono ml-1.5 text-[11px]">
-                              ({partnerData.outgoing[0].toStudentId})
-                            </span>
-                            <span className="text-slate-400 text-[11px] block sm:inline sm:ml-2">
-                              • Awaiting their acceptance
-                            </span>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleCancelPartnerRequest(partnerData.outgoing[0].id)}
-                          disabled={isPartnerLoading}
-                          className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-rose-500/20 border border-white/15 hover:border-rose-500/40 text-slate-300 hover:text-rose-300 text-xs font-semibold transition-colors cursor-pointer self-start sm:self-auto"
-                        >
-                          Cancel Request
-                        </button>
-                      </div>
-                    )}
-
-                    {/* SEND PARTNER REQUEST FORM */}
-                    {(!partnerData.outgoing || partnerData.outgoing.length === 0) && (
-                      <form onSubmit={handleSendPartnerRequest} className="space-y-3 pt-1">
-                        <div className="text-xs font-heading font-semibold text-slate-300">
-                          Send Partner Request to a Registered Member:
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-                          {/* Quick Select from Available Contenders */}
-                          <div className="sm:col-span-6">
-                            <select
-                              value={selectedPartnerOption}
-                              onChange={(e) => {
-                                setSelectedPartnerOption(e.target.value);
-                                if (e.target.value) setTargetPartnerInput('');
-                              }}
-                              className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/15 text-white text-xs font-medium focus:border-blue-500 focus:outline-none"
-                            >
-                              <option value="">-- Choose from Available Students ({availablePartners.length}) --</option>
-                              {availablePartners.map((cand) => (
-                                <option key={cand.id} value={cand.studentId}>
-                                  {cand.fullName} ({cand.studentId}) — {cand.department}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Or Type Student ID / Email */}
-                          <div className="sm:col-span-4">
-                            <input
-                              type="text"
-                              placeholder="Or type Student ID / Email"
-                              value={targetPartnerInput}
-                              onChange={(e) => {
-                                setTargetPartnerInput(e.target.value);
-                                if (e.target.value) setSelectedPartnerOption('');
-                              }}
-                              className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/15 text-white text-xs font-medium focus:border-blue-500 focus:outline-none"
-                            />
-                          </div>
-
-                          {/* Submit Button */}
-                          <div className="sm:col-span-2">
-                            <button
-                              type="submit"
-                              disabled={isPartnerLoading || (!targetPartnerInput.trim() && !selectedPartnerOption)}
-                              className="w-full py-2.5 px-3 rounded-xl bg-[#2563eb] hover:bg-blue-600 text-white font-heading font-bold text-xs shadow-lg hover:shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              <span>{isPartnerLoading ? 'Sending...' : 'Send'}</span>
-                            </button>
-                          </div>
-                        </div>
-
-                        <p className="text-[11px] text-slate-400">
-                          Tip: Once your partner accepts your request (or you accept theirs), you both become verified team members.
-                        </p>
-                      </form>
-                    )}
-
-                  </div>
-                )}
-
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono px-3 py-1.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                    Stage 01: Screening (MCQs)
+                  </span>
+                </div>
               </div>
+            </div>
+          )}
 
-              {/* ACTIVE QUIZ ARENA OR ACTIVE ROUND ACTION */}
-              {activeQuizAttempt ? (
-                /* LIVE QUIZ ATTEMPT INTERFACE */
-                <div className="p-5 sm:p-7 rounded-2xl bg-gradient-to-br from-[#0c1630] to-[#080d1a] border-2 border-blue-500/60 shadow-2xl space-y-6">
-                  
-                  {/* Quiz Header Bar with Anti-Cheat Live Monitoring */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span className="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">
-                        Round 0{activeQuizAttempt.roundNumber} In Progress
-                      </span>
-                    </div>
-
-                    {/* Live Anti-Cheat Monitor Indicator */}
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-rose-950/40 border border-rose-500/40 text-[11px] text-rose-300">
-                      <ShieldAlert className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-                      <span className="font-semibold hidden sm:inline">Anti-Cheat Lockdown Active</span>
-                      <span className="font-semibold sm:hidden">Lockdown</span>
-                      <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono font-bold text-[10px]">
-                        Strikes: {violationCount}/3
-                      </span>
-                    </div>
-
-                    {/* Full Screen & Server Authoritative Timer Countdown */}
-                    <div className="flex items-center gap-2">
-                      {!isFullScreen && (
-                        <button
-                          type="button"
-                          onClick={requestFullScreen}
-                          className="px-2.5 py-1.5 rounded-xl bg-blue-950/60 border border-blue-500/40 text-blue-400 hover:text-white text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                          title="Enter Full Screen Mode"
-                        >
-                          <Maximize2 className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Fullscreen</span>
-                        </button>
-                      )}
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/60 border border-white/20">
-                        <Clock className="w-4 h-4 text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
-                        <span className="font-mono font-black text-sm text-amber-300">
-                          {quizTimeRemaining}s Remaining
-                        </span>
-                      </div>
-                    </div>
+          {/* ======================================================== */}
+          {/* TAB 2: MY GROUP & TEAM (EXACTLY MATCHING USER SCREENSHOT) */}
+          {/* ======================================================== */}
+          {activeTab === 'team' && (
+            <div className="space-y-6 max-w-6xl mx-auto animate-fadeIn">
+              
+              {/* Feedback Alert */}
+              {partnerFeedback.message && (
+                <div className={`p-4 rounded-2xl text-xs flex items-center justify-between gap-2 shadow-lg ${
+                  partnerFeedback.isError
+                    ? 'bg-rose-500/15 border border-rose-500/30 text-rose-300'
+                    : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {partnerFeedback.isError ? <AlertCircle className="w-5 h-5 text-rose-400" /> : <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
+                    <span className="font-medium text-sm">{partnerFeedback.message}</span>
                   </div>
-
-                  {/* Question Prompt */}
-                  {activeQuizAttempt.questions[currentQIndex] && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between text-xs text-slate-400">
-                        <span>Question {currentQIndex + 1} of {activeQuizAttempt.questions.length}</span>
-                        <span className="font-mono text-blue-400">{activeQuizAttempt.questions[currentQIndex].subjectName}</span>
-                      </div>
-
-                      <h4 className="text-base sm:text-lg font-heading font-bold text-white leading-relaxed">
-                        {activeQuizAttempt.questions[currentQIndex].question}
-                      </h4>
-
-                      {/* Options */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                        {activeQuizAttempt.questions[currentQIndex].options.map((opt, oIdx) => (
-                          <button
-                            key={oIdx}
-                            type="button"
-                            onClick={() => setSelectedOption(oIdx)}
-                            className={`p-4 rounded-xl text-left text-xs font-medium border transition-all cursor-pointer flex items-center gap-3 ${
-                              selectedOption === oIdx
-                                ? 'bg-blue-600/30 border-blue-400 text-white shadow-md'
-                                : 'bg-black/40 border-white/10 text-slate-300 hover:border-white/30 hover:bg-white/5'
-                            }`}
-                          >
-                            <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-mono font-bold shrink-0 ${
-                              selectedOption === oIdx ? 'bg-blue-500 text-white' : 'bg-white/10 text-slate-400'
-                            }`}>
-                              {String.fromCharCode(65 + oIdx)}
-                            </span>
-                            <span className="leading-snug">{opt}</span>
-                          </button>
-                        ))}
-                      </div>
-
-                      {quizError && (
-                        <p className="text-xs text-rose-400 flex items-center gap-1.5 mt-2">
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          <span>{quizError}</span>
-                        </p>
-                      )}
-
-                      {/* Actions */}
-                      <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                        <button
-                          type="button"
-                          onClick={handleSkipQuestion}
-                          className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 text-xs font-heading font-semibold transition-colors cursor-pointer"
-                        >
-                          Skip Question
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={handleSubmitAnswer}
-                          disabled={selectedOption === null || isSubmittingAnswer}
-                          className="px-7 py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-600 text-white text-xs font-heading font-bold shadow-lg hover:shadow-blue-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-                        >
-                          {isSubmittingAnswer ? <span>Evaluating...</span> : <span>Confirm & Submit</span>}
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                    </div>
-                  )}
-
-                </div>
-              ) : (
-                /* TOURNAMENT ROUND LAUNCHER */
-                <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-[#0b1020] to-[#040814] border border-blue-500/30 shadow-xl space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <span className="text-[10px] font-mono font-bold text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20">
-                        {studentStatus?.activeRound?.stageBadge || 'Tournament Arena'}
-                      </span>
-                      <h4 className="text-lg font-heading font-bold text-white mt-1.5">
-                        {studentStatus?.activeRound?.title || 'Screening Round (MCQs)'}
-                      </h4>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {studentStatus?.activeRound?.qualificationRule || 'Top 80% of participating students qualify.'}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => handleStartQuiz(studentStatus?.activeRound?.roundNumber || 1)}
-                      className="px-6 py-3 rounded-xl bg-[#2563eb] hover:bg-blue-600 text-white text-xs font-heading font-bold shadow-lg hover:shadow-blue-500/30 flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-105 active:scale-95"
-                    >
-                      <Zap className="w-4 h-4 text-yellow-300" />
-                      <span>Take Active Round Quiz</span>
-                    </button>
-                  </div>
-
-                  {quizResultSummary && (
-                    <div className={`p-4 rounded-xl border text-xs flex items-center justify-between animate-fadeIn ${
-                      quizResultSummary.disqualified
-                        ? 'bg-rose-500/20 border-rose-500/40 text-rose-300'
-                        : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                    }`}>
-                      <div>
-                        {quizResultSummary.disqualified ? (
-                          <>
-                            <strong className="text-rose-400">Attempt Disqualified for Malpractice:</strong> Multiple tab switching or external application violations detected.
-                          </>
-                        ) : (
-                          <>
-                            <strong>Attempt Completed!</strong> You scored {quizResultSummary.score} / {quizResultSummary.totalQuestions} points.
-                          </>
-                        )}
-                      </div>
-                      <span className="font-mono font-bold text-white">
-                        {quizResultSummary.disqualified ? 'Disqualified (0 Pts)' : 'Score Saved'}
-                      </span>
-                    </div>
-                  )}
-
-                  {quizError && (
-                    <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{quizError}</span>
-                    </div>
-                  )}
+                  <button onClick={() => setPartnerFeedback({ message: '', isError: false })} className="text-slate-400 hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               )}
 
-              {/* Student Profile Details & Scorecard */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Main Team Members Section Header */}
+              <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl space-y-6">
                 
-                {/* Profile Information */}
-                <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-3">
-                  <h5 className="font-heading font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-blue-400" />
-                    <span>Contestant Profile</span>
-                  </h5>
-                  <div className="space-y-2 text-xs text-slate-300">
-                    <div className="flex justify-between border-b border-white/5 pb-1.5">
-                      <span className="text-slate-400">Full Name</span>
-                      <strong className="text-white">{currentUser.fullName}</strong>
+                {/* Header Row */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <Users className="w-5 h-5 text-blue-400" />
+                    <h3 className="text-lg font-heading font-black text-white">
+                      Team Members
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-mono font-bold flex items-center gap-1.5">
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>{partnerData.partner ? '2 of 2 Enrolled' : '1 of 2 Enrolled'}</span>
                     </div>
-                    <div className="flex justify-between border-b border-white/5 pb-1.5">
-                      <span className="text-slate-400">Student ID</span>
-                      <strong className="font-mono text-white">{currentUser.studentId}</strong>
-                    </div>
-                    <div className="flex justify-between border-b border-white/5 pb-1.5">
-                      <span className="text-slate-400">University</span>
-                      <span className="truncate max-w-[200px] text-right">{currentUser.universityName || 'COMSATS University'}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-white/5 pb-1.5">
-                      <span className="text-slate-400">Campus & Region</span>
-                      <span>{currentUser.campus} ({currentUser.region})</span>
-                    </div>
-                    <div className="flex justify-between border-b border-white/5 pb-1.5">
-                      <span className="text-slate-400">Degree & Semester</span>
-                      <span>{currentUser.degreeProgram} • {currentUser.semester}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-white/5 pb-1.5">
-                      <span className="text-slate-400">Official Email</span>
-                      <span className="truncate max-w-[190px] text-right font-mono text-[11px]">{currentUser.email}</span>
-                    </div>
-                    {partnerData.partner && (
-                      <div className="flex justify-between pt-0.5">
-                        <span className="text-emerald-400 font-semibold">Team Partner</span>
-                        <span className="text-right text-emerald-300 font-bold truncate max-w-[200px]">
-                          {partnerData.partner.fullName} ({partnerData.partner.studentId})
-                        </span>
-                      </div>
+
+                    {!partnerData.partner && (
+                      <button
+                        type="button"
+                        onClick={() => setShowInviteModal(true)}
+                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        <span>Invite Teammate</span>
+                      </button>
                     )}
                   </div>
                 </div>
 
-                {/* Round-Wise Official Scorecard */}
-                <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-3">
-                  <h5 className="font-heading font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
-                    <Award className="w-4 h-4 text-amber-400" />
-                    <span>Round-Wise Verified Scorecard</span>
-                  </h5>
-                  <div className="space-y-2 text-xs">
-                    {[1, 2, 3, 4].map((rNum) => {
-                      const match = (studentStatus?.roundScores || []).find((s) => s.roundNumber === rNum);
-                      return (
-                        <div key={rNum} className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5">
-                          <div>
-                            <span className="font-heading font-bold text-slate-200">Round 0{rNum}</span>
-                            <span className="text-[10px] text-slate-400 ml-2">
-                              {rNum === 1 ? 'Screening MCQs' : rNum === 2 ? 'Core CS' : rNum === 3 ? 'Rapid Fire' : 'Buzzer Finale'}
+                {/* Team Members Cards Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  
+                  {/* CARD 1: CURRENT STUDENT (LEADER) */}
+                  <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-black/60 border-2 border-amber-500/50 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                    <div className="flex items-start gap-4">
+                      {/* Avatar */}
+                      <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-heading font-black text-xl shadow-lg shrink-0">
+                        {currentUser.fullName ? currentUser.fullName.slice(0, 2).toUpperCase() : 'SR'}
+                      </div>
+
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-lg font-heading font-black text-white truncate">
+                            {currentUser.fullName}
+                          </h4>
+                          <span title="Group Leader" className="text-amber-400 text-sm">👑</span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold">
+                            {currentUser.studentId}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                            {currentUser.degreeProgram || 'BSSE'} • {currentUser.semester || 'Sec A'}
+                          </span>
+                        </div>
+
+                        <div className="pt-2 text-xs text-slate-400 space-y-1">
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="text-slate-500">✉</span>
+                            <span className="truncate">{currentUser.email}</span>
+                          </div>
+                          {currentUser.phone && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-500">📞</span>
+                              <span>{currentUser.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                      <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
+                        Group Leader
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-mono">Enrolled Contender</span>
+                    </div>
+                  </div>
+
+                  {/* CARD 2: TEAMMATE SLOT (PAIRED OR EMPTY) */}
+                  {partnerData.partner ? (
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-black/60 border-2 border-emerald-500/50 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                      <div className="flex items-start gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-heading font-black text-xl shadow-lg shrink-0">
+                          {partnerData.partner.fullName.slice(0, 2).toUpperCase()}
+                        </div>
+
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-lg font-heading font-black text-white truncate">
+                              {partnerData.partner.fullName}
+                            </h4>
+                            <span className="text-emerald-400 text-xs">✔</span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <span className="font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                              {partnerData.partner.studentId}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                              {partnerData.partner.department}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-blue-400">
-                              {match ? `${match.score} pts` : '--'}
-                            </span>
-                            {match && match.isQualified && (
-                              <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                Qualified
-                              </span>
+
+                          <div className="pt-2 text-xs text-slate-400 space-y-1">
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="text-slate-500">✉</span>
+                              <span className="truncate">{partnerData.partner.email}</span>
+                            </div>
+                            {partnerData.partner.phone && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-500">📞</span>
+                                <span>{partnerData.partner.phone}</span>
+                              </div>
                             )}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                        <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                          Team Member Enrolled
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleUnpairPartner}
+                          disabled={isPartnerLoading}
+                          className="text-xs text-rose-400 hover:text-rose-300 font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Leave Team</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* EMPTY TEAMMATE SLOT */
+                    <div className="p-6 rounded-2xl border-2 border-dashed border-slate-700/80 bg-slate-950/40 flex flex-col items-center justify-center text-center space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                        <UserPlus className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-heading font-bold text-white">Empty Teammate Slot</h4>
+                        <p className="text-xs text-slate-400 mt-0.5">Slot open for peer</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowInviteModal(true)}
+                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Invite Teammate</span>
+                      </button>
+                    </div>
+                  )}
+
+                </div>
+
+                {/* Bottom Action Buttons */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  {!partnerData.partner && (
+                    <button
+                      type="button"
+                      onClick={() => setShowInviteModal(true)}
+                      className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-blue-600/30"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span>Invite Teammate</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('overview')}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-heading font-bold cursor-pointer"
+                  >
+                    View Project Details
+                  </button>
                 </div>
 
               </div>
 
-              {/* Tournament Announcements & Notifications */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                
-                {/* Announcements */}
-                <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-3">
-                  <h5 className="font-heading font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-blue-400" />
-                    <span>Organizer Bulletins</span>
-                  </h5>
-                  {announcements.length === 0 ? (
-                    <p className="text-xs text-slate-500">No active bulletins published yet.</p>
-                  ) : (
-                    <div className="space-y-2.5 max-h-48 overflow-y-auto">
-                      {announcements.map((a) => (
-                        <div key={a.id} className="p-3 rounded-xl bg-white/5 border border-white/5 text-xs space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-white">{a.title}</span>
-                            <span className="text-[10px] font-mono text-blue-400">{a.category}</span>
+              {/* INCOMING PARTNER REQUESTS (IF ANYONE INVITED CURRENT USER) */}
+              {partnerData.incoming && partnerData.incoming.length > 0 && (
+                <div className="p-6 rounded-3xl bg-amber-950/20 border border-amber-500/40 shadow-xl space-y-4">
+                  <div className="flex items-center gap-2 text-amber-300 font-heading font-bold text-sm">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+                    <span>Received Team Invitations ({partnerData.incoming.length})</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {partnerData.incoming.map((req) => (
+                      <div
+                        key={req.id}
+                        className="p-4 rounded-2xl bg-black/50 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-heading font-black text-white text-base">{req.fromName}</h5>
+                            <span className="font-mono text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
+                              {req.fromStudentId}
+                            </span>
                           </div>
-                          <p className="text-slate-300 leading-snug">{a.content}</p>
+                          <p className="text-xs text-slate-400">
+                            {req.fromDepartment || 'Software Engineering'} • Wants you to join their official competition team!
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                  )}
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleRespondPartnerRequest(req.id, 'accept')}
+                            disabled={isPartnerLoading}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-950 transition-all disabled:opacity-50"
+                          >
+                            <Check className="w-4 h-4" />
+                            <span>Accept</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRespondPartnerRequest(req.id, 'reject')}
+                            disabled={isPartnerLoading}
+                            className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 font-heading font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+                          >
+                            <X className="w-4 h-4" />
+                            <span>Decline</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* PENDING SENT INVITATIONS TABLE (MATCHING SCREENSHOT TABLE) */}
+              <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Send className="w-4 h-4 text-blue-400" />
+                    <h4 className="font-heading font-bold text-white text-base">Pending Sent Invitations</h4>
+                  </div>
+                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
+                    {partnerData.outgoing && partnerData.outgoing.length ? `${partnerData.outgoing.length} In Flight` : '0 In Flight'}
+                  </span>
                 </div>
 
-                {/* In-App Notifications Feed */}
-                <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-3">
-                  <h5 className="font-heading font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
-                    <Bell className="w-4 h-4 text-yellow-400" />
-                    <span>My In-App Notifications</span>
-                  </h5>
-                  {notifications.length === 0 ? (
-                    <p className="text-xs text-slate-500">No new notifications for your account.</p>
-                  ) : (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {notifications.map((n) => (
-                        <div key={n.id} className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-xs">
-                          <div className="font-semibold text-slate-200">{n.title}</div>
-                          <p className="text-slate-400 text-[11px] mt-0.5">{n.message}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
+                {partnerData.outgoing && partnerData.outgoing.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-400 font-heading uppercase tracking-wider text-[11px]">
+                          <th className="py-3 px-4">Invited Student</th>
+                          <th className="py-3 px-4">Sent Date</th>
+                          <th className="py-3 px-4">Status</th>
+                          <th className="py-3 px-4 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-medium">
+                        {partnerData.outgoing.map((inv) => (
+                          <tr key={inv.id} className="hover:bg-slate-800/40 transition-colors">
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-white text-sm">{inv.toName}</div>
+                              <div className="text-[11px] font-mono text-slate-400">{inv.toStudentId}</div>
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-300">
+                              {inv.sentDate || new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[11px] font-bold inline-flex items-center gap-1">
+                                <Clock className="w-3 h-3 animate-spin" />
+                                <span>Pending</span>
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleCancelPartnerRequest(inv.id)}
+                                disabled={isPartnerLoading}
+                                className="px-3.5 py-1.5 rounded-xl border border-rose-500/40 text-rose-300 hover:bg-rose-500/20 font-bold text-xs inline-flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span>Cancel</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-slate-500 text-xs">
+                    No pending invitations in flight. Click <strong className="text-blue-400">"+ Invite Teammate"</strong> above to send an invite to any contestant.
+                  </div>
+                )}
               </div>
 
             </div>
           )}
 
-        </div>
+          {/* ======================================================== */}
+          {/* TAB 3: QUIZ ARENA (EXAMINATION ENGINE) */}
+          {/* ======================================================== */}
+          {activeTab === 'quiz' && (
+            <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn">
+              
+              {quizError && (
+                <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                  <span>{quizError}</span>
+                </div>
+              )}
 
-      </div>
+              {quizResultSummary && (
+                <div className="p-8 rounded-3xl bg-slate-900 border border-blue-500/40 text-center space-y-4 shadow-2xl">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center mx-auto text-2xl font-black">
+                    🏆
+                  </div>
+                  <h3 className="text-2xl font-heading font-black text-white">Quiz Attempt Completed</h3>
+                  <div className="text-3xl font-heading font-black text-amber-400">
+                    Score: {quizResultSummary.score} pts
+                  </div>
+                  <p className="text-xs text-slate-400">Your score has been registered in the tournament leaderboard.</p>
+                  <button
+                    onClick={() => {
+                      setQuizResultSummary(null);
+                      setActiveTab('overview');
+                    }}
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-500"
+                  >
+                    Back to Dashboard
+                  </button>
+                </div>
+              )}
 
-      {/* =========================================================================
-          ANTI-CHEAT VIOLATION LOCKDOWN MODAL (Pore screen par warning & lockout)
-          ========================================================================= */}
-      {showViolationModal && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-fadeIn">
-          <div className="w-full max-w-md rounded-3xl p-6 sm:p-8 bg-gradient-to-b from-[#1a0808] to-[#0d0404] border-2 border-rose-600 shadow-2xl shadow-rose-950 text-center relative overflow-hidden">
-            {/* Pulsating background glow */}
-            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-48 h-48 bg-rose-600/25 rounded-full blur-3xl pointer-events-none" />
+              {!activeQuizAttempt && !quizResultSummary && (
+                <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 space-y-6 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center mx-auto">
+                    <Zap className="w-8 h-8" />
+                  </div>
+                  <div className="max-w-md mx-auto">
+                    <h3 className="text-2xl font-heading font-black text-white">Championship Quiz Arena</h3>
+                    <p className="text-xs text-slate-400 mt-2">
+                      Stage 01 Screening: 5 Random MCQs across Programming, OOP, DSA, DBMS, CN, SE, OS. Strict 30s timer per question. Anti-cheat proctoring active.
+                    </p>
+                  </div>
+                  <div className="flex justify-center gap-3">
+                    <button
+                      onClick={() => handleStartAttempt(1)}
+                      className="px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-sm shadow-xl shadow-emerald-950 flex items-center gap-2 cursor-pointer hover:scale-105 transition-all"
+                    >
+                      <Zap className="w-4 h-4" />
+                      <span>Start Round 1 Attempt (Full Lockdown)</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
-            {/* Warning Icon */}
-            <div className="w-20 h-20 rounded-2xl bg-rose-600/20 border-2 border-rose-500 flex items-center justify-center text-rose-500 mx-auto mb-4 animate-bounce">
-              {isDisqualified ? <Ban className="w-10 h-10" /> : <AlertTriangle className="w-10 h-10 text-rose-500" />}
+              {/* ACTIVE QUIZ QUESTION CARD */}
+              {activeQuizAttempt && !quizResultSummary && (
+                <div className="p-6 sm:p-8 rounded-3xl bg-slate-900 border-2 border-blue-500/40 shadow-2xl space-y-6">
+                  {/* Top Bar with Timer */}
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                    <div className="text-xs font-mono text-slate-400">
+                      Question <strong className="text-white">{currentQIndex + 1}</strong> of {activeQuizAttempt.questions.length}
+                    </div>
+                    <div className={`px-4 py-1.5 rounded-full font-mono text-xs font-black flex items-center gap-1.5 ${
+                      quizTimeRemaining <= 10 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                    }`}>
+                      <Clock className="w-4 h-4" />
+                      <span>{quizTimeRemaining}s Left</span>
+                    </div>
+                  </div>
+
+                  {/* Question Text */}
+                  <div>
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      {activeQuizAttempt.questions[currentQIndex]?.subject || 'Computer Science'}
+                    </span>
+                    <h3 className="text-lg sm:text-xl font-heading font-bold text-white mt-2 select-none">
+                      {activeQuizAttempt.questions[currentQIndex]?.question}
+                    </h3>
+                  </div>
+
+                  {/* Options */}
+                  <div className="space-y-3">
+                    {(activeQuizAttempt.questions[currentQIndex]?.options || []).map((opt, oIdx) => {
+                      const isSelected = selectedOption === oIdx;
+                      const letter = ['A', 'B', 'C', 'D'][oIdx] || `${oIdx + 1}`;
+                      return (
+                        <button
+                          key={oIdx}
+                          type="button"
+                          onClick={() => handleSelectOption(oIdx)}
+                          className={`w-full p-4 rounded-2xl border text-left flex items-center gap-3.5 transition-all cursor-pointer ${
+                            isSelected 
+                              ? 'bg-blue-600/30 border-blue-500 text-white shadow-lg shadow-blue-900/40' 
+                              : 'bg-black/40 border-slate-800 text-slate-300 hover:bg-slate-800/60 hover:border-slate-700'
+                          }`}
+                        >
+                          <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                            isSelected ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'
+                          }`}>
+                            {letter}
+                          </span>
+                          <span className="text-sm font-medium">{opt}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Bottom Controls */}
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={handleSkipQuestion}
+                      disabled={isSubmittingAnswer}
+                      className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-xs font-bold cursor-pointer"
+                    >
+                      Skip Question (0 pts)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmitAnswer}
+                      disabled={selectedOption === null || isSubmittingAnswer}
+                      className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 cursor-pointer disabled:opacity-50"
+                    >
+                      {isSubmittingAnswer ? 'Saving...' : 'Submit Answer'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
             </div>
+          )}
 
-            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-tight uppercase">
-              {isDisqualified ? 'Examination Terminated' : 'Cheating Attempt Detected!'}
-            </h3>
-
-            <p className="text-xs text-rose-300 font-semibold mt-2 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30">
-              {violationReason || 'Tab switch or external application window detected!'}
-            </p>
-
-            <div className="mt-4 p-4 rounded-2xl bg-black/60 border border-rose-500/30 text-left space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-semibold">Violation Strike:</span>
-                <span className="font-mono font-black text-rose-400 text-sm">
-                  {Math.min(violationCount, 3)} / 3
-                </span>
-              </div>
-              <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div 
-                  className="bg-rose-500 h-full transition-all duration-300"
-                  style={{ width: `${(Math.min(violationCount, 3) / 3) * 100}%` }}
-                />
-              </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed pt-1">
-                {isDisqualified ? (
-                  <span className="text-rose-400 font-bold">
-                    You have exceeded 3 violations. Your quiz attempt has been automatically locked and submitted.
-                  </span>
+          {/* ======================================================== */}
+          {/* TAB 4: ANNOUNCEMENTS */}
+          {/* ======================================================== */}
+          {activeTab === 'announcements' && (
+            <div className="space-y-4 max-w-4xl mx-auto animate-fadeIn">
+              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+                <h3 className="text-lg font-heading font-black text-white flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-blue-400" />
+                  <span>Official Championship Bulletins</span>
+                </h3>
+                {announcements.length > 0 ? (
+                  <div className="space-y-3">
+                    {announcements.map((ann) => (
+                      <div key={ann.id} className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-white text-sm">{ann.title}</span>
+                          <span className="text-slate-500">{new Date(ann.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-xs text-slate-300">{ann.content}</p>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <span>
-                    <strong>Examination Rule:</strong> You are strictly forbidden from switching browser tabs, opening any other browser or application, minimizing this window, or exiting full screen during the quiz!
-                  </span>
+                  <p className="text-xs text-slate-400 py-6 text-center">No new announcements from the tournament jury yet.</p>
                 )}
-              </p>
+              </div>
             </div>
+          )}
 
-            {!isDisqualified ? (
-              <div className="mt-6 space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowViolationModal(false);
-                    requestFullScreen();
-                  }}
-                  className="w-full py-3.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-heading font-bold text-xs uppercase tracking-wider shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Maximize2 className="w-4 h-4" />
-                  <span>Resume Exam & Re-Enter Fullscreen</span>
-                </button>
-                <div className="text-[10px] text-slate-400">
-                  Next violation will lead to immediate disqualification.
+          {/* ======================================================== */}
+          {/* TAB 5: RULES & REGULATIONS */}
+          {/* ======================================================== */}
+          {activeTab === 'rules' && (
+            <div className="space-y-4 max-w-4xl mx-auto animate-fadeIn">
+              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+                <h3 className="text-lg font-heading font-black text-white flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-blue-400" />
+                  <span>Official Tournament Rules & Conduct</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-1.5">
+                    <h5 className="font-bold text-white">1. Individual Examination Integrity</h5>
+                    <p className="text-slate-400">All tests are evaluated atomically on the central university server. Answer explanations are never transmitted during rounds.</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-1.5">
+                    <h5 className="font-bold text-white">2. Anti-Cheating Lockdown</h5>
+                    <p className="text-slate-400">Tab switching, exiting fullscreen, or minimizing the window triggers instant proctor alerts. 3 violations cause automatic disqualification.</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-1.5">
+                    <h5 className="font-bold text-white">3. Marking & Penalties</h5>
+                    <p className="text-slate-400">Round 1 & 2: +1 for correct, 0 for wrong/skip. Round 4 Buzzer Final: +1 for correct, -0.5 for wrong answers.</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-1.5">
+                    <h5 className="font-bold text-white">4. Finality of Jury Decision</h5>
+                    <p className="text-slate-400">The decision of the COMSATS Faculty Jury and Tournament Director is final and binding on all candidates.</p>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="mt-6">
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 6: ADMIT PASS */}
+          {/* ======================================================== */}
+          {activeTab === 'admit' && (
+            <div className="space-y-4 max-w-2xl mx-auto animate-fadeIn">
+              <div className="p-6 rounded-3xl bg-slate-900 border border-blue-500/40 space-y-6 shadow-2xl">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                  <div>
+                    <h3 className="text-lg font-heading font-black text-white">Official Examination Pass</h3>
+                    <p className="text-xs text-slate-400">Mandatory for entry to university auditorium on Nov 20, 2026</p>
+                  </div>
+                  <button
+                    onClick={() => setShowPassModal(true)}
+                    className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-blue-600/30 hover:bg-blue-500 cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print Admit Card</span>
+                  </button>
+                </div>
+
+                <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-950/40 via-slate-900 to-black/60 border border-blue-500/30 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="font-heading font-black text-white text-base">BATTLE OF BRAINS 2026</div>
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold">
+                      {currentUser.id}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-500 block">Candidate Name</span>
+                      <strong className="text-white text-sm">{currentUser.fullName}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Registration ID</span>
+                      <strong className="text-blue-400 font-mono text-sm">{currentUser.studentId}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Department</span>
+                      <span className="text-slate-300">{currentUser.degreeProgram || currentUser.department}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Assigned Stage</span>
+                      <span className="text-emerald-400 font-bold">Stage 01 • Auditorium</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </main>
+      </div>
+
+      {/* ======================================================== */}
+      {/* MODAL 1: INVITE TEAMMATE MODAL */}
+      {/* ======================================================== */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-lg rounded-3xl bg-slate-900 border border-blue-500/40 p-6 sm:p-8 shadow-2xl relative space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-blue-400" />
+                <h3 className="font-heading font-black text-white text-lg">Invite Teammate to Group</h3>
+              </div>
+              <button onClick={() => setShowInviteModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendPartnerRequest} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  Select from Registered Contestants
+                </label>
+                <select
+                  value={selectedPartnerOption}
+                  onChange={(e) => {
+                    setSelectedPartnerOption(e.target.value);
+                    if (e.target.value) setTargetPartnerInput('');
+                  }}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-medium focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">-- Choose a registered student --</option>
+                  {availablePartners.map((p) => (
+                    <option key={p.id} value={p.studentId}>
+                      {p.fullName} ({p.studentId}) • {p.department || p.degreeProgram || 'Computing'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="text-center text-xs text-slate-500 font-mono">— OR ENTER MANUALLY —</div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  Type Student Registration ID or Email
+                </label>
+                <input
+                  type="text"
+                  value={targetPartnerInput}
+                  onChange={(e) => {
+                    setTargetPartnerInput(e.target.value);
+                    if (e.target.value) setSelectedPartnerOption('');
+                  }}
+                  placeholder="e.g. SP24-BSE-029"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-medium focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowViolationModal(false);
-                    setActiveQuizAttempt(null);
-                  }}
-                  className="w-full py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-heading font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                  onClick={() => setShowInviteModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-xs font-bold hover:bg-slate-800"
                 >
-                  Close & View Final Score
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPartnerLoading}
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{isPartnerLoading ? 'Sending...' : 'Send Invitation'}</span>
                 </button>
               </div>
-            )}
-
+            </form>
           </div>
         </div>
       )}
 
-      {/* PRINTABLE ADMIT CARD MODAL */}
+      {/* ======================================================== */}
+      {/* MODAL 2: PRINTABLE ADMIT CARD MODAL */}
+      {/* ======================================================== */}
       {showPassModal && currentUser && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
-          <div className="bg-[#0b1020] border-2 border-blue-500/60 p-6 sm:p-8 max-w-lg w-full rounded-2xl shadow-2xl relative text-white space-y-6">
-            
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black">
-                  BOB
-                </div>
-                <div>
-                  <h4 className="font-heading font-black text-sm text-blue-400 uppercase tracking-wider">
-                    Official Examination Admit Pass
-                  </h4>
-                  <div className="text-[10px] text-slate-400">Battle of Brains 2026 • Individual Championship</div>
-                </div>
-              </div>
+          <div className="bg-slate-950 border border-blue-500/40 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl relative space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h4 className="font-heading font-black text-white text-base flex items-center gap-2">
+                <Printer className="w-4 h-4 text-blue-400" />
+                <span>Official Contestant Examination Pass</span>
+              </h4>
               <button onClick={() => setShowPassModal(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-black/50 border border-white/10 rounded-xl p-5 text-xs space-y-3">
-              <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                <span className="text-slate-400 font-mono">Pass Reference ID</span>
-                <span className="font-mono font-bold text-base text-blue-400">{currentUser.id}</span>
+            <div className="p-6 rounded-2xl bg-white text-slate-900 space-y-4 print:p-0 print:border-none">
+              <div className="text-center border-b border-slate-200 pb-3">
+                <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">COMSATS UNIVERSITY ISLAMABAD</div>
+                <div className="text-lg font-heading font-black">BATTLE OF BRAINS 2026</div>
+                <div className="text-[10px] text-slate-500">Official Individual & Team Examination Pass</div>
               </div>
-              <div><span className="text-slate-400">Student Name:</span> <strong className="text-white block text-sm">{currentUser.fullName}</strong></div>
-              <div><span className="text-slate-400">Registration ID:</span> <strong className="text-white block font-mono">{currentUser.studentId}</strong></div>
-              <div><span className="text-slate-400">Institution:</span> <span className="text-slate-200 block">{currentUser.universityName || 'COMSATS University Islamabad'}</span></div>
-              <div><span className="text-slate-400">Campus & Region:</span> <span className="text-slate-200 block">{currentUser.campus} • {currentUser.region}</span></div>
-              <div><span className="text-slate-400">Department:</span> <span className="text-slate-200 block">{currentUser.degreeProgram} ({currentUser.semester})</span></div>
-              <div><span className="text-slate-400">Reporting Time:</span> <span className="text-amber-400 block font-semibold">08:50 AM • Main Auditorium</span></div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-500 text-[10px] block">Contestant Name:</span>
+                  <strong className="text-sm">{currentUser.fullName}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 text-[10px] block">Registration ID:</span>
+                  <strong className="text-sm font-mono text-blue-700">{currentUser.studentId}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 text-[10px] block">Pass Number:</span>
+                  <strong className="font-mono">{currentUser.id}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 text-[10px] block">Group Ref:</span>
+                  <strong className="font-mono text-emerald-700">{partnerData.partner ? 'TEAM PAIRED' : 'SOLO ENROLLED'}</strong>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 text-[10px] text-slate-500 text-center">
+                Nov 20, 2026 • Reporting Time: 09:00 AM • Main Auditorium Complex
+              </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex justify-end gap-3">
               <button
-                onClick={() => setShowPassModal(false)}
-                className="px-5 py-2.5 rounded-xl bg-white/10 text-slate-300 text-xs font-heading font-semibold hover:bg-white/20"
-              >
-                Close
-              </button>
-              <button
-                onClick={handlePrint}
-                className="px-6 py-2.5 rounded-xl bg-[#2563eb] text-white text-xs font-heading font-bold hover:bg-blue-600 flex items-center gap-1.5 shadow-lg"
+                onClick={() => window.print()}
+                className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-2 hover:bg-blue-500"
               >
                 <Printer className="w-4 h-4" />
-                <span>Print Admit Card</span>
+                <span>Print Document</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
 
+      {/* ======================================================== */}
+      {/* MODAL 3: ANTI-CHEAT MALPRACTICE VIOLATION POPUP */}
+      {/* ======================================================== */}
+      {showViolationModal && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-rose-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md rounded-3xl bg-slate-900 border-2 border-rose-500 p-6 text-center space-y-4 shadow-2xl">
+            <div className="w-16 h-16 rounded-2xl bg-rose-500/20 text-rose-500 border border-rose-500/40 flex items-center justify-center mx-auto text-2xl font-black">
+              🚨
+            </div>
+            <h3 className="text-xl font-heading font-black text-rose-400">Proctoring Warning #{violationCount}</h3>
+            <p className="text-xs text-rose-200">{violationReason}</p>
+            <p className="text-[11px] text-slate-400">
+              Exam security rule: Tab switching and leaving fullscreen is strictly forbidden. 3 warnings result in immediate disqualification.
+            </p>
+            <button
+              onClick={() => {
+                setShowViolationModal(false);
+                requestFullScreen();
+              }}
+              className="px-6 py-2.5 rounded-xl bg-rose-600 text-white font-bold text-xs hover:bg-rose-500"
+            >
+              I Understand & Resume Examination
+            </button>
           </div>
         </div>
       )}
