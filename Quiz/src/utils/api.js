@@ -1,3 +1,18 @@
+import {
+  getStoredParticipants,
+  saveParticipant,
+  generateParticipantId,
+  getAdminPassword,
+  getStoredDetails,
+  getStoredSubjects,
+  getStoredRounds,
+  getStoredRules,
+  getStoredQuestions,
+  getLoggedInStudent,
+  setLoggedInStudent,
+  setAdminAuth
+} from './storage';
+
 // Centralized API Client for Battle of Brains 2026
 // Connects frontend components to authoritative Express server
 
@@ -51,20 +66,65 @@ export const getActiveAuthHeader = () => {
 };
 
 // ==========================================
+
+async function safeJson(res) {
+  if (!res) return {};
+  try {
+    const contentType = res.headers ? res.headers.get('content-type') || '' : '';
+    const text = await res.text();
+    if (!text || !text.trim()) return {};
+    if (contentType.includes('application/json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      return JSON.parse(text);
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
 // AUTHENTICATION
 // ==========================================
 
 export async function apiAdminLogin(username, passcode) {
   try {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, passcode }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Admin login failed.');
-    setAdminAuthToken(data.token);
-    return { success: true, data };
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, passcode }),
+      });
+      data = await safeJson(res);
+    } catch {
+      res = null;
+    }
+
+    if (res && res.ok && data && data.token) {
+      setAdminAuthToken(data.token);
+      return { success: true, data };
+    }
+
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+
+    // Offline / static host fallback
+    const storedPass = getAdminPassword() || 'admin123';
+    if ((username === 'admin@comsats.edu.pk' || username === 'admin') && passcode === storedPass) {
+      const mockToken = 'local_admin_jwt_' + Date.now();
+      setAdminAuthToken(mockToken);
+      setAdminAuth(true);
+      return { 
+        success: true, 
+        data: { 
+          token: mockToken, 
+          user: { username: 'admin@comsats.edu.pk', role: 'admin', fullName: 'Tournament Director' } 
+        } 
+      };
+    }
+
+    return { success: false, error: 'Invalid admin credentials.' };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -72,17 +132,67 @@ export async function apiAdminLogin(username, passcode) {
 
 export async function apiStudentRegister(formData) {
   try {
-    const res = await fetch(`${API_BASE}/auth/register-student`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Student registration failed.');
-    if (data.token) {
-      setStudentAuthToken(data.token);
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/auth/register-student`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      data = await safeJson(res);
+    } catch {
+      res = null;
     }
-    return { success: true, participant: data.participant, token: data.token, message: data.message };
+
+    if (res && res.ok && data && data.participant) {
+      if (data.token) {
+        setStudentAuthToken(data.token);
+      }
+      return { success: true, participant: data.participant, token: data.token, message: data.message };
+    }
+
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+
+    // Offline / static host fallback (e.g. Vercel frontend-only deployment)
+    const existing = getStoredParticipants() || [];
+    const cleanId = (formData.studentId || '').trim().toUpperCase();
+    const cleanEmail = (formData.email || '').trim().toLowerCase();
+
+    const isDuplicate = existing.some(p => 
+      (p.studentId && p.studentId.trim().toUpperCase() === cleanId) ||
+      (p.email && p.email.trim().toLowerCase() === cleanEmail)
+    );
+
+    if (isDuplicate) {
+      return { 
+        success: false, 
+        error: `Participant with Student ID "${cleanId}" or Email "${cleanEmail}" is already registered.` 
+      };
+    }
+
+    const newParticipant = {
+      id: generateParticipantId(existing),
+      ...formData,
+      studentId: cleanId,
+      email: cleanEmail,
+      status: 'Verified',
+      registeredAt: new Date().toISOString(),
+    };
+
+    saveParticipant(newParticipant);
+    setLoggedInStudent(newParticipant);
+    const mockToken = 'local_jwt_' + Date.now();
+    setStudentAuthToken(mockToken);
+
+    return { 
+      success: true, 
+      participant: newParticipant, 
+      token: mockToken, 
+      message: 'Registration successful!' 
+    };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -90,17 +200,50 @@ export async function apiStudentRegister(formData) {
 
 export async function apiStudentLogin(identifier, password) {
   try {
-    const res = await fetch(`${API_BASE}/auth/student-login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Invalid student credentials.');
-    if (data.token) {
-      setStudentAuthToken(data.token);
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/auth/student-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password }),
+      });
+      data = await safeJson(res);
+    } catch {
+      res = null;
     }
-    return { success: true, user: data.user, token: data.token };
+
+    if (res && res.ok && data && data.user) {
+      if (data.token) {
+        setStudentAuthToken(data.token);
+      }
+      return { success: true, user: data.user, token: data.token };
+    }
+
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+
+    // Offline / static host fallback
+    const participants = getStoredParticipants() || [];
+    const cleanId = (identifier || '').trim().toLowerCase();
+    const found = participants.find(p => 
+      (p.studentId && p.studentId.toLowerCase() === cleanId) || 
+      (p.email && p.email.toLowerCase() === cleanId)
+    );
+
+    if (!found) {
+      return { success: false, error: 'Student registration ID or email not found.' };
+    }
+
+    if (found.password && found.password !== password) {
+      return { success: false, error: 'Invalid password. Please check your password.' };
+    }
+
+    const mockToken = 'local_jwt_' + Date.now();
+    setStudentAuthToken(mockToken);
+    setLoggedInStudent(found);
+    return { success: true, user: found, token: mockToken };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -113,7 +256,7 @@ export async function apiStudentResetPassword(studentId, email, newPassword) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ studentId, email, newPassword }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Password reset failed.');
     return { success: true, message: data.message };
   } catch (err) {
@@ -131,7 +274,7 @@ export async function apiChangePassword(currentPasscode, newPasscode) {
       },
       body: JSON.stringify({ currentPasscode, newPasscode }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Passcode update failed.');
     return { success: true, message: data.message };
   } catch (err) {
@@ -143,10 +286,23 @@ export async function apiGetMe() {
   try {
     const headers = getActiveAuthHeader();
     if (!headers.Authorization) return null;
-    const res = await fetch(`${API_BASE}/auth/me`, { headers });
-    if (!res.ok) return null;
-    return await res.json();
+    let res = null;
+    try {
+      res = await fetch(`${API_BASE}/auth/me`, { headers });
+    } catch {}
+    if (res && res.ok) {
+      const data = await safeJson(res);
+      if (data && data.user) return data;
+    }
+    // Fallback to local session
+    const student = getLoggedInStudent();
+    if (student) return { user: student, role: 'student' };
+    const adminToken = getAdminAuthToken();
+    if (adminToken) return { user: { username: 'admin@comsats.edu.pk', role: 'admin' }, role: 'admin' };
+    return null;
   } catch {
+    const student = getLoggedInStudent();
+    if (student) return { user: student, role: 'student' };
     return null;
   }
 }
@@ -157,11 +313,27 @@ export async function apiGetMe() {
 
 export async function apiGetCompetition() {
   try {
-    const res = await fetch(`${API_BASE}/competition`);
-    if (!res.ok) throw new Error('Failed to load competition data.');
-    return await res.json();
+    let res = null;
+    try {
+      res = await fetch(`${API_BASE}/competition`);
+    } catch {}
+    if (res && res.ok) {
+      const data = await safeJson(res);
+      if (data && data.details) return data;
+    }
+    return {
+      details: getStoredDetails(),
+      subjects: getStoredSubjects(),
+      rounds: getStoredRounds(),
+      rules: getStoredRules(),
+    };
   } catch {
-    return null;
+    return {
+      details: getStoredDetails(),
+      subjects: getStoredSubjects(),
+      rounds: getStoredRounds(),
+      rules: getStoredRules(),
+    };
   }
 }
 
@@ -175,7 +347,7 @@ export async function apiSaveCompetition(data) {
       },
       body: JSON.stringify(data),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -187,11 +359,19 @@ export async function apiSaveCompetition(data) {
 
 export async function apiGetParticipants() {
   try {
-    const res = await fetch(`${API_BASE}/participants`);
-    if (!res.ok) throw new Error('Failed to fetch participants.');
-    return await res.json();
+    let res = null;
+    try {
+      res = await fetch(`${API_BASE}/participants`);
+    } catch {}
+    if (res && res.ok) {
+      const data = await safeJson(res);
+      if (data && data.participants) return data;
+    }
+    const localList = getStoredParticipants() || [];
+    return { participants: localList, total: localList.length };
   } catch {
-    return null;
+    const localList = getStoredParticipants() || [];
+    return { participants: localList, total: localList.length };
   }
 }
 
@@ -201,14 +381,20 @@ export async function apiRegisterParticipant(formData) {
 
 export async function apiGetRegistrations(filters = {}) {
   try {
-    const query = new URLSearchParams(filters).toString();
-    const res = await fetch(`${API_BASE}/registrations?${query}`, {
-      headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
-    });
-    if (!res.ok) throw new Error('Failed to load registrations.');
-    return await res.json();
+    let res = null;
+    try {
+      const query = new URLSearchParams(filters).toString();
+      res = await fetch(`${API_BASE}/registrations?${query}`, {
+        headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
+      });
+    } catch {}
+    if (res && res.ok) {
+      const data = await safeJson(res);
+      if (Array.isArray(data)) return data;
+    }
+    return getStoredParticipants() || [];
   } catch {
-    return [];
+    return getStoredParticipants() || [];
   }
 }
 
@@ -222,7 +408,7 @@ export async function apiUpdateRegistrationStatus(id, status, notes = '') {
       },
       body: JSON.stringify({ status, notes }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Failed to update status.');
     return { success: true, participant: data.participant };
   } catch (err) {
@@ -240,7 +426,7 @@ export async function apiUpdateParticipant(id, changes) {
       },
       body: JSON.stringify(changes),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Update failed.');
     return { success: true, participant: data.participant };
   } catch (err) {
@@ -254,7 +440,7 @@ export async function apiDeleteParticipant(id) {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     return { success: true, message: data.message };
   } catch (err) {
     return { success: false, error: err.message };
@@ -267,7 +453,7 @@ export async function apiDeleteAllParticipants() {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -290,7 +476,7 @@ export async function apiGetQuestions(params = {}) {
 
     const res = await fetch(`${API_BASE}/questions?${query}`, { headers });
     if (!res.ok) return [];
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return [];
   }
@@ -306,7 +492,7 @@ export async function apiCreateQuestion(questionData) {
       },
       body: JSON.stringify(questionData),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Failed to create question.');
     return { success: true, question: data.question };
   } catch (err) {
@@ -324,7 +510,7 @@ export async function apiUpdateQuestion(id, changes) {
       },
       body: JSON.stringify(changes),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Failed to update question.');
     return { success: true, question: data.question };
   } catch (err) {
@@ -338,7 +524,7 @@ export async function apiDeleteQuestion(id) {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -354,7 +540,7 @@ export async function apiImportQuestions(questions) {
       },
       body: JSON.stringify({ questions }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Bulk import failed.');
     return { success: true, count: data.count };
   } catch (err) {
@@ -369,7 +555,7 @@ export async function apiImportQuestions(questions) {
 export async function apiGetRounds() {
   try {
     const res = await fetch(`${API_BASE}/rounds`);
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return [];
   }
@@ -385,7 +571,7 @@ export async function apiUpdateRound(roundNumber, changes) {
       },
       body: JSON.stringify(changes),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -401,7 +587,7 @@ export async function apiActivateRound(roundNumber, isActive) {
       },
       body: JSON.stringify({ isActive }),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -421,7 +607,7 @@ export async function apiStartQuizAttempt(roundNumber) {
       },
       body: JSON.stringify({ roundNumber }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Could not start quiz attempt.');
     return { success: true, attempt: data.attempt };
   } catch (err) {
@@ -439,7 +625,7 @@ export async function apiSubmitQuizAnswer(attemptId, questionId, selectedOptionI
       },
       body: JSON.stringify({ attemptId, questionId, selectedOptionIndex }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Failed to submit answer.');
     return { success: true, ...data };
   } catch (err) {
@@ -457,7 +643,7 @@ export async function apiSkipQuizQuestion(attemptId, questionId) {
       },
       body: JSON.stringify({ attemptId, questionId }),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -473,7 +659,7 @@ export async function apiFinishQuizAttempt(attemptId) {
       },
       body: JSON.stringify({ attemptId }),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -485,7 +671,7 @@ export async function apiGetStudentQuizStatus() {
       headers: { Authorization: `Bearer ${getStudentAuthToken()}` },
     });
     if (!res.ok) return null;
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return null;
   }
@@ -500,7 +686,7 @@ export async function apiGetRapidFireCandidates() {
     const res = await fetch(`${API_BASE}/rapidfire/candidates`, {
       headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
     });
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return [];
   }
@@ -516,7 +702,7 @@ export async function apiStartRapidFire(studentId, studentName) {
       },
       body: JSON.stringify({ studentId, studentName }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Failed to start rapid fire.');
     return { success: true, state: data.state };
   } catch (err) {
@@ -534,7 +720,7 @@ export async function apiRapidFireAction(action, questionId) {
       },
       body: JSON.stringify({ action, questionId }),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -549,7 +735,7 @@ export async function apiFinishRapidFire() {
         Authorization: `Bearer ${getAdminAuthToken()}`,
       },
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -558,7 +744,7 @@ export async function apiFinishRapidFire() {
 export async function apiGetRapidFireState() {
   try {
     const res = await fetch(`${API_BASE}/rapidfire/state`);
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return { status: 'idle' };
   }
@@ -571,7 +757,7 @@ export async function apiGetRapidFireState() {
 export async function apiGetBuzzerFinalists() {
   try {
     const res = await fetch(`${API_BASE}/buzzer/finalists`);
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return [];
   }
@@ -584,7 +770,7 @@ export async function apiBuzzerPress(studentId, studentName) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ studentId, studentName }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Buzzer press rejected.');
     return { success: true, ...data };
   } catch (err) {
@@ -602,7 +788,7 @@ export async function apiAdjudicateBuzzer(outcome, penaltyPoints = 0, notes = ''
       },
       body: JSON.stringify({ outcome, penaltyPoints, notes }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Adjudication failed.');
     return { success: true, ...data };
   } catch (err) {
@@ -619,7 +805,7 @@ export async function apiResetBuzzer() {
         Authorization: `Bearer ${getAdminAuthToken()}`,
       },
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -628,7 +814,7 @@ export async function apiResetBuzzer() {
 export async function apiGetBuzzerState() {
   try {
     const res = await fetch(`${API_BASE}/buzzer/state`);
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return { status: 'idle' };
   }
@@ -647,7 +833,7 @@ export async function apiCalculateQualification(roundNumber) {
         Authorization: `Bearer ${getAdminAuthToken()}`,
       },
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Qualification calculation failed.');
     return { success: true, ...data };
   } catch (err) {
@@ -658,7 +844,7 @@ export async function apiCalculateQualification(roundNumber) {
 export async function apiGetQualificationStatus() {
   try {
     const res = await fetch(`${API_BASE}/qualification/status`);
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return null;
   }
@@ -672,7 +858,7 @@ export async function apiGetLeaderboard() {
   try {
     const res = await fetch(`${API_BASE}/results/leaderboard`);
     if (!res.ok) throw new Error('Failed to load leaderboard.');
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return { leaderboard: [], totalCompetitors: 0 };
   }
@@ -688,7 +874,7 @@ export async function apiPublishResults(isPublished) {
       },
       body: JSON.stringify({ isPublished }),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -701,7 +887,7 @@ export async function apiPublishResults(isPublished) {
 export async function apiGetAnnouncements() {
   try {
     const res = await fetch(`${API_BASE}/announcements`);
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return [];
   }
@@ -717,7 +903,7 @@ export async function apiCreateAnnouncement(data) {
       },
       body: JSON.stringify(data),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -729,7 +915,7 @@ export async function apiDeleteAnnouncement(id) {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -741,7 +927,7 @@ export async function apiGetNotifications() {
       headers: { Authorization: `Bearer ${getStudentAuthToken()}` },
     });
     if (!res.ok) return [];
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return [];
   }
@@ -753,7 +939,7 @@ export async function apiMarkNotificationsRead() {
       method: 'POST',
       headers: { Authorization: `Bearer ${getStudentAuthToken()}` },
     });
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return { success: false };
   }
@@ -769,7 +955,7 @@ export async function apiGetAuditLogs() {
       headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
     });
     if (!res.ok) return [];
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return [];
   }
@@ -789,7 +975,7 @@ export async function apiReportProctorInfraction(infractionType, details, roundN
       },
       body: JSON.stringify({ infractionType, details, roundNumber }),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -801,7 +987,7 @@ export async function apiGetProctorAlerts() {
       headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
     });
     if (!res.ok) return [];
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return [];
   }
@@ -817,7 +1003,7 @@ export async function apiAcknowledgeProctorAlert(alertId, action) {
       },
       body: JSON.stringify({ alertId, action }),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -833,7 +1019,7 @@ export async function apiGetSemesterCohorts() {
       headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
     });
     if (!res.ok) return { cohorts: [], totalParticipants: 0 };
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return { cohorts: [], totalParticipants: 0 };
   }
@@ -849,7 +1035,7 @@ export async function apiPromoteStudentSemester(studentIds, targetSemester) {
       },
       body: JSON.stringify({ studentIds, targetSemester }),
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -861,7 +1047,7 @@ export async function apiGetOutboxEmails() {
       headers: { Authorization: `Bearer ${getAdminAuthToken()}` },
     });
     if (!res.ok) return [];
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return [];
   }
@@ -877,7 +1063,7 @@ export async function apiGetAvailablePartners() {
       headers: { Authorization: `Bearer ${getStudentAuthToken()}` },
     });
     if (!res.ok) return [];
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return [];
   }
@@ -889,7 +1075,7 @@ export async function apiGetMyPartnerRequests() {
       headers: { Authorization: `Bearer ${getStudentAuthToken()}` },
     });
     if (!res.ok) return { partner: null, incoming: [], outgoing: [] };
-    return await res.json();
+    return await safeJson(res);
   } catch {
     return { partner: null, incoming: [], outgoing: [] };
   }
@@ -905,7 +1091,7 @@ export async function apiSendPartnerRequest(targetStudentId) {
       },
       body: JSON.stringify({ targetStudentId }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Failed to send partner request.');
     return { success: true, ...data };
   } catch (err) {
@@ -923,7 +1109,7 @@ export async function apiRespondPartnerRequest(requestId, action) {
       },
       body: JSON.stringify({ requestId, action }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Failed to respond to partner request.');
     return { success: true, ...data };
   } catch (err) {
@@ -941,7 +1127,7 @@ export async function apiCancelPartnerRequest(requestId) {
       },
       body: JSON.stringify({ requestId }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Failed to cancel partner request.');
     return { success: true, ...data };
   } catch (err) {
@@ -958,7 +1144,7 @@ export async function apiUnpairPartner() {
         Authorization: `Bearer ${getStudentAuthToken()}`,
       },
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || 'Failed to unpair partner.');
     return { success: true, ...data };
   } catch (err) {
