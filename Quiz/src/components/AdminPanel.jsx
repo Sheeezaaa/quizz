@@ -1044,7 +1044,7 @@ export default function AdminPanel({
           </div>
         </div>
 
-        {/* Center: Live Proctor Malpractice Alarm (Surfaces all violating student IDs) */}
+        {/* Center: Live Proctor Malpractice Alarm (High-contrast, 100% readable) */}
         <div className="hidden lg:flex items-center gap-3">
           {(() => {
             if (unackViolators.length === 0) return null;
@@ -1058,11 +1058,13 @@ export default function AdminPanel({
                     setActiveCheatingAlert(unackViolators[0].latestAlert);
                   }
                 }}
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold animate-pulse shadow-lg shadow-rose-600/40 cursor-pointer"
+                className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md border-2 border-rose-400 cursor-pointer transition-all"
                 title="Click to inspect all offending student IDs"
               >
-                <Siren className="w-4 h-4 animate-bounce shrink-0" />
-                <span>🚨 {unackViolators.length} Student{unackViolators.length > 1 ? 's' : ''} Cheating: <strong className="font-mono underline">{idsList}{extra}</strong></span>
+                <Siren className="w-4 h-4 animate-bounce shrink-0 text-white" />
+                <span className="text-white font-extrabold tracking-tight">
+                  🚨 {unackViolators.length} Student{unackViolators.length > 1 ? 's' : ''} Cheating: <span className="font-mono underline font-black text-white">{idsList}{extra}</span>
+                </span>
               </button>
             );
           })()}
@@ -1295,40 +1297,46 @@ export default function AdminPanel({
                 </div>
               </div>
 
-              {/* LIVE PROCTORING & BROWSER SWITCH MALPRACTICE MONITOR - ALL STUDENT IDS DISPLAY */}
-              <div className={`p-6 rounded-3xl border shadow-2xl space-y-6 transition-all ${
-                liveProctorAlerts.some(a => !a.acknowledged)
-                  ? 'bg-gradient-to-r from-rose-950/80 via-red-950/40 to-slate-900 border-rose-500/60 shadow-rose-950/50'
-                  : isDark
-                    ? 'bg-slate-900/90 border-slate-800'
-                    : 'bg-white border-slate-200'
+              {/* LIVE PROCTORING & BROWSER SWITCH MALPRACTICE MONITOR - ULTRA HIGH-CONTRAST READABLE DISPLAY */}
+              <div className={`p-6 rounded-3xl border-2 shadow-2xl space-y-6 transition-all ${
+                isDark
+                  ? 'bg-slate-900 border-rose-500/40 text-white shadow-rose-950/40'
+                  : 'bg-white border-rose-400 text-slate-900 shadow-xl shadow-slate-200/50'
               }`}>
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-rose-500/20">
-                  <div className="flex items-start sm:items-center gap-3">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                      liveProctorAlerts.some(a => !a.acknowledged)
-                        ? 'bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-600/40'
-                        : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                
+                {/* Header Banner */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-rose-500/20">
+                  <div className="flex items-start sm:items-center gap-3.5">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md ${
+                      unackViolators.length > 0
+                        ? 'bg-rose-600 text-white shadow-rose-600/40'
+                        : isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-300'
                     }`}>
                       <AlertTriangle className="w-6 h-6" />
                     </div>
                     <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className={`font-heading font-black text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <h3 className={`font-heading font-black text-lg sm:text-xl tracking-tight ${
+                          isDark ? 'text-white' : 'text-slate-950'
+                        }`}>
                           Live Browser Switch & Tab Malpractice Monitor
                         </h3>
                         {unackViolators.length > 0 ? (
-                          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/50 animate-bounce">
-                            ⚠️ {unackViolators.length} STUDENT{unackViolators.length > 1 ? 'S' : ''} BREACH DETECTED
+                          <span className="px-3 py-1 rounded-full text-xs font-mono font-black bg-rose-600 text-white shadow-sm border border-rose-400 animate-pulse">
+                            ⚠️ {unackViolators.length} ACTIVE BREACH{unackViolators.length > 1 ? 'ES' : ''} DETECTED
                           </span>
                         ) : (
-                          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                          <span className={`px-3 py-1 rounded-full text-xs font-mono font-bold border ${
+                            isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black'
+                          }`}>
                             LOCKDOWN SECURE
                           </span>
                         )}
                       </div>
-                      <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Real-time tracking of all students opening another browser, switching tabs, or leaving full-screen lockdown during quiz rounds.
+                      <p className={`text-xs sm:text-sm mt-1 font-medium ${
+                        isDark ? 'text-slate-300' : 'text-slate-600'
+                      }`}>
+                        Real-time tracking of students opening another browser, switching tabs, or leaving full-screen examination mode.
                       </p>
                     </div>
                   </div>
@@ -1338,36 +1346,46 @@ export default function AdminPanel({
                       <button
                         type="button"
                         onClick={handleDismissAllAlerts}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-bold transition-all cursor-pointer shadow-sm"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-all cursor-pointer shadow-md"
                         title="Dismiss all malpractice alerts"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5 text-rose-400" />
+                        <CheckCircle2 className="w-4 h-4 text-white" />
                         <span>Dismiss All Alerts</span>
                       </button>
                     )}
-                    <span className="text-xs font-mono px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700">
-                      Total Violations: <strong className="text-white">{liveProctorAlerts.length}</strong>
+                    <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border ${
+                      isDark ? 'bg-slate-800 text-slate-200 border-slate-700' : 'bg-slate-100 text-slate-900 border-slate-300'
+                    }`}>
+                      Total Violations: <strong className={isDark ? 'text-white' : 'text-slate-950'}>{liveProctorAlerts.length}</strong>
                     </span>
-                    <span className="text-xs font-mono px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                      Violating Students: <strong className="text-white">{activeViolatorsByStudent.length}</strong>
+                    <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border ${
+                      isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-rose-100 text-rose-900 border-rose-300'
+                    }`}>
+                      Violating Students: <strong className={isDark ? 'text-white' : 'text-slate-950'}>{activeViolatorsByStudent.length}</strong>
                     </span>
                   </div>
                 </div>
 
-                {/* 1. HIGHLIGHTED REGISTRY: ALL STUDENT IDs CAUGHT OPENING OTHER BROWSERS */}
+                {/* 1. HIGHLIGHTED CARDS: ALL OFFENDING STUDENT IDs */}
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-black uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
-                      <Siren className="w-3.5 h-3.5 text-rose-400" />
+                  <div className="flex items-center justify-between mb-3.5">
+                    <span className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                      isDark ? 'text-rose-400' : 'text-rose-700'
+                    }`}>
+                      <Siren className="w-4 h-4 shrink-0" />
                       <span>All Offending Student IDs ({activeViolatorsByStudent.length} Detected)</span>
                     </span>
                     {activeViolatorsByStudent.length > 0 && (
                       <div className="flex items-center gap-1.5 text-xs">
-                        <span className="text-slate-400 text-[11px]">Filter by ID:</span>
+                        <span className={`font-bold text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>Filter:</span>
                         <select
                           value={proctorFilterId}
                           onChange={(e) => setProctorFilterId(e.target.value)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-800 text-white font-mono text-xs border border-slate-700 focus:outline-none focus:border-rose-500 cursor-pointer"
+                          className={`px-2.5 py-1 rounded-lg font-mono text-xs font-bold border cursor-pointer focus:outline-none ${
+                            isDark
+                              ? 'bg-slate-800 text-white border-slate-700 focus:border-rose-500'
+                              : 'bg-white text-slate-900 border-slate-300 shadow-sm focus:border-rose-500'
+                          }`}
                         >
                           <option value="ALL">All Student IDs ({activeViolatorsByStudent.length})</option>
                           {activeViolatorsByStudent.map(v => (
@@ -1381,149 +1399,213 @@ export default function AdminPanel({
                   </div>
 
                   {activeViolatorsByStudent.length === 0 ? (
-                    <div className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-3">
-                      <CheckCircle2 className="w-5 h-5 shrink-0" />
+                    <div className={`p-5 rounded-2xl border text-xs flex items-center gap-3.5 ${
+                      isDark ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                    }`}>
+                      <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
                       <div>
-                        <strong className="block text-sm font-heading">Zero Browser Switches Detected</strong>
-                        <span>All candidate sessions are currently locked into full-screen exam mode with zero background infractions.</span>
+                        <strong className="block text-sm font-heading font-black">Zero Browser Switches Detected</strong>
+                        <span className="font-medium">All candidate sessions are currently locked into full-screen exam mode with zero background infractions.</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
                       {activeViolatorsByStudent
                         .filter(v => proctorFilterId === 'ALL' || v.studentId === proctorFilterId)
-                        .map((violator) => (
-                          <div
-                            key={violator.studentId}
-                            className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 ${
-                              violator.unacknowledgedCount > 0
-                                ? 'bg-gradient-to-b from-rose-950/60 to-slate-900 border-rose-500/60 shadow-lg shadow-rose-950/40 ring-1 ring-rose-500/30'
-                                : isDark
-                                  ? 'bg-slate-950/50 border-slate-800 text-slate-400'
-                                  : 'bg-slate-50 border-slate-200 text-slate-600'
-                            }`}
-                          >
-                            <div>
-                              {/* TOP ROW: STUDENT ID BADGE & VIOLATION COUNT */}
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="px-3 py-1 rounded-xl bg-rose-600 text-white font-mono font-black text-sm flex items-center gap-1.5 shadow-md shadow-rose-600/30 select-all">
-                                  <span className="text-[10px] text-rose-200 font-sans uppercase">ID:</span>
-                                  <span>{violator.studentId}</span>
+                        .map((violator) => {
+                          const isUnack = violator.unacknowledgedCount > 0;
+                          return (
+                            <div
+                              key={violator.studentId}
+                              className={`p-4 sm:p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-3.5 shadow-md ${
+                                isUnack
+                                  ? isDark
+                                    ? 'bg-rose-950/50 border-rose-500 text-white shadow-rose-950/40'
+                                    : 'bg-rose-50/90 border-rose-400 text-slate-950 shadow-rose-200/60'
+                                  : isDark
+                                    ? 'bg-slate-950/60 border-slate-800 text-slate-200'
+                                    : 'bg-slate-50 border-slate-300 text-slate-900'
+                              }`}
+                            >
+                              <div>
+                                {/* TOP ROW: STUDENT ID BADGE & COUNT */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="px-3 py-1 rounded-xl bg-rose-600 text-white font-mono font-black text-sm flex items-center gap-1.5 shadow-md shadow-rose-600/30 select-all">
+                                    <span className="text-[10px] text-rose-200 font-sans uppercase font-bold">ID:</span>
+                                    <span>{violator.studentId}</span>
+                                  </div>
+                                  <span className={`text-xs font-mono font-black px-2.5 py-0.5 rounded-lg border ${
+                                    isUnack
+                                      ? 'bg-rose-600 text-white border-rose-400 animate-pulse'
+                                      : isDark
+                                        ? 'bg-slate-800 text-slate-300 border-slate-700'
+                                        : 'bg-slate-200 text-slate-800 border-slate-300'
+                                  }`}>
+                                    ⚠️ {violator.totalCount}x Switched
+                                  </span>
                                 </div>
-                                <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border ${
-                                  violator.unacknowledgedCount > 0
-                                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 animate-pulse'
-                                    : 'bg-slate-800 text-slate-400 border-slate-700'
+
+                                {/* STUDENT NAME & PROGRAM */}
+                                <div className="mt-3">
+                                  <strong className={`text-base font-heading font-black block truncate ${
+                                    isDark ? 'text-white' : 'text-slate-950'
+                                  }`}>
+                                    {violator.studentName}
+                                  </strong>
+                                  <span className={`text-xs font-mono font-bold block mt-0.5 ${
+                                    isDark ? 'text-slate-300' : 'text-slate-600'
+                                  }`}>
+                                    {violator.campus} • {violator.semester || violator.degreeProgram}
+                                  </span>
+                                </div>
+
+                                {/* LATEST VIOLATION DETAILS - HIGH CONTRAST */}
+                                <div className={`mt-3 p-3 rounded-xl border text-xs ${
+                                  isDark
+                                    ? 'bg-black/60 border-rose-500/30 text-rose-200'
+                                    : 'bg-white border-rose-300 text-rose-950 shadow-sm'
                                 }`}>
-                                  ⚠️ {violator.totalCount}x Switched
-                                </span>
-                              </div>
-
-                              {/* STUDENT NAME & CAMPUS INFO */}
-                              <div className="mt-3">
-                                <strong className="text-white text-sm font-heading block truncate">
-                                  {violator.studentName}
-                                </strong>
-                                <span className="text-xs text-slate-400 font-mono block">
-                                  {violator.campus} • {violator.semester || violator.degreeProgram}
-                                </span>
-                              </div>
-
-                              {/* LATEST VIOLATION DETAILS */}
-                              <div className="mt-2.5 p-2 rounded-xl bg-black/40 border border-white/5 text-[11px] text-rose-300">
-                                <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-bold">
-                                  <ExternalLink className="w-3 h-3" />
-                                  <span>Latest Detection:</span>
+                                  <div className={`flex items-center gap-1 text-[10px] uppercase font-black ${
+                                    isDark ? 'text-slate-400' : 'text-slate-600'
+                                  }`}>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <span>Latest Infraction:</span>
+                                  </div>
+                                  <p className="mt-1 font-bold leading-snug line-clamp-2">
+                                    {violator.latestAlert.details}
+                                  </p>
+                                  <span className={`text-[11px] font-mono font-bold block mt-1.5 ${
+                                    isDark ? 'text-slate-400' : 'text-slate-500'
+                                  }`}>
+                                    Detected at: {new Date(violator.latestTimestamp).toLocaleTimeString()}
+                                  </span>
                                 </div>
-                                <p className="mt-0.5 line-clamp-2">
-                                  {violator.latestAlert.details}
-                                </p>
-                                <span className="text-[10px] font-mono text-slate-400 block mt-1">
-                                  At: {new Date(violator.latestTimestamp).toLocaleTimeString()}
-                                </span>
+                              </div>
+
+                              {/* ACTIONS */}
+                              <div className="pt-2.5 border-t border-rose-500/20 flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveCheatingAlert(violator.latestAlert)}
+                                  className="flex-1 py-2 px-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-heading font-black text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer text-center"
+                                >
+                                  Review ID
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleActionOnCheatingAlert(violator.latestAlert.id, 'WARN_STUDENT')}
+                                  className={`py-2 px-3 rounded-xl border text-xs font-black transition-all cursor-pointer ${
+                                    isDark
+                                      ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 text-amber-300'
+                                      : 'bg-amber-100 hover:bg-amber-200 border-amber-400 text-amber-900'
+                                  }`}
+                                  title="Issue formal warning to candidate"
+                                >
+                                  Warn
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDismissStudentAlerts(violator.studentId)}
+                                  className={`py-2 px-3 rounded-xl border text-xs font-black transition-all cursor-pointer ${
+                                    isDark
+                                      ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
+                                      : 'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-800'
+                                  }`}
+                                  title="Dismiss all alerts for this student ID"
+                                >
+                                  Clear
+                                </button>
                               </div>
                             </div>
-
-                            {/* ACTION BUTTONS FOR THIS STUDENT ID */}
-                            <div className="pt-2 border-t border-white/10 flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setActiveCheatingAlert(violator.latestAlert)}
-                                className="flex-1 py-1.5 px-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-heading font-bold text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer text-center"
-                              >
-                                Review ID
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleActionOnCheatingAlert(violator.latestAlert.id, 'WARN_STUDENT')}
-                                className="py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-heading font-bold text-xs transition-all cursor-pointer"
-                                title="Issue warning to student"
-                              >
-                                Warn
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDismissStudentAlerts(violator.studentId)}
-                                className="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs transition-all cursor-pointer"
-                                title="Dismiss all alerts for this student ID"
-                              >
-                                Clear
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                     </div>
                   )}
                 </div>
 
-                {/* 2. CHRONOLOGICAL STREAM OF ALL INDIVIDUAL INCIDENTS */}
+                {/* 2. CHRONOLOGICAL INCIDENT LOG - CRYSTAL-CLEAR CONTRAST */}
                 {liveProctorAlerts.length > 0 && (
-                  <div className="pt-4 border-t border-rose-500/20">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                  <div className="pt-5 border-t border-rose-500/20">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className={`text-xs font-mono font-black uppercase tracking-wider ${
+                        isDark ? 'text-slate-300' : 'text-slate-800'
+                      }`}>
                         Full Chronological Incident Log ({liveProctorAlerts.length} Events)
                       </span>
                     </div>
                     <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                       {liveProctorAlerts
                         .filter(a => proctorFilterId === 'ALL' || a.studentId === proctorFilterId)
-                        .map((alert) => (
-                          <div
-                            key={alert.id}
-                            className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs transition-all ${
-                              !alert.acknowledged
-                                ? 'bg-rose-950/30 border-rose-500/40 text-white'
-                                : isDark
-                                  ? 'bg-slate-950/40 border-slate-800 text-slate-400'
-                                  : 'bg-slate-50 border-slate-200 text-slate-600'
-                            }`}
-                          >
-                            <div className="flex flex-wrap items-center gap-2.5 min-w-0">
-                              <span className="px-2 py-0.5 rounded-lg bg-rose-600/30 border border-rose-500/50 text-rose-300 font-mono font-black text-xs">
-                                {alert.studentId}
-                              </span>
-                              <strong className="text-white truncate">{alert.studentName}</strong>
-                              <span className="text-slate-400 font-mono text-[11px]">Round 0{alert.roundNumber}</span>
-                              <span className="text-rose-300/80 truncate max-w-xs">{alert.details}</span>
+                        .map((alert) => {
+                          const isUnack = !alert.acknowledged;
+                          return (
+                            <div
+                              key={alert.id}
+                              className={`p-3.5 rounded-xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-all shadow-sm ${
+                                isUnack
+                                  ? isDark
+                                    ? 'bg-rose-950/70 border-rose-500 text-white'
+                                    : 'bg-rose-50 border-rose-400 text-slate-950 shadow-rose-200/50'
+                                  : isDark
+                                    ? 'bg-slate-950/70 border-slate-800 text-slate-200'
+                                    : 'bg-white border-slate-300 text-slate-900'
+                              }`}
+                            >
+                              <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+                                {/* STUDENT ID BADGE - ALWAYS SOLID HIGH CONTRAST */}
+                                <span className="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-mono font-black text-xs shadow-sm shrink-0 select-all">
+                                  {alert.studentId}
+                                </span>
+
+                                {/* STUDENT NAME */}
+                                <strong className={`font-heading font-black text-sm truncate ${
+                                  isDark ? 'text-white' : 'text-slate-950'
+                                }`}>
+                                  {alert.studentName}
+                                </strong>
+
+                                {/* STAGE / ROUND */}
+                                <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded ${
+                                  isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-800'
+                                }`}>
+                                  Round 0{alert.roundNumber}
+                                </span>
+
+                                {/* DETAILS */}
+                                <span className={`font-semibold truncate max-w-sm ${
+                                  isUnack
+                                    ? isDark ? 'text-rose-200 font-bold' : 'text-rose-900 font-bold'
+                                    : isDark ? 'text-slate-300' : 'text-slate-700'
+                                }`}>
+                                  {alert.details}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2.5 shrink-0">
+                                <span className={`text-xs font-mono font-bold ${
+                                  isDark ? 'text-slate-400' : 'text-slate-600'
+                                }`}>
+                                  {new Date(alert.timestamp).toLocaleTimeString()}
+                                </span>
+                                {isUnack ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleActionOnCheatingAlert(alert.id, 'DISMISS')}
+                                    className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs cursor-pointer shadow-sm"
+                                  >
+                                    Dismiss
+                                  </button>
+                                ) : (
+                                  <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
+                                    isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-700 border border-slate-300'
+                                  }`}>
+                                    {alert.actionTaken || 'RESOLVED'}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] font-mono text-slate-400">
-                                {new Date(alert.timestamp).toLocaleTimeString()}
-                              </span>
-                              {!alert.acknowledged ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleActionOnCheatingAlert(alert.id, 'DISMISS')}
-                                  className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] cursor-pointer"
-                                >
-                                  Dismiss
-                                </button>
-                              ) : (
-                                <span className="text-[10px] font-mono text-slate-500">{alert.actionTaken || 'RESOLVED'}</span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                     </div>
                   </div>
                 )}
