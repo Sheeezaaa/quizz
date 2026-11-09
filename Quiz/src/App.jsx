@@ -277,6 +277,16 @@ export default function App() {
         </button>
       </div>
 
+      {/* Discreet Secret Admin Corner Trigger (Hidden from normal students) */}
+      <button
+        onClick={handleOpenAdmin}
+        className="fixed bottom-2 left-2 z-30 opacity-15 hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-blue-500 cursor-pointer"
+        title="Admin Portal"
+        aria-label="Staff Administration"
+      >
+        <ShieldCheck className="w-3.5 h-3.5" />
+      </button>
+
     </div>
   );
 }
