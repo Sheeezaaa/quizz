@@ -431,21 +431,21 @@ export default function RegistrationManager({ isDark }) {
                     registrations.map((student) => {
                       const status = student.registrationStatus || 'Approved';
                       return (
-                        <tr key={student.id} className={`hover:bg-white/[0.02] transition-colors ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                          <td className="p-3.5 font-mono font-bold text-blue-400">
+                        <tr key={student.id} className={`border-b transition-colors ${isDark ? 'border-slate-800/80 hover:bg-white/[0.02] text-slate-200' : 'border-slate-200 hover:bg-slate-50 text-slate-900'}`}>
+                          <td className="p-3.5 font-mono font-black text-blue-600 dark:text-blue-400">
                             {student.id}
                           </td>
                           <td className="p-3.5">
-                            <div className="font-heading font-bold text-white">{student.fullName}</div>
-                            <div className="text-[11px] font-mono text-slate-400">{student.studentId}</div>
+                            <div className={`font-heading font-black text-sm ${isDark ? 'text-white' : 'text-slate-950'}`}>{student.fullName}</div>
+                            <div className={`text-xs font-mono font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{student.studentId}</div>
                           </td>
                           <td className="p-3.5">
-                            <div className="truncate max-w-[160px] text-slate-200">{student.universityName || 'COMSATS Islamabad'}</div>
-                            <div className="text-[11px] text-slate-400">{student.campus || 'Islamabad'} • {student.region || 'Federal'}</div>
+                            <div className={`truncate max-w-[160px] font-bold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{student.universityName || 'COMSATS Islamabad'}</div>
+                            <div className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{student.campus || 'Islamabad'} • {student.region || 'Federal'}</div>
                           </td>
                           <td className="p-3.5">
-                            <div>{student.department || student.degreeProgram}</div>
-                            <div className="text-[11px] text-slate-400">{student.semester}</div>
+                            <div className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{student.department || student.degreeProgram}</div>
+                            <div className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{student.semester}</div>
                           </td>
                           <td className="p-3.5">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
@@ -580,11 +580,11 @@ export default function RegistrationManager({ isDark }) {
                       : isDark ? 'border-slate-800 bg-slate-900/60 hover:border-slate-700' : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
-                  <span className="text-[10px] font-heading font-bold uppercase tracking-wider text-slate-400 truncate block">
+                  <span className={`text-[10px] font-heading font-bold uppercase tracking-wider truncate block ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     {cohort.semester}
                   </span>
-                  <div className="text-xl font-heading font-black text-white mt-0.5">{cohort.count}</div>
-                  <span className="text-[10px] text-slate-500">Active Students</span>
+                  <div className={`text-xl font-heading font-black mt-0.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>{cohort.count}</div>
+                  <span className={`text-[10px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Active Students</span>
                 </button>
               );
             })}
@@ -595,22 +595,24 @@ export default function RegistrationManager({ isDark }) {
             isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'
           }`}>
             <div className="flex items-center gap-3 w-full md:w-auto">
-              <span className="text-xs font-heading font-bold text-slate-300">
+              <span className={`text-xs font-heading font-black ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
                 Selected for Promotion:
               </span>
-              <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              <span className={`px-3 py-1 rounded-full text-xs font-mono font-black border shadow-sm ${
+                isDark ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40' : 'bg-indigo-100 text-indigo-900 border-indigo-300'
+              }`}>
                 {selectedStudentsForPromotion.length} students
               </span>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400">Promote to:</span>
+                <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Promote to:</span>
                 <select
                   value={targetSemester}
                   onChange={(e) => setTargetSemester(e.target.value)}
-                  className={`px-3 py-1.5 rounded-xl text-xs border focus:outline-none ${
-                    isDark ? 'bg-black/50 border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border focus:outline-none ${
+                    isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900 shadow-sm'
                   }`}
                 >
                   <option value="2nd Semester">2nd Semester</option>
@@ -627,10 +629,10 @@ export default function RegistrationManager({ isDark }) {
               <button
                 onClick={handlePromoteCohort}
                 disabled={promotionLoading || selectedStudentsForPromotion.length === 0}
-                className={`px-4 py-2 rounded-xl text-xs font-heading font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-heading font-black flex items-center gap-2 transition-all cursor-pointer ${
                   selectedStudentsForPromotion.length > 0 && !promotionLoading
                     ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30'
-                    : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
+                    : isDark ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700' : 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300'
                 }`}
               >
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -646,25 +648,31 @@ export default function RegistrationManager({ isDark }) {
               : (cohortsData.find(c => c.semester === selectedSemester)?.students || []);
 
             return (
-              <div className={`rounded-xl border overflow-hidden ${isDark ? 'border-slate-800 bg-[#090f1d]' : 'border-slate-200 bg-white'}`}>
-                <div className="p-4 border-b flex items-center justify-between border-white/5 bg-black/40">
-                  <div className="flex items-center gap-2">
+              <div className={`rounded-2xl border-2 overflow-hidden shadow-lg transition-all ${
+                isDark ? 'border-slate-800 bg-[#090f1d]' : 'border-slate-300 bg-white'
+              }`}>
+                <div className={`p-4 border-b flex items-center justify-between ${
+                  isDark ? 'border-slate-800 bg-slate-900/90 text-white' : 'border-slate-200 bg-slate-100 text-slate-900'
+                }`}>
+                  <div className="flex items-center gap-2.5">
                     <button
                       onClick={() => handleSelectAllInSemester(displayedStudents)}
-                      className="p-1 rounded text-slate-400 hover:text-white"
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                        isDark ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
+                      }`}
                       title="Select / Unselect All in this View"
                     >
                       {displayedStudents.length > 0 && displayedStudents.every(s => selectedStudentsForPromotion.includes(s.id)) ? (
-                        <CheckSquare className="w-4 h-4 text-indigo-400" />
+                        <CheckSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                       ) : (
                         <Square className="w-4 h-4" />
                       )}
                     </button>
-                    <span className="font-heading font-bold text-white text-xs">
+                    <span className={`font-heading font-black text-sm ${isDark ? 'text-white' : 'text-slate-950'}`}>
                       {selectedSemester === 'All' ? 'All Registered Students' : `${selectedSemester} Cohort`} ({displayedStudents.length})
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-400 font-mono">
+                  <span className={`text-xs font-mono font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     Check students to advance them to the next academic cycle
                   </span>
                 </div>
@@ -672,19 +680,21 @@ export default function RegistrationManager({ isDark }) {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className={`border-b ${isDark ? 'border-slate-800 bg-black/20 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
-                        <th className="p-3.5 w-10 text-center font-heading font-bold">Select</th>
-                        <th className="p-3.5 font-heading font-bold">Student Name & ID</th>
-                        <th className="p-3.5 font-heading font-bold">Department / Program</th>
-                        <th className="p-3.5 font-heading font-bold">Current Semester</th>
-                        <th className="p-3.5 font-heading font-bold">Semester Progression History</th>
-                        <th className="p-3.5 font-heading font-bold text-right">Quick Action</th>
+                      <tr className={`border-b ${
+                        isDark ? 'border-slate-800 bg-slate-950/70 text-slate-300' : 'border-slate-300 bg-slate-100 text-slate-900 font-black'
+                      }`}>
+                        <th className="p-3.5 w-10 text-center font-heading font-black">Select</th>
+                        <th className="p-3.5 font-heading font-black text-sm">Student Name & ID</th>
+                        <th className="p-3.5 font-heading font-black text-sm">Department / Program</th>
+                        <th className="p-3.5 font-heading font-black text-sm">Current Semester</th>
+                        <th className="p-3.5 font-heading font-black text-sm">Semester Progression History</th>
+                        <th className="p-3.5 font-heading font-black text-sm text-right">Quick Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-200'}`}>
                       {displayedStudents.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="p-8 text-center text-slate-500">
+                          <td colSpan={6} className={`p-8 text-center font-bold text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             No students currently recorded in {selectedSemester}.
                           </td>
                         </tr>
@@ -693,7 +703,14 @@ export default function RegistrationManager({ isDark }) {
                           const isChecked = selectedStudentsForPromotion.includes(s.id);
                           const history = s.semesterHistory || [];
                           return (
-                            <tr key={s.id} className={`hover:bg-white/[0.02] transition-colors ${isChecked ? 'bg-indigo-500/5' : ''}`}>
+                            <tr
+                              key={s.id}
+                              className={`border-b transition-colors ${
+                                isChecked
+                                  ? isDark ? 'bg-indigo-950/50 border-indigo-500/40' : 'bg-indigo-50/90 border-indigo-200'
+                                  : isDark ? 'border-slate-800/80 hover:bg-slate-900/60' : 'border-slate-200 hover:bg-slate-50/80'
+                              }`}
+                            >
                               <td className="p-3.5 text-center">
                                 <input
                                   type="checkbox"
@@ -703,32 +720,44 @@ export default function RegistrationManager({ isDark }) {
                                 />
                               </td>
                               <td className="p-3.5">
-                                <div className="font-heading font-bold text-white">{s.fullName}</div>
-                                <div className="text-[10px] font-mono text-slate-400">{s.studentId} • {s.email}</div>
-                              </td>
-                              <td className="p-3.5 text-slate-300">
-                                <div>{s.department || s.degreeProgram || 'Computer Science'}</div>
-                                <div className="text-[10px] text-slate-500">{s.campus || 'Islamabad Campus'}</div>
+                                <div className={`font-heading font-black text-sm ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                                  {s.fullName}
+                                </div>
+                                <div className={`text-xs font-mono font-bold mt-0.5 ${isDark ? 'text-indigo-400' : 'text-indigo-700'}`}>
+                                  {s.studentId} <span className={isDark ? 'text-slate-400 font-normal' : 'text-slate-600 font-semibold'}>• {s.email}</span>
+                                </div>
                               </td>
                               <td className="p-3.5">
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                                <div className={`font-bold text-xs ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
+                                  {s.department || s.degreeProgram || 'Computer Science'}
+                                </div>
+                                <div className={`text-xs font-semibold mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                                  {s.campus || 'Islamabad Campus'}
+                                </div>
+                              </td>
+                              <td className="p-3.5">
+                                <span className={`px-3 py-1 rounded-full text-xs font-mono font-black border shadow-sm ${
+                                  isDark
+                                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                                    : 'bg-indigo-100 text-indigo-950 border-indigo-300 font-black'
+                                }`}>
                                   {s.semester || 'Unassigned'}
                                 </span>
                               </td>
                               <td className="p-3.5">
                                 {history.length === 0 ? (
-                                  <span className="text-[11px] text-slate-500 italic">
-                                    Initial enrollment in {s.semester || '1st Semester'}
+                                  <span className={`text-xs italic font-semibold ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
+                                    Initial enrollment in <strong className={isDark ? 'text-slate-200' : 'text-slate-950'}>{s.semester || '1st Semester'}</strong>
                                   </span>
                                 ) : (
-                                  <div className="space-y-1">
+                                  <div className="space-y-1.5">
                                     {history.map((h, hIdx) => (
-                                      <div key={hIdx} className="flex items-center gap-1.5 text-[10px] font-mono text-slate-300">
-                                        <History className="w-3 h-3 text-indigo-400" />
-                                        <span className="text-slate-400">{h.fromSemester}</span>
-                                        <ArrowRight className="w-2.5 h-2.5 text-slate-500" />
-                                        <span className="text-indigo-300 font-bold">{h.toSemester}</span>
-                                        <span className="text-[9px] text-slate-500">
+                                      <div key={hIdx} className={`flex items-center gap-1.5 text-xs font-mono font-bold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>
+                                        <History className={`w-3.5 h-3.5 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                                        <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>{h.fromSemester}</span>
+                                        <ArrowRight className="w-3 h-3 text-slate-400" />
+                                        <span className={`font-black ${isDark ? 'text-indigo-300' : 'text-indigo-700'}`}>{h.toSemester}</span>
+                                        <span className={`text-[10px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                                           ({new Date(h.promotedAt).toLocaleDateString()})
                                         </span>
                                       </div>
@@ -747,7 +776,11 @@ export default function RegistrationManager({ isDark }) {
                                       fetchRegistrations();
                                     }
                                   }}
-                                  className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-[10px] font-heading font-semibold transition-colors cursor-pointer"
+                                  className={`px-3 py-1.5 rounded-xl border text-xs font-heading font-black transition-all cursor-pointer shadow-sm ${
+                                    isDark
+                                      ? 'bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border-indigo-500/40'
+                                      : 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700 shadow-indigo-600/30'
+                                  }`}
                                 >
                                   Advance to {targetSemester}
                                 </button>
@@ -866,17 +899,17 @@ export default function RegistrationManager({ isDark }) {
                     </tr>
                   ) : (
                     outboxEmails.map((email) => (
-                      <tr key={email.id} className="hover:bg-white/[0.02] transition-colors">
+                      <tr key={email.id} className={`border-b transition-colors ${isDark ? 'border-slate-800 hover:bg-white/[0.02]' : 'border-slate-200 hover:bg-slate-50'}`}>
                         <td className="p-3.5">
-                          <div className="font-heading font-bold text-white">{email.recipientName || 'Student Participant'}</div>
-                          <div className="text-[11px] font-mono text-emerald-400">{email.to}</div>
+                          <div className={`font-heading font-black text-sm ${isDark ? 'text-white' : 'text-slate-950'}`}>{email.recipientName || 'Student Participant'}</div>
+                          <div className={`text-xs font-mono font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>{email.to}</div>
                         </td>
-                        <td className="p-3.5 text-slate-200 font-medium">
+                        <td className={`p-3.5 font-bold text-xs ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
                           {email.subject}
                         </td>
-                        <td className="p-3.5 text-slate-300">
-                          <div className="font-mono text-[11px] text-blue-300">{email.testDate || 'Nov 12, 2026'} • {email.reportingTime || '08:50 AM PST'}</div>
-                          <div className="text-[10px] text-slate-400 truncate max-w-[200px]">{email.venue || 'COMSATS Main Auditorium'}</div>
+                        <td className="p-3.5">
+                          <div className={`font-mono font-bold text-xs ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>{email.testDate || 'Nov 12, 2026'} • {email.reportingTime || '08:50 AM PST'}</div>
+                          <div className={`text-[11px] font-medium truncate max-w-[200px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{email.venue || 'COMSATS Main Auditorium'}</div>
                         </td>
                         <td className="p-3.5">
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
