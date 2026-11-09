@@ -1553,7 +1553,7 @@ export default function AdminPanel({
                             >
                               <div className="flex flex-wrap items-center gap-2.5 min-w-0">
                                 {/* STUDENT ID BADGE - ALWAYS SOLID HIGH CONTRAST */}
-                                <span className="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-mono font-black text-xs shadow-sm shrink-0 select-all">
+                                <span className="px-3 py-1 rounded-lg bg-rose-600 text-white font-mono font-black text-sm shadow-sm shrink-0 select-all">
                                   {alert.studentId}
                                 </span>
 
