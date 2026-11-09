@@ -964,36 +964,22 @@ export default function AdminPanel({
             {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-600/30">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm">
               <Zap className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-heading font-black text-base tracking-tight text-blue-600">BATTLE</span>
-                <span className={`font-heading font-black text-base tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>OF BRAINS</span>
-                <span className="hidden sm:inline-block text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 border border-blue-500/30 px-2 py-0.5 rounded">
-                  ADMIN CONSOLE
-                </span>
-              </div>
-              <div className={`hidden sm:flex items-center gap-2 text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>System Online • Live Database Synced</span>
-              </div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-heading font-black text-sm sm:text-base tracking-tight text-blue-600">BATTLE</span>
+              <span className={`font-heading font-black text-sm sm:text-base tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>OF BRAINS</span>
+              <span className="hidden sm:inline-block text-[9px] font-mono font-bold bg-blue-500/10 text-blue-600 border border-blue-500/30 px-1.5 py-0.5 rounded-md">
+                ADMIN
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Center: Live Event Countdown pill & Proctor Siren Status */}
+        {/* Center: Live Proctor Malpractice Alarm (Visible only when breach detected) */}
         <div className="hidden lg:flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-mono ${
-            isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
-          }`}>
-            <Clock className="w-3.5 h-3.5 text-blue-500" />
-            <span>Countdown: <strong className={isDark ? 'text-white' : 'text-slate-900'}>{calculateDaysLeft()}</strong></span>
-          </div>
-
-          {/* Live Proctor Malpractice Status Pill in Admin Header */}
           {(() => {
             const unackCount = liveProctorAlerts.filter(a => !a.acknowledged).length;
             return unackCount > 0 ? (
@@ -1006,82 +992,74 @@ export default function AdminPanel({
                 className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold animate-pulse shadow-lg shadow-rose-600/40 cursor-pointer"
               >
                 <Siren className="w-4 h-4 animate-bounce" />
-                <span>{unackCount} Cheating Alarm{unackCount > 1 ? 's' : ''}!</span>
+                <span>{unackCount} Malpractice Alarm{unackCount > 1 ? 's' : ''}!</span>
               </button>
-            ) : (
-              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] ${
-                isDark ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
-              }`}>
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Proctor Siren Armed</span>
-              </div>
-            );
+            ) : null;
           })()}
         </div>
 
-        {/* Right: Theme Toggle, Save Button, Live Site, Profile & Logout */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          
-          {/* THEME TOGGLE (Sun / Moon) inside Admin Header */}
+        {/* Right Action Buttons - Clean, Spacious & Uncluttered */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+
+          {/* Quick Save All Changes button */}
+          <button
+            onClick={handleSaveAll}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-heading font-bold text-xs shadow-md shadow-blue-600/25 transition-all cursor-pointer"
+            title="Save all changes to website"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Save</span>
+          </button>
+
+          {/* View Live Public Site Button (Compact) */}
+          <button
+            onClick={onClose}
+            className={`inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+              isDark 
+                ? 'text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border-slate-700/80' 
+                : 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border-slate-200'
+            }`}
+            title="Return to Public Website"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-blue-500" />
+            <span className="hidden md:inline">Website</span>
+          </button>
+
+          {/* THEME TOGGLE (Sun / Moon) */}
           <button
             onClick={handleToggleThemeClick}
-            className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
               isDark
                 ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/20'
                 : 'bg-amber-500/10 border-amber-500/30 text-amber-600 hover:bg-amber-500/20 shadow-sm'
             }`}
-            title={isDark ? 'Switch Admin to Light Mode' : 'Switch Admin to Dark Mode'}
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             aria-label="Toggle Theme Mode"
           >
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          {/* Quick Save All Changes button */}
-          <button
-            onClick={handleSaveAll}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-heading font-bold text-xs shadow-md shadow-blue-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-            title="Save all changes to website"
-          >
-            <Save className="w-4 h-4" />
-            <span className="hidden sm:inline">Save All Changes</span>
-            <span className="sm:hidden">Save</span>
-          </button>
-
-          {/* View Live Public Site Button */}
-          <button
-            onClick={onClose}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-              isDark 
-                ? 'text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border-slate-700/80' 
-                : 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border-slate-200'
-            }`}
-            title="Switch back to public website view"
-          >
-            <ExternalLink className="w-3.5 h-3.5 text-blue-500" />
-            <span className="hidden md:inline">View Public Website</span>
-          </button>
-
           {/* User Profile Pill */}
-          <div className={`hidden xl:flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border text-xs ${
+          <div className={`hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-xs shadow-sm ${
             isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-slate-100 border-slate-200'
           }`}>
-            <div className="w-6 h-6 rounded-full bg-blue-600/20 text-blue-600 font-bold flex items-center justify-center text-[10px] border border-blue-500/40">
+            <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[10px]">
               AU
             </div>
-            <div className="text-left">
-              <div className={`font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Faculty Admin</div>
-              <div className="text-[10px] text-slate-500 leading-tight">admin@comsats.edu.pk</div>
+            <div className="text-left max-w-[100px] truncate">
+              <div className={`font-bold leading-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>Admin</div>
+              <div className="text-[10px] text-slate-500 leading-tight truncate">Faculty</div>
             </div>
           </div>
 
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold text-rose-500 hover:text-rose-600 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold text-rose-500 hover:text-rose-600 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Log Out of Admin Panel"
           >
             <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Sign Out</span>
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </header>
