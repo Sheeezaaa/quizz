@@ -521,72 +521,83 @@ export default function PracticeArena({ initialMode = 'round1' }) {
           FULL-SCREEN EMERGENCY PROCTORING BUZZER ALARM MODAL (OFFICIAL PROCTORING)
           ========================================================================= */}
       {showWarningModal && (
-        <div className="proctor-modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-red-950/90 backdrop-blur-md animate-fadeIn">
-          <div className="bg-[#14080c] border-2 border-red-500 max-w-lg w-full p-6 sm:p-8 rounded-3xl shadow-[0_0_60px_rgba(239,68,68,0.6)] text-center space-y-5 relative">
+        <div className="proctor-modal-container fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-xl animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-gradient-to-b from-[#180e14] via-[#120a10] to-[#0c050a] border border-rose-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_25px_70px_rgba(244,63,94,0.35)] text-center space-y-6 overflow-hidden ring-1 ring-rose-500/20">
             
-            <div className="w-16 h-16 rounded-full bg-red-600/20 border-2 border-red-500 flex items-center justify-center text-red-500 mx-auto animate-bounce">
-              <ShieldAlert className="w-8 h-8" />
+            {/* Ambient Red Glow */}
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-44 bg-rose-600/25 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Glowing Shield Icon */}
+            <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-3xl bg-rose-500/20 animate-ping opacity-25" />
+              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-rose-500/30 to-red-600/20 border-2 border-rose-500/60 flex items-center justify-center text-rose-400 shadow-xl shadow-rose-950">
+                <ShieldAlert className="w-10 h-10 text-rose-400 drop-shadow-[0_0_12px_rgba(244,63,94,0.6)]" />
+              </div>
             </div>
 
-            <div>
-              <span className="text-[11px] font-mono font-bold uppercase tracking-widest bg-red-500/20 text-red-400 border border-red-500/40 px-3.5 py-1 rounded-full">
-                🚨 Proctored Violation Buzzer Sounded!
-              </span>
-              <h3 style={{ color: '#ffffff' }} className="text-2xl font-heading font-black text-white mt-3 tracking-tight">
-                {isDisqualified ? 'DISQUALIFIED: CHEATING DETECTED' : 'UNAUTHORIZED TAB / BROWSER SWITCH DETECTED!'}
+            {/* Header Status & Text */}
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[11px] font-mono font-bold uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                <span>Proctored Violation Buzzer Sounded</span>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-heading font-black text-white tracking-tight leading-snug">
+                {isDisqualified ? 'Disqualified: Cheating Detected' : 'Unauthorized Tab / Browser Switch!'}
               </h3>
-              <p style={{ color: '#fca5a5' }} className="text-xs text-red-300 mt-2.5 leading-relaxed font-sans">
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans max-w-md mx-auto pt-1">
                 {isDisqualified
-                  ? 'Multiple unauthorized window blur or tab switch events were detected during your examination session. In accordance with Article 03 (Integrity & Proctoring Regulations), this session has been locked and marked for administrative adjudication.'
+                  ? 'Multiple unauthorized window blur or browser tab switch events were recorded during your examination session. In accordance with Article 03 (Integrity & Proctoring Regulations), this session has been locked.'
                   : 'Switching browser tabs, minimizing the screen, or accessing external applications during an active test session is strictly prohibited. An infraction alert has been logged with the proctoring console.'}
               </p>
             </div>
 
-            {/* Infraction Details Box */}
-            <div 
-              style={{ backgroundColor: '#1a0508', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f8fafc' }} 
-              className="proctor-info-box p-4 rounded-2xl border text-left text-xs font-mono space-y-2.5 shadow-inner"
-            >
-              <div className="flex justify-between items-center">
-                <span style={{ color: '#f87171' }} className="font-bold text-red-400">Infraction Type:</span>
-                <span style={{ color: '#ffffff' }} className="font-semibold text-white text-right truncate max-w-[220px]">
-                  {latestViolationReason || 'Browser Tab Switched / Window Blur'}
+            {/* Infraction Details Box (Clean & Readable, No Truncation) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-black/60 border border-rose-500/30 text-left text-xs font-mono space-y-3 shadow-inner">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2.5 border-b border-white/10">
+                <span className="text-[11px] font-bold uppercase text-slate-400">Infraction Type:</span>
+                <span className="font-semibold text-rose-200 text-left sm:text-right">
+                  {latestViolationReason || 'Browser Window Lost Focus / Tab Switch'}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span style={{ color: '#f87171' }} className="font-bold text-red-400">Violation Count:</span>
-                <span style={{ color: '#ffffff' }} className="font-bold text-white font-mono">
+              <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
+                <span className="text-[11px] font-bold uppercase text-slate-400">Violation Count:</span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold text-xs">
                   {tabViolations.length} / 2 Maximum Allowed
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span style={{ color: '#f87171' }} className="font-bold text-red-400">System Status:</span>
-                <span style={{ color: '#34d399' }} className="text-emerald-400 font-bold">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase text-slate-400">System Status:</span>
+                <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                   🚨 Alarm Sounded & Logged to Admin
                 </span>
               </div>
             </div>
 
-            {!isDisqualified ? (
-              <button
-                onClick={() => setShowWarningModal(false)}
-                style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
-                className="w-full py-3.5 px-6 rounded-xl font-heading font-bold text-sm shadow-lg shadow-red-600/40 hover:bg-red-500 transition-all cursor-pointer text-white"
-              >
-                I Acknowledge - Return to Examination
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setShowWarningModal(false);
-                  resetQuiz();
-                }}
-                style={{ backgroundColor: '#334155', color: '#ffffff', borderColor: '#475569' }}
-                className="w-full py-3.5 px-6 rounded-xl border font-heading font-bold text-sm hover:bg-slate-600 transition-all cursor-pointer text-white shadow-md"
-              >
-                Reset Authorized Session
-              </button>
-            )}
+            {/* Action Buttons */}
+            <div>
+              {!isDisqualified ? (
+                <button
+                  type="button"
+                  onClick={() => setShowWarningModal(false)}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-heading font-black text-sm tracking-wide shadow-xl shadow-rose-600/40 hover:shadow-rose-600/60 transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>I Acknowledge — Return to Examination</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWarningModal(false);
+                    resetQuiz();
+                  }}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-heading font-black text-sm tracking-wide shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Reset Authorized Session</span>
+                </button>
+              )}
+            </div>
 
           </div>
         </div>

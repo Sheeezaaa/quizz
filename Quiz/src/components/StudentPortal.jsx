@@ -2190,25 +2190,65 @@ export default function StudentPortal({
       {/* MODAL 3: ANTI-CHEAT MALPRACTICE VIOLATION POPUP */}
       {/* ======================================================== */}
       {showViolationModal && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-rose-950/80 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-md rounded-3xl bg-slate-900 border-2 border-rose-500 p-6 text-center space-y-4 shadow-2xl">
-            <div className="w-16 h-16 rounded-2xl bg-rose-500/20 text-rose-500 border border-rose-500/40 flex items-center justify-center mx-auto text-2xl font-black">
-              🚨
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-xl animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-gradient-to-b from-[#180e14] via-[#120a10] to-[#0c050a] border border-rose-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_25px_70px_rgba(244,63,94,0.35)] text-center space-y-6 overflow-hidden ring-1 ring-rose-500/20">
+            
+            {/* Ambient Red Glow */}
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-44 bg-rose-600/25 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Glowing Icon */}
+            <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-3xl bg-rose-500/20 animate-ping opacity-25" />
+              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-rose-500/30 to-red-600/20 border-2 border-rose-500/60 flex items-center justify-center text-rose-400 shadow-xl shadow-rose-950">
+                <AlertTriangle className="w-10 h-10 text-rose-400 drop-shadow-[0_0_12px_rgba(244,63,94,0.6)]" />
+              </div>
             </div>
-            <h3 className="text-xl font-heading font-black text-rose-400">Proctoring Warning #{violationCount}</h3>
-            <p className="text-xs text-rose-200">{violationReason}</p>
-            <p className="text-[11px] text-slate-400">
-              Exam security rule: Tab switching and leaving fullscreen is strictly forbidden. 3 warnings result in immediate disqualification.
-            </p>
-            <button
-              onClick={() => {
-                setShowViolationModal(false);
-                requestFullScreen();
-              }}
-              className="px-6 py-2.5 rounded-xl bg-rose-600 text-white font-bold text-xs hover:bg-rose-500"
-            >
-              I Understand & Resume Examination
-            </button>
+
+            {/* Header Status & Text */}
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[11px] font-mono font-bold uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                <span>Anti-Cheat Proctor Warning #{violationCount}</span>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-heading font-black text-white tracking-tight leading-snug">
+                {isDisqualified ? 'Disqualified: Malpractice Logged' : 'Unauthorized Tab / Browser Switch!'}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans max-w-md mx-auto pt-1">
+                {violationReason || 'You switched tabs or minimized the active examination window. 3 infractions result in automatic disqualification.'}
+              </p>
+            </div>
+
+            {/* Details Box */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-black/60 border border-rose-500/30 text-left text-xs font-mono space-y-3 shadow-inner">
+              <div className="flex justify-between items-center pb-2.5 border-b border-white/10">
+                <span className="text-[11px] font-bold uppercase text-slate-400">Warning Strike:</span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold text-xs">
+                  {violationCount} / 3 Maximum Allowed
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase text-slate-400">Proctoring Telemetry:</span>
+                <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  Transmitted to Admin Console
+                </span>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowViolationModal(false);
+                  requestFullScreen();
+                }}
+                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-heading font-black text-sm tracking-wide shadow-xl shadow-rose-600/40 hover:shadow-rose-600/60 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>I Understand — Resume Examination</span>
+              </button>
+            </div>
+
           </div>
         </div>
       )}
