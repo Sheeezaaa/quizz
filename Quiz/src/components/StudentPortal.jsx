@@ -792,7 +792,7 @@ export default function StudentPortal({
                   STUDENT PORTAL
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Department of Computer Science • COMSATS University Islamabad</p>
+              <p className="text-xs text-slate-600 font-medium">Department of Computer Science • COMSATS University Islamabad</p>
             </div>
           </div>
 
@@ -996,10 +996,10 @@ export default function StudentPortal({
      SCREEN 2: PROPER FULL-SCREEN STUDENT DASHBOARD (MATCHING ADMIN DASHBOARD)
      ========================================================================= */
   return (
-    <div className="fixed inset-0 z-50 flex flex-col h-screen w-screen overflow-hidden font-sans bg-gradient-to-br from-[#031526] via-[#06243d] to-[#0a3556] text-slate-100 transition-colors animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex flex-col h-screen w-screen overflow-hidden font-sans bg-gradient-to-br from-[#cbe8fd] via-[#e2f3fe] to-[#a3d8f8] text-slate-900 transition-colors animate-fadeIn">
       
       {/* 1. TOP GLOBAL NAVIGATION BAR */}
-      <header className="h-16 border-b border-sky-400/30 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 bg-[#062038]/95 text-white shadow-lg shadow-sky-950/40 backdrop-blur-md">
+      <header className="h-16 border-b-2 border-sky-200 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 bg-white/95 text-slate-900 shadow-md shadow-sky-950/5 backdrop-blur-md">
         
         {/* Left: Branding & Mobile/Desktop Collapse */}
         <div className="flex items-center gap-3 sm:gap-4">
@@ -1013,7 +1013,7 @@ export default function StudentPortal({
 
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="hidden md:flex p-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer"
+            className="hidden md:flex p-2 rounded-xl border-2 border-sky-200 bg-sky-50 text-slate-700 hover:text-blue-700 hover:bg-sky-100 transition-all cursor-pointer"
             title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
             {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -1026,12 +1026,12 @@ export default function StudentPortal({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-heading font-black text-base tracking-tight text-blue-500">BATTLE</span>
-                <span className="font-heading font-black text-base tracking-tight text-white">OF BRAINS</span>
-                <span className="hidden sm:inline-block text-[10px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded">
+                <span className="font-heading font-black text-base tracking-tight text-slate-900">OF BRAINS</span>
+                <span className="hidden sm:inline-block text-[10px] font-mono font-bold bg-sky-100 text-sky-800 border border-sky-300 px-2 py-0.5 rounded-full">
                   STUDENT PORTAL
                 </span>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-400">
+              <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-600 font-semibold">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>Enrolled: {currentUser.fullName} ({currentUser.studentId})</span>
               </div>
@@ -1041,9 +1041,9 @@ export default function StudentPortal({
 
         {/* Center: Live Enrolled Team Badge */}
         <div className="hidden lg:flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-900 text-slate-300 text-xs font-mono">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 border-sky-200 bg-sky-50 text-slate-800 text-xs font-mono font-bold shadow-sm">
             <Users className="w-3.5 h-3.5 text-blue-400" />
-            <span>Group Status: <strong className={currentMembersList.length > 0 ? 'text-emerald-400' : 'text-blue-400'}>
+            <span>Group Status: <strong className={currentMembersList.length > 0 ? 'text-emerald-700' : 'text-blue-700'}>
               {currentMembersList.length > 0 ? `${currentTeamTotal} of 4 Enrolled (Team)` : '1 of 4 Enrolled (Solo)'}
             </strong></span>
           </div>
@@ -1053,9 +1053,9 @@ export default function StudentPortal({
         <div className="flex items-center gap-2 sm:gap-3">
 
           {/* PROMINENT MARKS DISPLAY BADGE IN HEADER */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500/20 border border-sky-400/40 text-sky-200 text-xs font-mono font-bold shadow-sm shadow-sky-950/40">
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 border border-sky-300 text-white text-xs font-mono font-bold shadow-md shadow-sky-500/25">
             <Award className="w-3.5 h-3.5 text-sky-300" />
-            <span>Marks: <strong className="text-white">{studentStatus?.totalScore ?? 0} pts</strong></span>
+            <span>Marks: <strong className="text-white font-black">{studentStatus?.totalScore ?? 0} pts</strong></span>
           </div>
           
           {/* THEME TOGGLE (Sun / Moon) */}
@@ -1074,7 +1074,7 @@ export default function StudentPortal({
 
           <button
             onClick={() => setShowPassModal(true)}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 transition-all cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-sky-100 hover:bg-sky-200 border-2 border-sky-300 text-sky-900 transition-all cursor-pointer"
             title="View Official Admit Card Pass"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -1083,7 +1083,7 @@ export default function StudentPortal({
 
           <button
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-700/80 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border-2 border-slate-200 text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition-all cursor-pointer"
             title="Return to Public Website"
           >
             <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
@@ -1091,19 +1091,19 @@ export default function StudentPortal({
           </button>
 
           {/* User Profile Pill */}
-          <div className="hidden xl:flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/80 text-xs">
+          <div className="hidden xl:flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border-2 border-sky-200 bg-sky-50 text-xs text-slate-800 shadow-sm">
             <div className="w-6 h-6 rounded-full bg-blue-600/30 text-blue-400 font-bold flex items-center justify-center text-[10px] border border-blue-500/40">
               {currentUser.fullName ? currentUser.fullName.slice(0, 2).toUpperCase() : 'ST'}
             </div>
             <div className="text-left">
-              <div className="font-bold leading-tight text-white">{currentUser.fullName}</div>
-              <div className="text-[10px] text-slate-400 leading-tight font-mono">{currentUser.studentId}</div>
+              <div className="font-bold leading-tight text-slate-900">{currentUser.fullName}</div>
+              <div className="text-[10px] text-slate-600 leading-tight font-mono font-bold">{currentUser.studentId}</div>
             </div>
           </div>
 
           <button
             onClick={handleLogout}
-            className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border-2 border-rose-200 flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Sign Out of Student Portal"
           >
             <LogOut className="w-4 h-4" />
@@ -1119,12 +1119,12 @@ export default function StudentPortal({
         <aside className={`
           fixed md:relative inset-y-0 left-0 z-40 md:z-10
           ${isSidebarCollapsed ? 'w-20' : 'w-64'}
-          border-r border-sky-400/20 bg-[#041a2e]/98 text-sky-200 flex flex-col shrink-0
+          border-r-2 border-sky-200 bg-white/95 text-slate-700 flex flex-col shrink-0 shadow-sm
           transition-all duration-300 ease-in-out
           ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}>
           <div className="p-4 flex-1 overflow-y-auto space-y-1">
-            <div className="text-[10px] font-heading font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">
+            <div className="text-[10px] font-heading font-black text-sky-900 uppercase tracking-wider px-3 mb-2">
               {isSidebarCollapsed ? '•••' : 'Student Navigation'}
             </div>
 
@@ -1141,7 +1141,7 @@ export default function StudentPortal({
                   className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-xs font-heading font-bold transition-all cursor-pointer ${
                     isActive 
                       ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg shadow-sky-500/30 border border-sky-300/30' 
-                      : 'text-sky-200/80 hover:text-white hover:bg-sky-900/40'
+                      : 'text-slate-700 hover:text-blue-700 hover:bg-sky-50 font-bold'
                   }`}
                   title={tab.label}
                 >
@@ -1163,15 +1163,15 @@ export default function StudentPortal({
 
           {/* Sidebar Footer info */}
           {!isSidebarCollapsed && (
-            <div className="p-4 border-t border-slate-800/80 text-[11px] text-slate-500">
-              <div className="font-bold text-slate-300">Department of CS</div>
+            <div className="p-4 border-t-2 border-sky-100 text-[11px] text-slate-600 font-semibold">
+              <div className="font-bold text-slate-800">Department of CS</div>
               <div>COMSATS University Islamabad</div>
             </div>
           )}
         </aside>
 
         {/* 3. MAIN DASHBOARD CONTENT AREA */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-[#051e33] via-[#072844] to-[#04192b] space-y-6">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-[#e0f2fe] via-[#bae6fd] to-[#d8effd] space-y-6">
 
           {/* ======================================================== */}
           {/* TAB 1: DASHBOARD OVERVIEW */}
@@ -1180,7 +1180,7 @@ export default function StudentPortal({
             <div className="space-y-6 max-w-6xl mx-auto animate-fadeIn">
               
               {/* Welcome Banner */}
-              <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-[#0a3860] via-[#0d477a] to-[#083054] border border-sky-400/40 relative overflow-hidden shadow-2xl">
+              <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-700 border-2 border-sky-300 text-white relative overflow-hidden shadow-xl shadow-sky-900/10">
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div>
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 mb-3">
@@ -1190,8 +1190,8 @@ export default function StudentPortal({
                     <h2 className="text-2xl sm:text-3xl font-heading font-black text-white">
                       Welcome, {currentUser.fullName}!
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
-                      Student ID: <span className="font-mono text-blue-400 font-bold">{currentUser.studentId}</span> • {currentUser.degreeProgram || currentUser.department} ({currentUser.semester || '4th Semester'})
+                    <p className="text-xs sm:text-sm text-sky-100 font-medium mt-1 max-w-xl">
+                      Student ID: <span className="font-mono text-white underline font-black">{currentUser.studentId}</span> • {currentUser.degreeProgram || currentUser.department} ({currentUser.semester || '4th Semester'})
                     </p>
                   </div>
 
@@ -1215,7 +1215,7 @@ export default function StudentPortal({
               </div>
 
               {/* PROMINENT EXAMINATION MARKS & PERFORMANCE SCORECARD HERO */}
-              <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-[#0b3860] via-[#0e487b] to-[#0a3357] border border-sky-400/50 shadow-2xl space-y-6 relative overflow-hidden">
+              <div className="rounded-3xl p-6 sm:p-8 bg-white border-2 border-sky-300 shadow-xl shadow-sky-900/5 space-y-6 text-slate-900 relative overflow-hidden">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-sky-400/30">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 shadow-inner">
@@ -1223,23 +1223,23 @@ export default function StudentPortal({
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-heading font-black text-xl text-white">Examination Marks & Performance</h3>
+                        <h3 className="font-heading font-black text-xl text-slate-900">Examination Marks & Performance</h3>
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-sky-400/20 text-sky-200 border border-sky-400/40">
                           LIVE MARKS
                         </span>
                       </div>
-                      <p className="text-xs text-sky-200/80 mt-0.5">
-                        Official verified tournament score for Student ID: <span className="font-mono text-white font-bold">{currentUser.studentId}</span>
+                      <p className="text-xs text-slate-600 font-medium mt-0.5">
+                        Official verified tournament score for Student ID: <span className="font-mono text-blue-700 font-bold">{currentUser.studentId}</span>
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <div className="text-[11px] font-heading font-bold text-sky-300 uppercase tracking-wider">Total Marks Obtained</div>
-                      <div className="text-3xl font-heading font-black text-white flex items-center justify-end gap-1.5">
+                      <div className="text-[11px] font-heading font-bold text-slate-500 uppercase tracking-wider">Total Marks Obtained</div>
+                      <div className="text-3xl font-heading font-black text-blue-700 flex items-center justify-end gap-1.5">
                         <span>{studentStatus?.totalScore ?? 0}</span>
-                        <span className="text-xs font-normal text-sky-200">/ 200 pts</span>
+                        <span className="text-xs font-normal text-slate-500">/ 200 pts</span>
                       </div>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300">
@@ -1252,64 +1252,64 @@ export default function StudentPortal({
                 <div>
                   <div className="text-xs font-heading font-bold text-sky-200 uppercase tracking-wider mb-3 flex items-center justify-between">
                     <span>Round-by-Round Marks Breakdown</span>
-                    <span className="text-[11px] font-mono text-sky-300">4 Proctored Competition Stages</span>
+                    <span className="text-[11px] font-mono text-slate-500 font-bold">4 Proctored Competition Stages</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {/* Stage 1 */}
-                    <div className="p-4 rounded-2xl bg-[#062038]/90 border border-sky-400/30 shadow-md">
+                    <div className="p-4 rounded-2xl bg-sky-50/80 border-2 border-sky-200 shadow-sm">
                       <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-heading font-bold text-sky-200">Stage 01: Screening</span>
+                        <span className="font-heading font-bold text-slate-900">Stage 01: Screening</span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
                           Completed
                         </span>
                       </div>
-                      <div className="text-xl font-heading font-black text-white mt-2">
-                        {studentStatus?.roundScores?.[0]?.score ?? (studentStatus?.totalScore ? studentStatus.totalScore : 0)} <span className="text-xs text-sky-300 font-normal">/ 20 pts</span>
+                      <div className="text-xl font-heading font-black text-blue-700 mt-2">
+                        {studentStatus?.roundScores?.[0]?.score ?? (studentStatus?.totalScore ? studentStatus.totalScore : 0)} <span className="text-xs text-slate-500 font-normal">/ 20 pts</span>
                       </div>
-                      <p className="text-[11px] text-sky-200/70 mt-1">Foundational Computing & Logic MCQs</p>
+                      <p className="text-[11px] text-slate-600 font-medium mt-1">Foundational Computing & Logic MCQs</p>
                     </div>
 
                     {/* Stage 2 */}
-                    <div className="p-4 rounded-2xl bg-[#062038]/90 border border-sky-400/30 shadow-md">
+                    <div className="p-4 rounded-2xl bg-sky-50/80 border-2 border-sky-200 shadow-sm">
                       <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-heading font-bold text-sky-200">Stage 02: Core CS</span>
+                        <span className="font-heading font-bold text-slate-900">Stage 02: Core CS</span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">
                           {studentStatus?.roundScores?.[1] ? 'Completed' : 'Upcoming'}
                         </span>
                       </div>
-                      <div className="text-xl font-heading font-black text-white mt-2">
-                        {studentStatus?.roundScores?.[1]?.score ?? 0} <span className="text-xs text-sky-300 font-normal">/ 30 pts</span>
+                      <div className="text-xl font-heading font-black text-blue-700 mt-2">
+                        {studentStatus?.roundScores?.[1]?.score ?? 0} <span className="text-xs text-slate-500 font-normal">/ 30 pts</span>
                       </div>
-                      <p className="text-[11px] text-sky-200/70 mt-1">Data Structures, Algorithms & OOP</p>
+                      <p className="text-[11px] text-slate-600 font-medium mt-1">Data Structures, Algorithms & OOP</p>
                     </div>
 
                     {/* Stage 3 */}
-                    <div className="p-4 rounded-2xl bg-[#062038]/90 border border-sky-400/30 shadow-md">
+                    <div className="p-4 rounded-2xl bg-sky-50/80 border-2 border-sky-200 shadow-sm">
                       <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-heading font-bold text-sky-200">Stage 03: Speed Coding</span>
+                        <span className="font-heading font-bold text-slate-900">Stage 03: Speed Coding</span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">
                           {studentStatus?.roundScores?.[2] ? 'Completed' : 'Upcoming'}
                         </span>
                       </div>
-                      <div className="text-xl font-heading font-black text-white mt-2">
-                        {studentStatus?.roundScores?.[2]?.score ?? 0} <span className="text-xs text-sky-300 font-normal">/ 50 pts</span>
+                      <div className="text-xl font-heading font-black text-blue-700 mt-2">
+                        {studentStatus?.roundScores?.[2]?.score ?? 0} <span className="text-xs text-slate-500 font-normal">/ 50 pts</span>
                       </div>
-                      <p className="text-[11px] text-sky-200/70 mt-1">Real-time Algorithmic Challenges</p>
+                      <p className="text-[11px] text-slate-600 font-medium mt-1">Real-time Algorithmic Challenges</p>
                     </div>
 
                     {/* Stage 4 */}
-                    <div className="p-4 rounded-2xl bg-[#062038]/90 border border-sky-400/30 shadow-md">
+                    <div className="p-4 rounded-2xl bg-sky-50/80 border-2 border-sky-200 shadow-sm">
                       <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-heading font-bold text-sky-200">Stage 04: Grand Finale</span>
+                        <span className="font-heading font-bold text-slate-900">Stage 04: Grand Finale</span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
                           Auditorium
                         </span>
                       </div>
-                      <div className="text-xl font-heading font-black text-white mt-2">
-                        {studentStatus?.roundScores?.[3]?.score ?? 0} <span className="text-xs text-sky-300 font-normal">/ 100 pts</span>
+                      <div className="text-xl font-heading font-black text-blue-700 mt-2">
+                        {studentStatus?.roundScores?.[3]?.score ?? 0} <span className="text-xs text-slate-500 font-normal">/ 100 pts</span>
                       </div>
-                      <p className="text-[11px] text-sky-200/70 mt-1">Live Buzzer Arena & Championship</p>
+                      <p className="text-[11px] text-slate-600 font-medium mt-1">Live Buzzer Arena & Championship</p>
                     </div>
                   </div>
                 </div>
@@ -1317,36 +1317,36 @@ export default function StudentPortal({
 
               {/* Metrics Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-5 rounded-2xl bg-[#092d4d]/90 border border-sky-400/30 shadow-xl">
-                  <div className="text-xs font-heading font-semibold text-slate-400">Registration Status</div>
+                <div className="p-5 rounded-2xl bg-white border-2 border-sky-200 shadow-lg shadow-sky-900/5 text-slate-900">
+                  <div className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider">Registration Status</div>
                   <div className="text-base font-heading font-black text-emerald-400 flex items-center gap-1.5 mt-2">
                     <CheckCircle2 className="w-5 h-5" />
                     <span>Verified Active</span>
                   </div>
-                  <div className="text-[11px] text-slate-500 font-mono mt-1">Pass Ref: {currentUser.id}</div>
+                  <div className="text-[11px] text-slate-600 font-mono font-bold mt-1">Pass Ref: {currentUser.id}</div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-[#092d4d]/90 border border-sky-400/30 shadow-xl">
-                  <div className="text-xs font-heading font-semibold text-slate-400">Team Enrollment</div>
+                <div className="p-5 rounded-2xl bg-white border-2 border-sky-200 shadow-lg shadow-sky-900/5 text-slate-900">
+                  <div className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider">Team Enrollment</div>
                   <div className="text-base font-heading font-black text-blue-400 flex items-center gap-1.5 mt-2">
                     <Users className="w-5 h-5" />
                     <span>{currentTeamTotal} of 4 Enrolled</span>
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">
+                  <div className="text-[11px] text-slate-600 font-medium mt-1">
                     {currentMembersList.length > 0 ? `${currentMembersList.length} teammate(s) enrolled` : 'Teammate slots open (Add 2 or 3 members)'}
                   </div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-[#092d4d]/90 border border-sky-400/30 shadow-xl">
-                  <div className="text-xs font-heading font-semibold text-slate-400">Tournament Points</div>
+                <div className="p-5 rounded-2xl bg-white border-2 border-sky-200 shadow-lg shadow-sky-900/5 text-slate-900">
+                  <div className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider">Tournament Points</div>
                   <div className="text-2xl font-heading font-black text-amber-400 mt-1">
                     {studentStatus?.totalScore || 0} <span className="text-xs text-slate-500 font-normal">pts</span>
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">Official Leaderboard Tally</div>
+                  <div className="text-[11px] text-slate-600 font-medium mt-1">Official Leaderboard Tally</div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-[#092d4d]/90 border border-sky-400/30 shadow-xl">
-                  <div className="text-xs font-heading font-semibold text-slate-400">Official Admit Pass</div>
+                <div className="p-5 rounded-2xl bg-white border-2 border-sky-200 shadow-lg shadow-sky-900/5 text-slate-900">
+                  <div className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider">Official Admit Pass</div>
                   <button
                     onClick={() => setShowPassModal(true)}
                     className="mt-2 text-xs font-heading font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 cursor-pointer"
@@ -1354,19 +1354,19 @@ export default function StudentPortal({
                     <Printer className="w-4 h-4" />
                     <span>View / Print Pass</span>
                   </button>
-                  <div className="text-[11px] text-slate-500 mt-1">Exam Hall Clearance</div>
+                  <div className="text-[11px] text-slate-600 font-medium mt-1">Exam Hall Clearance</div>
                 </div>
               </div>
 
               {/* Tournament Schedule Card */}
-              <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="p-6 rounded-2xl bg-white border-2 border-sky-200 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 text-slate-900">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
                     <Calendar className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="font-heading font-bold text-white text-base">Grand Championship: November 20, 2026</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Venue: Main University Auditorium & CS Computing Complex, COMSATS Islamabad</p>
+                    <h4 className="font-heading font-bold text-slate-900 text-base">Grand Championship: November 20, 2026</h4>
+                    <p className="text-xs text-slate-600 font-medium mt-0.5">Venue: Main University Auditorium & CS Computing Complex, COMSATS Islamabad</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1402,10 +1402,10 @@ export default function StudentPortal({
               )}
 
               {/* Main Team Members Section Header */}
-              <div className="p-6 rounded-3xl bg-[#092d4d]/95 border border-sky-400/30 shadow-2xl space-y-6">
+              <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-sky-200 shadow-xl shadow-sky-900/5 space-y-6 text-slate-900">
                 
                 {/* Participation Mode Toggle Switch */}
-                <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="p-4 rounded-2xl bg-sky-50 border-2 border-sky-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-slate-900">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
                       isGroupMode ? 'bg-blue-600/20 border-blue-500/40 text-blue-400' : 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
@@ -1413,7 +1413,7 @@ export default function StudentPortal({
                       {isGroupMode ? <Users className="w-5 h-5" /> : <User className="w-5 h-5" />}
                     </div>
                     <div>
-                      <div className="font-heading font-bold text-white text-sm flex items-center gap-2">
+                      <div className="font-heading font-bold text-slate-900 text-sm flex items-center gap-2">
                         <span>Contestant Mode:</span>
                         <span className={`px-2 py-0.5 rounded text-xs font-mono font-bold ${
                           isGroupMode ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
@@ -1421,7 +1421,7 @@ export default function StudentPortal({
                           {isGroupMode ? 'Group / Duo Team Mode' : 'Solo Individual Mode'}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-600 font-medium mt-0.5">
                         {isGroupMode 
                           ? 'Group pairing enabled: Invite a peer or accept invitations to compete as a 2-student team.' 
                           : 'Individual solo competition active. Toggle to Group Mode to invite a teammate.'}
@@ -1463,7 +1463,7 @@ export default function StudentPortal({
                   <div className="flex items-center gap-2.5">
                     <Users className="w-5 h-5 text-blue-400" />
                     <div>
-                      <h3 className="text-lg font-heading font-black text-white">
+                      <h3 className="text-lg font-heading font-black text-slate-900">
                         Team Members
                       </h3>
                       <p className="text-xs text-slate-400">
@@ -1495,7 +1495,7 @@ export default function StudentPortal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   
                   {/* CARD 1: CURRENT STUDENT (LEADER) */}
-                  <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-black/60 border-2 border-amber-500/50 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                  <div className="p-6 rounded-2xl bg-white border-2 border-amber-400 shadow-lg text-slate-900 relative overflow-hidden flex flex-col justify-between">
                     <div className="flex items-start gap-4">
                       {/* Avatar */}
                       <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-heading font-black text-xl shadow-lg shrink-0">
@@ -1504,7 +1504,7 @@ export default function StudentPortal({
 
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h4 className="text-lg font-heading font-black text-white truncate">
+                          <h4 className="text-lg font-heading font-black text-slate-900 truncate">
                             {currentUser.fullName}
                           </h4>
                           <span title="Group Leader" className="text-amber-400 text-sm">👑</span>
@@ -1519,14 +1519,14 @@ export default function StudentPortal({
                           </span>
                         </div>
 
-                        <div className="pt-2 text-xs text-slate-400 space-y-1">
+                        <div className="pt-2 text-xs text-slate-600 font-medium space-y-1">
                           <div className="flex items-center gap-2 truncate">
-                            <span className="text-slate-500">✉</span>
+                            <span className="text-slate-600 font-bold">✉</span>
                             <span className="truncate">{currentUser.email}</span>
                           </div>
                           {currentUser.phone && (
                             <div className="flex items-center gap-2">
-                              <span className="text-slate-500">📞</span>
+                              <span className="text-slate-600 font-bold">📞</span>
                               <span>{currentUser.phone}</span>
                             </div>
                           )}
@@ -1546,7 +1546,7 @@ export default function StudentPortal({
                   {currentMembersList.map((member, index) => (
                     <div
                       key={member.studentId || index}
-                      className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-black/60 border-2 border-emerald-500/50 shadow-xl relative overflow-hidden flex flex-col justify-between"
+                      className="p-6 rounded-2xl bg-white border-2 border-emerald-400 shadow-lg text-slate-900 relative overflow-hidden flex flex-col justify-between"
                     >
                       <div className="flex items-start gap-4">
                         <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-heading font-black text-xl shadow-lg shrink-0">
@@ -1555,7 +1555,7 @@ export default function StudentPortal({
 
                         <div className="space-y-1.5 flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <h4 className="text-lg font-heading font-black text-white truncate">
+                            <h4 className="text-lg font-heading font-black text-slate-900 truncate">
                               {member.fullName}
                             </h4>
                             <span className="text-emerald-400 text-xs">✔</span>
@@ -1570,9 +1570,9 @@ export default function StudentPortal({
                             </span>
                           </div>
 
-                          <div className="pt-2 text-xs text-slate-400 space-y-1">
+                          <div className="pt-2 text-xs text-slate-600 font-medium space-y-1">
                             <div className="flex items-center gap-2 truncate">
-                              <span className="text-slate-500">✉</span>
+                              <span className="text-slate-600 font-bold">✉</span>
                               <span className="truncate">{member.email || `${(member.studentId || '').toLowerCase()}@student.comsats.edu.pk`}</span>
                             </div>
                           </div>
@@ -1719,7 +1719,7 @@ export default function StudentPortal({
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                   <div className="flex items-center gap-2">
                     <Send className="w-4 h-4 text-blue-400" />
-                    <h4 className="font-heading font-bold text-white text-base">Pending Sent Invitations</h4>
+                    <h4 className="font-heading font-black text-slate-900 text-base">Pending Sent Invitations</h4>
                   </div>
                   <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
                     {partnerData.outgoing && partnerData.outgoing.length ? `${partnerData.outgoing.length} In Flight` : '0 In Flight'}
@@ -1730,7 +1730,7 @@ export default function StudentPortal({
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="border-b border-slate-800 text-slate-400 font-heading uppercase tracking-wider text-[11px]">
+                        <tr className="border-b-2 border-sky-200 text-slate-600 font-heading font-bold uppercase tracking-wider text-[11px]">
                           <th className="py-3 px-4">Invited Student</th>
                           <th className="py-3 px-4">Sent Date</th>
                           <th className="py-3 px-4">Status</th>
@@ -1793,15 +1793,15 @@ export default function StudentPortal({
               )}
 
               {quizResultSummary && (
-                <div className="p-8 rounded-3xl bg-slate-900 border border-blue-500/40 text-center space-y-4 shadow-2xl">
+                <div className="p-8 rounded-3xl bg-white border-2 border-sky-300 text-center space-y-4 shadow-xl text-slate-900">
                   <div className="w-16 h-16 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center mx-auto text-2xl font-black">
                     🏆
                   </div>
-                  <h3 className="text-2xl font-heading font-black text-white">Quiz Attempt Completed</h3>
-                  <div className="text-3xl font-heading font-black text-amber-400">
+                  <h3 className="text-2xl font-heading font-black text-slate-900">Quiz Attempt Completed</h3>
+                  <div className="text-3xl font-heading font-black text-blue-700">
                     Score: {quizResultSummary.score} pts
                   </div>
-                  <p className="text-xs text-slate-400">Your score has been registered in the tournament leaderboard.</p>
+                  <p className="text-xs text-slate-600 font-medium">Your score has been registered in the tournament leaderboard.</p>
                   <button
                     onClick={() => {
                       setQuizResultSummary(null);
@@ -1815,13 +1815,13 @@ export default function StudentPortal({
               )}
 
               {!activeQuizAttempt && !quizResultSummary && (
-                <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 space-y-6 text-center">
+                <div className="p-8 rounded-3xl bg-white border-2 border-sky-200 space-y-6 text-center shadow-lg text-slate-900">
                   <div className="w-16 h-16 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center mx-auto">
                     <Zap className="w-8 h-8" />
                   </div>
                   <div className="max-w-md mx-auto">
-                    <h3 className="text-2xl font-heading font-black text-white">Championship Quiz Arena</h3>
-                    <p className="text-xs text-slate-400 mt-2">
+                    <h3 className="text-2xl font-heading font-black text-slate-900">Championship Quiz Arena</h3>
+                    <p className="text-xs text-slate-600 font-medium mt-2">
                       Stage 01 Screening: 5 Random MCQs across Programming, OOP, DSA, DBMS, CN, SE, OS. Strict 30s timer per question. Anti-cheat proctoring active.
                     </p>
                   </div>
@@ -1839,11 +1839,11 @@ export default function StudentPortal({
 
               {/* ACTIVE QUIZ QUESTION CARD */}
               {activeQuizAttempt && !quizResultSummary && (
-                <div className="p-6 sm:p-8 rounded-3xl bg-slate-900 border-2 border-blue-500/40 shadow-2xl space-y-6">
+                <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-sky-300 shadow-xl space-y-6 text-slate-900">
                   {/* Top Bar with Timer */}
                   <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-                    <div className="text-xs font-mono text-slate-400">
-                      Question <strong className="text-white">{currentQIndex + 1}</strong> of {activeQuizAttempt.questions.length}
+                    <div className="text-xs font-mono text-slate-600 font-bold">
+                      Question <strong className="text-blue-700">{currentQIndex + 1}</strong> of {activeQuizAttempt.questions.length}
                     </div>
                     <div className={`px-4 py-1.5 rounded-full font-mono text-xs font-black flex items-center gap-1.5 ${
                       quizTimeRemaining <= 10 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
@@ -1876,7 +1876,7 @@ export default function StudentPortal({
                           className={`w-full p-4 rounded-2xl border text-left flex items-center gap-3.5 transition-all cursor-pointer ${
                             isSelected 
                               ? 'bg-blue-600/30 border-blue-500 text-white shadow-lg shadow-blue-900/40' 
-                              : 'bg-black/40 border-slate-800 text-slate-300 hover:bg-slate-800/60 hover:border-slate-700'
+                              : 'bg-white border-2 border-sky-200 text-slate-800 hover:bg-sky-50 hover:border-sky-300 font-medium'
                           }`}
                         >
                           <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
@@ -1920,20 +1920,20 @@ export default function StudentPortal({
           {/* ======================================================== */}
           {activeTab === 'announcements' && (
             <div className="space-y-4 max-w-4xl mx-auto animate-fadeIn">
-              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
-                <h3 className="text-lg font-heading font-black text-white flex items-center gap-2">
+              <div className="p-6 rounded-3xl bg-white border-2 border-sky-200 shadow-lg space-y-4 text-slate-900">
+                <h3 className="text-lg font-heading font-black text-slate-900 flex items-center gap-2">
                   <Bell className="w-5 h-5 text-blue-400" />
                   <span>Official Championship Bulletins</span>
                 </h3>
                 {announcements.length > 0 ? (
                   <div className="space-y-3">
                     {announcements.map((ann) => (
-                      <div key={ann.id} className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-1">
+                      <div key={ann.id} className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-1 text-slate-800">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-white text-sm">{ann.title}</span>
+                          <span className="font-bold text-slate-900 text-sm">{ann.title}</span>
                           <span className="text-slate-500">{new Date(ann.createdAt).toLocaleDateString()}</span>
                         </div>
-                        <p className="text-xs text-slate-300">{ann.content}</p>
+                        <p className="text-xs text-slate-700 font-medium">{ann.content}</p>
                       </div>
                     ))}
                   </div>
@@ -1955,21 +1955,21 @@ export default function StudentPortal({
                   <span>Official Tournament Rules & Conduct</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-1.5">
-                    <h5 className="font-bold text-white">1. Individual Examination Integrity</h5>
-                    <p className="text-slate-400">All tests are evaluated atomically on the central university server. Answer explanations are never transmitted during rounds.</p>
+                  <div className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-1 text-slate-800.5">
+                    <h5 className="font-bold text-slate-900">1. Individual Examination Integrity</h5>
+                    <p className="text-slate-600 font-medium">All tests are evaluated atomically on the central university server. Answer explanations are never transmitted during rounds.</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-1.5">
-                    <h5 className="font-bold text-white">2. Anti-Cheating Lockdown</h5>
-                    <p className="text-slate-400">Tab switching, exiting fullscreen, or minimizing the window triggers instant proctor alerts. 3 violations cause automatic disqualification.</p>
+                  <div className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-1 text-slate-800.5">
+                    <h5 className="font-bold text-slate-900">2. Anti-Cheating Lockdown</h5>
+                    <p className="text-slate-600 font-medium">Tab switching, exiting fullscreen, or minimizing the window triggers instant proctor alerts. 3 violations cause automatic disqualification.</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-1.5">
-                    <h5 className="font-bold text-white">3. Marking & Penalties</h5>
-                    <p className="text-slate-400">Round 1 & 2: +1 for correct, 0 for wrong/skip. Round 4 Buzzer Final: +1 for correct, -0.5 for wrong answers.</p>
+                  <div className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-1 text-slate-800.5">
+                    <h5 className="font-bold text-slate-900">3. Marking & Penalties</h5>
+                    <p className="text-slate-600 font-medium">Round 1 & 2: +1 for correct, 0 for wrong/skip. Round 4 Buzzer Final: +1 for correct, -0.5 for wrong answers.</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-1.5">
-                    <h5 className="font-bold text-white">4. Finality of Jury Decision</h5>
-                    <p className="text-slate-400">The decision of the COMSATS Faculty Jury and Tournament Director is final and binding on all candidates.</p>
+                  <div className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-1 text-slate-800.5">
+                    <h5 className="font-bold text-slate-900">4. Finality of Jury Decision</h5>
+                    <p className="text-slate-600 font-medium">The decision of the COMSATS Faculty Jury and Tournament Director is final and binding on all candidates.</p>
                   </div>
                 </div>
               </div>
@@ -1981,7 +1981,7 @@ export default function StudentPortal({
           {/* ======================================================== */}
           {activeTab === 'admit' && (
             <div className="space-y-4 max-w-2xl mx-auto animate-fadeIn">
-              <div className="p-6 rounded-3xl bg-slate-900 border border-blue-500/40 space-y-6 shadow-2xl">
+              <div className="p-6 rounded-3xl bg-white border-2 border-sky-300 space-y-6 shadow-xl text-slate-900">
                 <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                   <div>
                     <h3 className="text-lg font-heading font-black text-white">Official Examination Pass</h3>
@@ -1996,9 +1996,9 @@ export default function StudentPortal({
                   </button>
                 </div>
 
-                <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-950/40 via-slate-900 to-black/60 border border-blue-500/30 space-y-4">
+                <div className="p-6 rounded-2xl bg-sky-50/90 border-2 border-sky-200 space-y-4 text-slate-900">
                   <div className="flex items-center justify-between">
-                    <div className="font-heading font-black text-white text-base">BATTLE OF BRAINS 2026</div>
+                    <div className="font-heading font-black text-slate-900 text-base">BATTLE OF BRAINS 2026</div>
                     <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold">
                       {currentUser.id}
                     </span>
@@ -2006,15 +2006,15 @@ export default function StudentPortal({
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
                       <span className="text-slate-500 block">Candidate Name</span>
-                      <strong className="text-white text-sm">{currentUser.fullName}</strong>
+                      <strong className="text-slate-900 text-sm font-black">{currentUser.fullName}</strong>
                     </div>
                     <div>
                       <span className="text-slate-500 block">Registration ID</span>
-                      <strong className="text-blue-400 font-mono text-sm">{currentUser.studentId}</strong>
+                      <strong className="text-blue-700 font-mono text-sm font-black">{currentUser.studentId}</strong>
                     </div>
                     <div>
                       <span className="text-slate-500 block">Department</span>
-                      <span className="text-slate-300">{currentUser.degreeProgram || currentUser.department}</span>
+                      <span className="text-slate-800 font-bold">{currentUser.degreeProgram || currentUser.department}</span>
                     </div>
                     <div>
                       <span className="text-slate-500 block">Assigned Stage</span>
@@ -2034,11 +2034,11 @@ export default function StudentPortal({
       {/* ======================================================== */}
       {showInviteModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-lg rounded-3xl bg-slate-900 border border-blue-500/40 p-6 sm:p-8 shadow-2xl relative space-y-5">
+          <div className="w-full max-w-lg rounded-3xl bg-white border-2 border-sky-300 p-6 sm:p-8 shadow-2xl relative space-y-5 text-slate-900">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-blue-400" />
-                <h3 className="font-heading font-black text-white text-lg">Send Team Member Invitation (Teammate must Accept)</h3>
+                <h3 className="font-heading font-black text-slate-900 text-lg">Send Team Member Invitation (Teammate must Accept)</h3>
               </div>
               <button onClick={() => setShowInviteModal(false)} className="text-slate-400 hover:text-white p-1">
                 <X className="w-5 h-5" />
@@ -2056,7 +2056,7 @@ export default function StudentPortal({
 
             <form onSubmit={handleSendPartnerRequest} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-800 mb-1.5">
                   Select from Registered Contestants
                 </label>
                 <select
@@ -2072,7 +2072,7 @@ export default function StudentPortal({
                       }
                     }
                   }}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-medium focus:border-blue-500 focus:outline-none"
+                  className="w-full px-4 py-3 rounded-xl bg-sky-50 border-2 border-sky-200 text-slate-900 text-xs font-semibold focus:border-blue-500 focus:outline-none"
                 >
                   <option value="">-- Choose a registered student --</option>
                   {availablePartners.map((p) => (
@@ -2086,7 +2086,7 @@ export default function StudentPortal({
               <div className="text-center text-xs text-slate-500 font-mono">— OR ENTER ANY STUDENT ID —</div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-800 mb-1.5">
                   Student Registration ID <span className="text-rose-400">*</span>
                 </label>
                 <input
@@ -2097,13 +2097,13 @@ export default function StudentPortal({
                     if (e.target.value) setSelectedPartnerOption('');
                   }}
                   placeholder="e.g. SP24-BSE-029 or any student ID"
-                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-medium focus:border-blue-500 focus:outline-none"
+                  className="w-full px-4 py-3 rounded-xl bg-sky-50 border-2 border-sky-200 text-slate-900 text-xs font-semibold focus:border-blue-500 focus:outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-800 mb-1.5">
                   Teammate Full Name (Optional)
                 </label>
                 <input
@@ -2111,18 +2111,18 @@ export default function StudentPortal({
                   value={targetPartnerName}
                   onChange={(e) => setTargetPartnerName(e.target.value)}
                   placeholder="e.g. Muhammad Ahmad"
-                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-medium focus:border-blue-500 focus:outline-none"
+                  className="w-full px-4 py-3 rounded-xl bg-sky-50 border-2 border-sky-200 text-slate-900 text-xs font-semibold focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-800 mb-1.5">
                   Department / Program
                 </label>
                 <select
                   value={targetPartnerDept}
                   onChange={(e) => setTargetPartnerDept(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-medium focus:border-blue-500 focus:outline-none"
+                  className="w-full px-4 py-3 rounded-xl bg-sky-50 border-2 border-sky-200 text-slate-900 text-xs font-semibold focus:border-blue-500 focus:outline-none"
                 >
                   <option value="BS Computer Science">BS Computer Science</option>
                   <option value="BS Software Engineering">BS Software Engineering</option>

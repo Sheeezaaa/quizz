@@ -91,15 +91,15 @@ export default function Navbar({
             </div>
           </a>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden lg:flex items-center gap-7">
+          {/* Desktop Navigation Links - Optimized Spacing to prevent overlap */}
+          <div className="hidden lg:flex items-center gap-4 xl:gap-6 shrink-0">
             {navLinks.map((link) => {
               const isActive = activeSection === link.id;
               return (
                 <a
                   key={link.id}
                   href={link.href}
-                  className={`relative text-sm font-heading font-medium transition-colors py-1 ${
+                  className={`relative text-xs xl:text-sm font-heading font-semibold transition-colors py-1 px-1 ${
                     isActive
                       ? currentTheme === 'light' ? 'text-blue-600 font-bold' : 'text-white font-bold'
                       : currentTheme === 'light' ? 'text-slate-600 hover:text-blue-600' : 'text-slate-300 hover:text-white'
@@ -114,36 +114,25 @@ export default function Navbar({
             })}
           </div>
 
-          {/* Right Actions: Student Portal, Admin Access, Register & Theme Toggle */}
-          <div className="hidden sm:flex items-center gap-2.5">
+          {/* Right Actions: Student Portal, Register & Theme Toggle (Admin Access removed from Menu Bar) */}
+          <div className="hidden sm:flex items-center gap-2.5 shrink-0">
             <button
               onClick={onOpenStudentPortal}
-              className={`px-3 py-2 text-xs font-heading font-semibold transition-colors flex items-center gap-1.5 rounded-lg border ${
+              className={`px-3.5 py-2 text-xs font-heading font-bold transition-all flex items-center gap-1.5 rounded-xl border shadow-sm shrink-0 cursor-pointer ${
                 currentTheme === 'light' 
-                  ? 'border-blue-200 text-blue-700 bg-blue-50/70 hover:bg-blue-100' 
-                  : 'border-blue-500/30 text-blue-400 bg-blue-600/10 hover:bg-blue-600/20'
+                  ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 hover:border-blue-400' 
+                  : 'border-sky-500/40 text-sky-300 bg-sky-500/15 hover:bg-sky-500/25 hover:border-sky-400'
               }`}
               title="Open Contestant Dashboard"
             >
-              <IdCard className="w-3.5 h-3.5 text-blue-400" />
+              <IdCard className="w-3.5 h-3.5 text-blue-500" />
               <span>Student Portal</span>
-            </button>
-
-            <button
-              onClick={onOpenAdmin}
-              className={`px-3 py-2 text-xs font-heading font-semibold transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5 ${
-                currentTheme === 'light' ? 'text-slate-700 hover:text-blue-600' : 'text-slate-300 hover:text-white'
-              }`}
-              title="Open Admin Control Panel"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
-              <span>Admin Access</span>
             </button>
 
             <a
               href="#register"
               onClick={onOpenRegister}
-              className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-blue-600 active:bg-blue-700 text-white font-heading font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-blue-600 active:bg-blue-700 text-white font-heading font-semibold text-xs sm:text-sm px-4 xl:px-5 py-2.5 rounded-xl shadow-md hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shrink-0"
             >
               <span>Register Now</span>
               <ArrowRight className="w-4 h-4" />
@@ -229,17 +218,6 @@ export default function Navbar({
               >
                 <IdCard className="w-4 h-4 text-blue-400" />
                 <span>Student Contestant Portal</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAdmin();
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-heading font-semibold text-white bg-white/5 border border-white/15"
-              >
-                <ShieldCheck className="w-4 h-4 text-blue-400" />
-                <span>Admin Access & Editor</span>
               </button>
 
               <a

@@ -121,15 +121,6 @@ export default function Footer({ onOpenAdmin, onOpenStudentPortal }) {
                   <span>Student Portal</span>
                 </button>
               )}
-              {onOpenAdmin && (
-                <button
-                  onClick={onOpenAdmin}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-heading font-bold text-slate-900 bg-white border-2 border-sky-300 hover:bg-sky-50 transition-all cursor-pointer shadow-sm"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Admin Console</span>
-                </button>
-              )}
             </div>
           </div>
 

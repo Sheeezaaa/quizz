@@ -77,8 +77,21 @@ export default function App() {
         setIsStudentPortalOpen(true);
       }
     };
+
+    const handleAdminKey = (e) => {
+      // Secret Admin Keybind: Ctrl+Shift+A or Alt+A opens Admin Panel securely
+      if ((e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) || (e.altKey && (e.key === 'A' || e.key === 'a'))) {
+        e.preventDefault();
+        setIsAdminOpen((prev) => !prev);
+      }
+    };
+
     window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('keydown', handleAdminKey);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('keydown', handleAdminKey);
+    };
   }, []);
 
   useEffect(() => {
@@ -250,7 +263,7 @@ export default function App() {
         onToggleTheme={handleToggleTheme}
       />
 
-      {/* Floating Shortcut Buttons (Bottom-Right) */}
+      {/* Floating Shortcut Button (Bottom-Right) - Student Portal Only */}
       <div className="fixed bottom-5 right-5 z-40 flex flex-col gap-2.5 items-end">
         <button
           onClick={handleOpenStudentPortal}
@@ -260,17 +273,6 @@ export default function App() {
           <span className="w-4 h-4 flex items-center justify-center font-black">🎓</span>
           <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap">
             Student Portal
-          </span>
-        </button>
-
-        <button
-          onClick={handleOpenAdmin}
-          className="bg-[#2563eb] hover:bg-blue-600 active:bg-blue-700 text-white p-3 rounded-full shadow-2xl border border-blue-400/40 flex items-center gap-2 text-xs font-heading font-bold hover:scale-105 active:scale-95 transition-all group cursor-pointer"
-          title="Open Admin Control Panel"
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap">
-            Admin Console
           </span>
         </button>
       </div>
