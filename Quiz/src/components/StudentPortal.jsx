@@ -1019,49 +1019,33 @@ export default function StudentPortal({
             {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-600/30">
-              <GraduationCap className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
+              <GraduationCap className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-heading font-black text-base tracking-tight text-blue-500">BATTLE</span>
-                <span className="font-heading font-black text-base tracking-tight text-slate-900">OF BRAINS</span>
-                <span className="hidden sm:inline-block text-[10px] font-mono font-bold bg-sky-100 text-sky-800 border border-sky-300 px-2 py-0.5 rounded-full">
-                  STUDENT PORTAL
-                </span>
-              </div>
-              <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-600 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Enrolled: {currentUser.fullName} ({currentUser.studentId})</span>
-              </div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-heading font-black text-sm sm:text-base tracking-tight text-blue-600">BATTLE</span>
+              <span className="font-heading font-black text-sm sm:text-base tracking-tight text-slate-900">OF BRAINS</span>
+              <span className="hidden sm:inline-block text-[9px] font-mono font-bold bg-sky-100 text-sky-800 border border-sky-300 px-1.5 py-0.5 rounded-md">
+                PORTAL
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Center: Live Enrolled Team Badge */}
-        <div className="hidden lg:flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 border-sky-200 bg-sky-50 text-slate-800 text-xs font-mono font-bold shadow-sm">
-            <Users className="w-3.5 h-3.5 text-blue-400" />
-            <span>Group Status: <strong className={currentMembersList.length > 0 ? 'text-emerald-700' : 'text-blue-700'}>
-              {currentMembersList.length > 0 ? `${currentTeamTotal} of 4 Enrolled (Team)` : '1 of 4 Enrolled (Solo)'}
-            </strong></span>
-          </div>
-        </div>
-
-        {/* Right Action Buttons */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        {/* Right Action Buttons - Clean, Optimized & Uncluttered */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
 
           {/* PROMINENT MARKS DISPLAY BADGE IN HEADER */}
-          <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 border border-sky-300 text-white text-xs font-mono font-bold shadow-md shadow-sky-500/25">
-            <Award className="w-3.5 h-3.5 text-sky-300" />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 border border-sky-300 text-white text-xs font-mono font-bold shadow-sm shadow-sky-500/20">
+            <Award className="w-3.5 h-3.5 text-sky-200" />
             <span>Marks: <strong className="text-white font-black">{studentStatus?.totalScore ?? 0} pts</strong></span>
           </div>
           
           {/* THEME TOGGLE (Sun / Moon) */}
           <button
             onClick={handleToggleThemeClick}
-            className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
               isDark
                 ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/20'
                 : 'bg-amber-500/10 border-amber-500/30 text-amber-600 hover:bg-amber-500/20 shadow-sm'
@@ -1072,38 +1056,30 @@ export default function StudentPortal({
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          <button
-            onClick={() => setShowPassModal(true)}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-sky-100 hover:bg-sky-200 border-2 border-sky-300 text-sky-900 transition-all cursor-pointer"
-            title="View Official Admit Card Pass"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Admit Card Pass</span>
-          </button>
-
+          {/* RETURN TO PUBLIC WEBSITE */}
           <button
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border-2 border-slate-200 text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition-all cursor-pointer"
+            className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold border-2 border-sky-200 text-slate-700 hover:text-blue-700 bg-sky-50 hover:bg-sky-100 transition-all cursor-pointer flex items-center gap-1.5"
             title="Return to Public Website"
           >
-            <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
-            <span className="hidden md:inline">Public Website</span>
+            <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden md:inline">Website</span>
           </button>
 
           {/* User Profile Pill */}
-          <div className="hidden xl:flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border-2 border-sky-200 bg-sky-50 text-xs text-slate-800 shadow-sm">
-            <div className="w-6 h-6 rounded-full bg-blue-600/30 text-blue-400 font-bold flex items-center justify-center text-[10px] border border-blue-500/40">
+          <div className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 border-sky-200 bg-white text-xs text-slate-800 shadow-sm">
+            <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-black flex items-center justify-center text-[10px]">
               {currentUser.fullName ? currentUser.fullName.slice(0, 2).toUpperCase() : 'ST'}
             </div>
-            <div className="text-left">
-              <div className="font-bold leading-tight text-slate-900">{currentUser.fullName}</div>
-              <div className="text-[10px] text-slate-600 leading-tight font-mono font-bold">{currentUser.studentId}</div>
+            <div className="text-left max-w-[120px] truncate">
+              <div className="font-bold leading-tight text-slate-900 truncate">{currentUser.fullName}</div>
+              <div className="text-[10px] text-slate-500 leading-tight font-mono truncate">{currentUser.studentId}</div>
             </div>
           </div>
 
           <button
             onClick={handleLogout}
-            className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border-2 border-rose-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border-2 border-rose-200 flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Sign Out of Student Portal"
           >
             <LogOut className="w-4 h-4" />
