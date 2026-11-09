@@ -90,7 +90,8 @@ import {
   apiGetQuestions, 
   apiSaveQuestions,
   apiGetProctorAlerts,
-  apiAcknowledgeProctorAlert
+  apiAcknowledgeProctorAlert,
+  apiDismissAllProctorAlerts
 } from '../utils/api';
 import { playAntiCheatBuzzer, playDisqualificationSiren } from '../utils/soundEffects';
 import RegistrationManager from './admin/RegistrationManager';
@@ -123,6 +124,7 @@ export default function AdminPanel({
   // Real-Time Anti-Cheat Proctoring & Siren States
   const [liveProctorAlerts, setLiveProctorAlerts] = useState([]);
   const [activeCheatingAlert, setActiveCheatingAlert] = useState(null);
+  const [proctorToast, setProctorToast] = useState(null);
   const [seenAlertIds, setSeenAlertIds] = useState(new Set());
   const [isSirenMuted, setIsSirenMuted] = useState(false);
 
@@ -243,7 +245,7 @@ export default function AdminPanel({
     };
   }, [isOpen]);
 
-  // Real-Time Proctoring Malpractice Alert Poller (Siren + Immediate Modal)
+  // Real-Time Proctoring Malpractice Alert Poller (Non-intrusive Toast Notification)
   useEffect(() => {
     if (!isOpen || !isAuthenticated) return;
 
@@ -255,9 +257,10 @@ export default function AdminPanel({
           const unack = alerts.find((a) => !a.acknowledged);
           if (unack && !seenAlertIds.has(unack.id)) {
             setSeenAlertIds((prev) => new Set([...prev, unack.id]));
-            setActiveCheatingAlert(unack);
+            // Show lightweight notification toast so admin is not locked out
+            setProctorToast(unack);
             if (!isSirenMuted) {
-              playDisqualificationSiren();
+              playAntiCheatBuzzer();
             }
           }
         }
@@ -273,10 +276,21 @@ export default function AdminPanel({
     try {
       await apiAcknowledgeProctorAlert(alertId, action);
       setActiveCheatingAlert(null);
+      setProctorToast((prev) => (prev && prev.id === alertId ? null : prev));
       const updated = await apiGetProctorAlerts();
       if (Array.isArray(updated)) setLiveProctorAlerts(updated);
       const serverList = await apiGetParticipants();
       if (serverList && Array.isArray(serverList)) setParticipants(serverList);
+    } catch {}
+  };
+
+  const handleDismissAllAlerts = async () => {
+    try {
+      await apiDismissAllProctorAlerts();
+      setProctorToast(null);
+      setActiveCheatingAlert(null);
+      const updated = await apiGetProctorAlerts();
+      if (Array.isArray(updated)) setLiveProctorAlerts(updated);
     } catch {}
   };
 
@@ -1264,6 +1278,17 @@ export default function AdminPanel({
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {liveProctorAlerts.some(a => !a.acknowledged) && (
+                      <button
+                        type="button"
+                        onClick={handleDismissAllAlerts}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-bold transition-all cursor-pointer shadow-sm"
+                        title="Dismiss all malpractice alerts"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-rose-400" />
+                        <span>Dismiss All Alerts</span>
+                      </button>
+                    )}
                     <span className="text-xs font-mono px-3 py-1 rounded-xl bg-slate-800 text-slate-300 border border-slate-700">
                       Total Alerts: <strong className="text-white">{liveProctorAlerts.length}</strong>
                     </span>
@@ -3277,7 +3302,72 @@ export default function AdminPanel({
       )}
 
       {/* =========================================================================
-          HIGH-URGENCY REAL-TIME MALPRACTICE & CHEATING ALERT MODAL WITH SIREN
+          NON-INTRUSIVE FLOATING TOAST NOTIFICATION FOR BROWSER SWITCH DURING QUIZ
+          ========================================================================= */}
+      {proctorToast && (
+        <aside
+          role="status"
+          aria-live="assertive"
+          className="fixed top-20 right-4 sm:right-6 z-[80] w-[92vw] sm:w-[420px] bg-slate-950/95 backdrop-blur-xl border-2 border-rose-500 rounded-2xl p-4 shadow-2xl shadow-rose-950/60 animate-in slide-in-from-top-4 duration-300"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center shrink-0 text-rose-400">
+              <AlertTriangle className="w-5 h-5 animate-bounce" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-rose-400">
+                  ⚠️ Browser Switch Detected
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {new Date(proctorToast.timestamp || Date.now()).toLocaleTimeString()}
+                </span>
+              </div>
+              <div className="mt-1 font-bold text-white text-sm truncate">
+                Student ID: <span className="font-mono text-rose-400 underline">{proctorToast.studentId}</span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5 line-clamp-2">
+                {proctorToast.details || 'Candidate switched tab or opened another browser window during quiz!'}
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveCheatingAlert(proctorToast);
+                    setProctorToast(null);
+                  }}
+                  className="flex-1 py-1.5 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer text-center"
+                >
+                  Review Alert
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleActionOnCheatingAlert(proctorToast.id, 'DISMISS');
+                    setProctorToast(null);
+                  }}
+                  className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs transition-all cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setProctorToast(null)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
+              title="Close notification"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </aside>
+      )}
+
+      {/* =========================================================================
+          HIGH-URGENCY REAL-TIME MALPRACTICE & CHEATING ALERT MODAL (REVIEW MODE)
           ========================================================================= */}
       {activeCheatingAlert && (
         <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fadeIn">
@@ -3381,6 +3471,22 @@ export default function AdminPanel({
                   className="py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-heading font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
                 >
                   Dismiss Alert
+                </button>
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-rose-500/20 text-xs">
+                <button
+                  type="button"
+                  onClick={handleDismissAllAlerts}
+                  className="text-rose-300 hover:text-white underline font-mono text-xs cursor-pointer"
+                >
+                  Dismiss All Pending Alerts ({liveProctorAlerts.filter(a => !a.acknowledged).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveCheatingAlert(null)}
+                  className="text-slate-400 hover:text-white text-xs cursor-pointer"
+                >
+                  Close Window
                 </button>
               </div>
             </div>

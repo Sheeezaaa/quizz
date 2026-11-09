@@ -169,8 +169,9 @@ export default function StudentPortal({
     } catch {}
   };
 
-  // Anti-Cheat Violation Handler
+  // Anti-Cheat Violation Handler (Strictly only during active quiz attempt)
   const recordAntiCheatViolation = (reason = 'Tab switch or external application window detected.', infractionType = 'BROWSER_SWITCH') => {
+    if (!activeQuizAttempt || isDisqualified) return;
     try {
       playAntiCheatBuzzer();
     } catch {}
@@ -183,43 +184,38 @@ export default function StudentPortal({
       activeQuizAttempt?.roundNumber || 1
     ).catch(() => {});
 
-    if (activeQuizAttempt && !isDisqualified) {
-      setViolationCount((prev) => {
-        const nextCount = prev + 1;
-        if (nextCount >= 3) {
-          try {
-            playDisqualificationSiren();
-          } catch {}
-          setIsDisqualified(true);
-          setTimeout(() => {
-            handleAutoFinishAttempt(true);
-          }, 1500);
-        }
-        return nextCount;
-      });
-    }
+    setViolationCount((prev) => {
+      const nextCount = prev + 1;
+      if (nextCount >= 3) {
+        try {
+          playDisqualificationSiren();
+        } catch {}
+        setIsDisqualified(true);
+        setTimeout(() => {
+          handleAutoFinishAttempt(true);
+        }, 1500);
+      }
+      return nextCount;
+    });
   };
 
   // Dedicated Anti-Cheat & Browser Switch Detection Effect
+  // Strictly active ONLY when student is in an ongoing quiz round
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !activeQuizAttempt || isDisqualified) return;
 
     let lastReportTime = 0;
     const reportSwitch = (infractionMsg, type = "BROWSER_SWITCH") => {
+      if (!activeQuizAttempt || isDisqualified) return;
       const now = Date.now();
       if (now - lastReportTime < 2500) return;
       lastReportTime = now;
 
       const sid = currentUser?.studentId || "UNKNOWN_STUDENT";
-      const fullDetail = `Student ID: ${sid} (${currentUser?.fullName || "Contestant"}) switched window or opened another browser!`;
+      const fullDetail = `Student ID: ${sid} (${currentUser?.fullName || "Contestant"}) switched window or opened another browser during Quiz!`;
 
-      // Always send alert so Admin sees the Student ID immediately
-      apiReportProctorInfraction(type, fullDetail, activeQuizAttempt?.roundNumber || 1).catch(() => {});
-
-      // If active quiz is ongoing, trigger quiz penalty and buzzer
-      if (activeQuizAttempt && !isDisqualified) {
-        recordAntiCheatViolation(fullDetail, type);
-      }
+      // Trigger quiz penalty, modal, buzzer and send infraction to admin
+      recordAntiCheatViolation(fullDetail, type);
     };
 
     const handleVisibilityChange = () => {

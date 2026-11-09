@@ -3207,6 +3207,19 @@ app.post('/api/proctor/acknowledge-alert', requireAdmin, (req, res) => {
   res.json({ success: true, alert });
 });
 
+// Admin dismisses all pending alerts at once
+app.post('/api/proctor/dismiss-all', requireAdmin, (req, res) => {
+  const db = readDB();
+  const alerts = db.liveProctorAlerts || [];
+  alerts.forEach((a) => {
+    a.acknowledged = true;
+    a.actionTaken = 'DISMISSED';
+  });
+  writeDB(db);
+  addAuditLog(req.user.username, 'PROCTOR_ALERTS_DISMISS_ALL', 'proctor', 'all', { count: alerts.length });
+  res.json({ success: true, count: alerts.length });
+});
+
 // ====================================================================
 // SEMESTER COHORT & STUDENT PROGRESSION MANAGEMENT (ADMIN)
 // ====================================================================

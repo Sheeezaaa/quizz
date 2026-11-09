@@ -1083,6 +1083,27 @@ export async function apiAcknowledgeProctorAlert(alertId, action) {
   }
 }
 
+export async function apiDismissAllProctorAlerts() {
+  try {
+    const local = JSON.parse(localStorage.getItem('bob_live_proctor_alerts_v1') || '[]');
+    const updated = local.map((a) => ({ ...a, acknowledged: true, actionTaken: 'DISMISSED' }));
+    localStorage.setItem('bob_live_proctor_alerts_v1', JSON.stringify(updated));
+  } catch {}
+
+  try {
+    const res = await fetch(`${API_BASE}/proctor/dismiss-all`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+    });
+    return await safeJson(res);
+  } catch (err) {
+    return { success: true };
+  }
+}
+
 // ==========================================
 // SEMESTER COHORTS & PROGRESSION
 // ==========================================
