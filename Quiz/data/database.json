@@ -232,6 +232,89 @@
   },
   "participants": [
     {
+      "id": "BOB-2026-954",
+      "fullName": "Teammate Zeeshan",
+      "studentId": "MEM-8182",
+      "mobile": "0303158182",
+      "phone": "0303158182",
+      "email": "0303158182@student.bob.pk",
+      "universityName": "COMSATS University Islamabad",
+      "campus": "Islamabad Campus",
+      "region": "Federal Capital",
+      "department": "Computer Science",
+      "degreeProgram": "BS Computer Science",
+      "semester": "4th Semester",
+      "passwordHash": "$2b$10$ZfZCvX53ti4FclQMuCJyJOhlgQWYD4gflca2BoR4vdDXECW0wxS1C",
+      "registrationStatus": "Approved",
+      "role": "Participant",
+      "rulesAccepted": true,
+      "teamId": "TEAM-159491",
+      "isTeamLeader": false,
+      "registeredAt": "2026-11-11T17:12:39.941Z"
+    },
+    {
+      "id": "BOB-2026-257",
+      "fullName": "Teammate Usama",
+      "studentId": "MEM-8182",
+      "mobile": "0302158182",
+      "phone": "0302158182",
+      "email": "0302158182@student.bob.pk",
+      "universityName": "COMSATS University Islamabad",
+      "campus": "Islamabad Campus",
+      "region": "Federal Capital",
+      "department": "Computer Science",
+      "degreeProgram": "BS Computer Science",
+      "semester": "4th Semester",
+      "passwordHash": "$2b$10$VpveUB6KXlKcfCConKBNiuG4HMigrYMnAe82m42U/3ULehqJCP36W",
+      "registrationStatus": "Approved",
+      "role": "Participant",
+      "rulesAccepted": true,
+      "teamId": "TEAM-159491",
+      "isTeamLeader": false,
+      "registeredAt": "2026-11-11T17:12:39.672Z"
+    },
+    {
+      "id": "BOB-2026-847",
+      "fullName": "Leader Bilal",
+      "studentId": "LEAD-8182",
+      "mobile": "0301158182",
+      "phone": "0301158182",
+      "email": "0301158182@student.bob.pk",
+      "universityName": "COMSATS University Islamabad",
+      "campus": "Islamabad Campus",
+      "region": "Federal Capital",
+      "department": "Computer Science",
+      "degreeProgram": "BS Computer Science",
+      "semester": "4th Semester",
+      "passwordHash": "$2b$10$Uh5P9rNuAIx6SU520AvIxO1zDDnI33OQfQ8jpEZ9Hd6/G3eFaDRHS",
+      "registrationStatus": "Approved",
+      "role": "Participant",
+      "rulesAccepted": true,
+      "isTeamLeader": true,
+      "registeredAt": "2026-11-11T17:12:39.491Z",
+      "teamId": "TEAM-159491"
+    },
+    {
+      "id": "BOB-2026-815",
+      "fullName": "Student Alpha",
+      "studentId": "STU-8182",
+      "mobile": "0300158182",
+      "phone": "0300158182",
+      "email": "0300158182@student.bob.pk",
+      "universityName": "COMSATS University Islamabad",
+      "campus": "Islamabad Campus",
+      "region": "Federal Capital",
+      "department": "Computer Science",
+      "degreeProgram": "BS Computer Science",
+      "semester": "4th Semester",
+      "passwordHash": "$2b$10$QCkI.F2FoL98WHPq/lOCuO4JmdQPQAMBNyRq4tI4/PYl48Tge2drq",
+      "registrationStatus": "Approved",
+      "role": "Participant",
+      "rulesAccepted": true,
+      "teamId": null,
+      "registeredAt": "2026-11-11T17:12:38.675Z"
+    },
+    {
       "id": "BOB-2026-399",
       "fullName": "Student Beta",
       "studentId": "PAIR-B-3248",
@@ -18109,5 +18192,43 @@
       "respondedAt": "2026-11-06T13:39:03.184Z"
     }
   ],
-  "teams": []
+  "teams": [
+    {
+      "id": "TEAM-159491",
+      "name": "Cyber Knights Finalized",
+      "inviteCode": "INV-IMLO0F",
+      "leaderId": "BOB-2026-847",
+      "leaderStudentId": "LEAD-8182",
+      "targetSize": 3,
+      "status": "confirmed",
+      "members": [
+        {
+          "id": "BOB-2026-847",
+          "studentId": "LEAD-8182",
+          "fullName": "Leader Bilal",
+          "mobile": "0301158182",
+          "role": "Leader",
+          "joinedAt": "2026-11-11T17:12:39.491Z"
+        },
+        {
+          "id": "BOB-2026-257",
+          "studentId": "MEM-8182",
+          "fullName": "Teammate Usama",
+          "mobile": "0302158182",
+          "role": "Member",
+          "joinedAt": "2026-11-11T17:12:39.672Z"
+        },
+        {
+          "id": "BOB-2026-954",
+          "studentId": "MEM-8182",
+          "fullName": "Teammate Zeeshan",
+          "mobile": "0303158182",
+          "role": "Member",
+          "joinedAt": "2026-11-11T17:12:39.941Z"
+        }
+      ],
+      "createdAt": "2026-11-11T17:12:39.491Z",
+      "confirmedAt": "2026-11-11T17:12:39.980Z"
+    }
+  ]
 }

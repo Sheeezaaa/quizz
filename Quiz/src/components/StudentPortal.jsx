@@ -67,6 +67,8 @@ import {
   apiUnpairPartner,
   apiAddTeamMember,
   apiRemoveTeamMember,
+  apiGetMyTeam,
+  apiFinalizeTeam,
   setStudentAuthToken,
   getStudentAuthToken
 } from '../utils/api';
@@ -87,6 +89,8 @@ export default function StudentPortal({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [localTheme, setLocalTheme] = useState(currentTheme || 'dark');
   const [isGroupMode, setIsGroupMode] = useState(true);
+  const [teamFormationData, setTeamFormationData] = useState(null);
+  const [teamInviteCopied, setTeamInviteCopied] = useState(false);
 
   // Sync theme
   useEffect(() => {
@@ -351,6 +355,14 @@ export default function StudentPortal({
       if (avail && Array.isArray(avail)) {
         setAvailablePartners(avail);
       }
+      try {
+        const myTeamRes = await apiGetMyTeam();
+        if (myTeamRes && myTeamRes.success && myTeamRes.team) {
+          setTeamFormationData(myTeamRes.team);
+        } else {
+          setTeamFormationData(null);
+        }
+      } catch {}
     } catch (err) {
       console.error('Error fetching partner data:', err);
     }
@@ -846,13 +858,13 @@ export default function StudentPortal({
                 <div>
                   <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Student Registration ID or Email</span>
+                    <span>Mobile Number, Student ID, or Email</span>
                   </label>
                   <input
                     type="text"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="e.g. SP24-BSE-043"
+                    placeholder="e.g. 03001234567 or SP24-BSE-043"
                     className="w-full px-4 py-3 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm font-medium focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-500"
                     required
                   />
@@ -1355,6 +1367,142 @@ export default function StudentPortal({
           {/* ======================================================== */}
           {activeTab === 'team' && (
             <div className="space-y-6 max-w-6xl mx-auto animate-fadeIn">
+              
+              {/* OFFICIAL TEAM FORMATION HUB BANNER (IF ACTIVE TEAM) */}
+              {teamFormationData && (
+                <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-blue-950/90 to-indigo-950/90 border-2 border-blue-500/50 shadow-2xl space-y-6 text-white">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shadow-lg">
+                        <Crown className="w-7 h-7" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2.5">
+                          <h3 className="text-2xl font-heading font-black text-white">
+                            Team: {teamFormationData.name}
+                          </h3>
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold uppercase tracking-wider ${
+                            teamFormationData.status === 'confirmed'
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          }`}>
+                            {teamFormationData.status === 'confirmed' ? 'Registration Confirmed' : 'Forming Team'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 mt-1">
+                          Official Team Roster • Minimum 2, Maximum 3 Members
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="px-4 py-2 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-300 text-sm font-mono font-bold flex items-center gap-2">
+                        <Users className="w-4 h-4 text-blue-400" />
+                        <span>{teamFormationData.currentCount || teamFormationData.members?.length || 1} / {teamFormationData.targetSize || 3} Joined</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Shareable Invitation Link */}
+                  <div className="p-4 rounded-2xl bg-black/50 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-heading font-bold text-slate-300">Invite Code:</span>
+                      <span className="px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 font-mono font-bold text-xs border border-blue-500/40">
+                        {teamFormationData.inviteCode}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const base = window.location.origin + window.location.pathname;
+                          const url = `${base}#register?joinTeam=${teamFormationData.inviteCode}`;
+                          navigator.clipboard.writeText(url).then(() => {
+                            setTeamInviteCopied(true);
+                            setTimeout(() => setTeamInviteCopied(false), 2500);
+                          });
+                        }}
+                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/30 transition-all cursor-pointer"
+                      >
+                        {teamInviteCopied ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{teamInviteCopied ? 'Copied Link!' : 'Copy Invitation Link'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const base = window.location.origin + window.location.pathname;
+                          const url = `${base}#register?joinTeam=${teamFormationData.inviteCode}`;
+                          const text = encodeURIComponent(`Join my team "${teamFormationData.name}" for Battle of Brains 2026: ${url}`);
+                          window.open(`https://wa.me/?text=${text}`, '_blank');
+                        }}
+                        className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-xs flex items-center gap-1 shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
+                        title="Share on WhatsApp"
+                      >
+                        <span>WhatsApp</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Registered Team Members */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {teamFormationData.members?.map((m, idx) => {
+                      const isLeader = m.role === 'Leader' || idx === 0;
+                      return (
+                        <div
+                          key={m.id || idx}
+                          className={`p-4 rounded-2xl border-2 flex flex-col justify-between space-y-2 ${
+                            isLeader ? 'bg-amber-950/30 border-amber-500/40 text-amber-200' : 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-base">{isLeader ? '👑' : '👤'}</span>
+                            <div className="min-w-0 flex-1">
+                              <h5 className="font-heading font-bold text-white text-sm truncate">{m.fullName}</h5>
+                              <span className="text-[10px] font-mono text-slate-300">{isLeader ? 'Team Leader' : 'Registered Member'}</span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-300 font-mono pt-2 border-t border-white/10">
+                            📞 {m.mobile || 'N/A'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Finalize Button for Leader */}
+                  {teamFormationData.isLeader && teamFormationData.status !== 'confirmed' && (
+                    <div className="pt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (teamFormationData.members?.length < 2) {
+                            alert('A team must have at least 2 members before finalizing.');
+                            return;
+                          }
+                          try {
+                            const fRes = await apiFinalizeTeam(teamFormationData.name);
+                            if (fRes.success && fRes.team) {
+                              setTeamFormationData(fRes.team);
+                              alert('Team registration successfully confirmed and locked!');
+                            } else {
+                              alert(fRes.error || 'Failed to finalize team.');
+                            }
+                          } catch (e) {
+                            alert(e.message || 'Error finalizing team.');
+                          }
+                        }}
+                        disabled={teamFormationData.members?.length < 2}
+                        className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-heading font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Confirm & Finalize Team ({teamFormationData.members?.length || 1}/{teamFormationData.targetSize || 3})</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* Feedback Alert */}
               {partnerFeedback.message && (

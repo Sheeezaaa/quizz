@@ -1357,3 +1357,267 @@ export async function apiUnpairPartner() {
     return localUnpairPartner(me?.studentId);
   }
 }
+
+
+// ==========================================
+// STUDENT REGISTRATION & TEAM FORMATION CLIENT APIS
+// ==========================================
+
+export async function apiRegisterIndividual(formData) {
+  try {
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/auth/register-individual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      data = await safeJson(res);
+    } catch {
+      res = null;
+    }
+
+    if (res && res.ok && data && data.participant) {
+      if (data.token) {
+        setStudentAuthToken(data.token);
+      }
+      setLoggedInStudent(data.participant);
+      return { success: true, participant: data.participant, token: data.token, message: data.message };
+    }
+
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+
+    // Offline / fallback handling
+    const existing = getStoredParticipants() || [];
+    const cleanMobile = (formData.mobile || '').replace(/[^\d]/g, '');
+    const isDup = existing.some((p) => (p.mobile || p.phone || '').replace(/[^\d]/g, '').endsWith(cleanMobile.slice(-10)));
+    if (isDup) {
+      return { success: false, error: `Mobile number "${formData.mobile}" is already registered.` };
+    }
+
+    const newParticipant = {
+      id: generateParticipantId(existing),
+      ...formData,
+      studentId: `STU-${cleanMobile.slice(-4) || '2026'}`,
+      mobile: formData.mobile,
+      phone: formData.mobile,
+      email: `${cleanMobile || 'student'}@student.bob.pk`,
+      status: 'Verified',
+      registeredAt: new Date().toISOString(),
+    };
+    saveParticipant(newParticipant);
+    setLoggedInStudent(newParticipant);
+    const mockToken = 'local_jwt_' + Date.now();
+    setStudentAuthToken(mockToken);
+    return { success: true, participant: newParticipant, token: mockToken, message: 'Registration successful!' };
+  } catch (err) {
+    return { success: false, error: err.message || 'Registration failed' };
+  }
+}
+
+export async function apiCreateTeam(teamData) {
+  try {
+    let res = null;
+    let data = {};
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      const token = getStudentAuthToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      res = await fetch(`${API_BASE}/teams/create`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(teamData),
+      });
+      data = await safeJson(res);
+    } catch {
+      res = null;
+    }
+
+    if (res && res.ok && data && data.team) {
+      if (data.token) {
+        setStudentAuthToken(data.token);
+      }
+      if (data.participant) {
+        setLoggedInStudent(data.participant);
+      }
+      return { success: true, team: data.team, participant: data.participant, token: data.token, inviteCode: data.inviteCode };
+    }
+
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+
+    // Local fallback
+    const inviteCode = 'INV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const mockTeam = {
+      id: 'TEAM-' + Date.now().toString().slice(-6),
+      name: teamData.teamName || 'My Team',
+      inviteCode,
+      targetSize: Number(teamData.targetSize) || 3,
+      status: 'forming',
+      members: [
+        {
+          id: 'BOB-' + Math.floor(100 + Math.random() * 900),
+          studentId: 'LEAD-' + Date.now().toString().slice(-4),
+          fullName: teamData.leaderFullName || 'Team Leader',
+          mobile: teamData.leaderMobile || '',
+          role: 'Leader',
+          joinedAt: new Date().toISOString(),
+        },
+      ],
+      createdAt: new Date().toISOString(),
+    };
+    return { success: true, team: mockTeam, inviteCode };
+  } catch (err) {
+    return { success: false, error: err.message || 'Failed to create team' };
+  }
+}
+
+export async function apiGetTeamByInvite(code) {
+  try {
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/teams/invite/${encodeURIComponent(code)}`);
+      data = await safeJson(res);
+    } catch {
+      res = null;
+    }
+
+    if (res && res.ok && data && data.team) {
+      return { success: true, team: data.team };
+    }
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+    return { success: false, error: 'Team not found or link has expired.' };
+  } catch (err) {
+    return { success: false, error: err.message || 'Failed to check invite link' };
+  }
+}
+
+export async function apiJoinTeam(joinData) {
+  try {
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/teams/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(joinData),
+      });
+      data = await safeJson(res);
+    } catch {
+      res = null;
+    }
+
+    if (res && res.ok && data && data.team) {
+      if (data.token) {
+        setStudentAuthToken(data.token);
+      }
+      if (data.participant) {
+        setLoggedInStudent(data.participant);
+      }
+      return { success: true, team: data.team, participant: data.participant, token: data.token, message: data.message };
+    }
+
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+
+    return { success: false, error: 'Failed to join team' };
+  } catch (err) {
+    return { success: false, error: err.message || 'Failed to join team' };
+  }
+}
+
+export async function apiAddTeamMemberDirect(memberData) {
+  try {
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/teams/add-member-direct`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getStudentAuthToken()}`,
+        },
+        body: JSON.stringify(memberData),
+      });
+      data = await safeJson(res);
+    } catch {
+      res = null;
+    }
+
+    if (res && res.ok && data && data.team) {
+      return { success: true, team: data.team, member: data.member, message: data.message };
+    }
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+    return { success: false, error: 'Failed to add member' };
+  } catch (err) {
+    return { success: false, error: err.message || 'Failed to add member' };
+  }
+}
+
+export async function apiFinalizeTeam(teamName) {
+  try {
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/teams/finalize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getStudentAuthToken()}`,
+        },
+        body: JSON.stringify({ teamName }),
+      });
+      data = await safeJson(res);
+    } catch {
+      res = null;
+    }
+
+    if (res && res.ok && data && data.team) {
+      return { success: true, team: data.team, message: data.message };
+    }
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+    return { success: false, error: 'Failed to finalize team registration' };
+  } catch (err) {
+    return { success: false, error: err.message || 'Failed to finalize team registration' };
+  }
+}
+
+export async function apiGetMyTeam() {
+  try {
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/teams/my-team`, {
+        headers: {
+          Authorization: `Bearer ${getStudentAuthToken()}`,
+        },
+      });
+      data = await safeJson(res);
+    } catch {
+      res = null;
+    }
+
+    if (res && res.ok) {
+      return { success: true, team: data.team };
+    }
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+    return { success: false, team: null };
+  } catch {
+    return { success: false, team: null };
+  }
+}

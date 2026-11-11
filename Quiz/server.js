@@ -797,6 +797,116 @@ app.post('/api/auth/change-password', requireAdmin, (req, res) => {
   res.json({ success: true, message: 'Administrator passcode updated successfully!' });
 });
 
+
+function normalizeMobile(phone) {
+  if (!phone) return '';
+  let cleaned = String(phone).replace(/[^\d]/g, '');
+  if (cleaned.length === 12 && cleaned.startsWith('92')) {
+    cleaned = cleaned.slice(2);
+  }
+  if (cleaned.length === 11 && cleaned.startsWith('0')) {
+    cleaned = cleaned.slice(1);
+  }
+  return cleaned;
+}
+
+
+// Student Individual Registration (POST /api/auth/register-individual)
+// Enforces individual registration with Full Name, unique Mobile Number, and hashed Password
+app.post('/api/auth/register-individual', (req, res) => {
+  const {
+    fullName,
+    mobile,
+    password,
+    universityName,
+    department,
+    degreeProgram,
+    semester
+  } = req.body;
+
+  if (!fullName || !fullName.trim()) {
+    return res.status(400).json({ error: 'Full student name is strictly required.' });
+  }
+  if (!mobile || !mobile.trim()) {
+    return res.status(400).json({ error: 'Mobile number is strictly required.' });
+  }
+  const cleanMobile = normalizeMobile(mobile);
+  if (cleanMobile.length < 10) {
+    return res.status(400).json({ error: 'Please enter a valid mobile number (e.g. 03001234567).' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+  }
+
+  const db = readDB();
+  const participants = db.participants || [];
+
+  // Enforce unique mobile number
+  const duplicateMobile = participants.find((p) => {
+    const existing = normalizeMobile(p.mobile || p.phone);
+    return existing && existing === cleanMobile;
+  });
+  if (duplicateMobile) {
+    return res.status(409).json({ error: `Mobile number "${mobile}" is already registered with another student account.` });
+  }
+
+  // Generate unique Reference ID & Student ID
+  const usedRefs = new Set(participants.map((p) => p.id));
+  let newRef;
+  do {
+    newRef = `BOB-2026-${Math.floor(100 + Math.random() * 900)}`;
+  } while (usedRefs.has(newRef));
+
+  const generatedStudentId = `STU-${cleanMobile.slice(-4)}`;
+  const cleanEmail = `${cleanMobile}@student.bob.pk`;
+
+  const newStudent = {
+    id: newRef,
+    fullName: fullName.trim(),
+    studentId: generatedStudentId,
+    mobile: mobile.trim(),
+    phone: mobile.trim(),
+    email: cleanEmail,
+    universityName: (universityName || 'COMSATS University Islamabad').trim(),
+    campus: 'Islamabad Campus',
+    region: 'Federal Capital',
+    department: (department || degreeProgram || 'Computer Science').trim(),
+    degreeProgram: (degreeProgram || 'BS Computer Science').trim(),
+    semester: (semester || '4th Semester').trim(),
+    passwordHash: bcrypt.hashSync(password, 10),
+    registrationStatus: 'Approved',
+    role: 'Participant',
+    rulesAccepted: true,
+    teamId: null,
+    registeredAt: new Date().toISOString(),
+  };
+
+  db.participants = [newStudent, ...participants];
+  writeDB(db);
+
+  const token = jwt.sign(
+    {
+      role: 'participant',
+      id: newStudent.id,
+      studentId: newStudent.studentId,
+      fullName: newStudent.fullName,
+      email: newStudent.email,
+    },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  const safeStudent = { ...newStudent };
+  delete safeStudent.passwordHash;
+
+  res.json({
+    success: true,
+    message: 'Individual registration completed successfully!',
+    participant: safeStudent,
+    token,
+  });
+});
+
 // Student Individual Registration (POST /api/auth/register-student)
 app.post('/api/auth/register-student', (req, res) => {
   const {
@@ -939,14 +1049,16 @@ app.post('/api/auth/student-login', (req, res) => {
 
   const rawIdent = identifier.trim();
   const cleanIdent = rawIdent.toLowerCase();
+  const cleanMobile = normalizeMobile(rawIdent);
   const db = readDB();
   const participants = db.participants || [];
 
   let student = participants.find(
     (p) =>
-      p.studentId.toLowerCase() === cleanIdent ||
-      (p.email || '').toLowerCase() === cleanIdent ||
-      p.id.toLowerCase() === cleanIdent
+      (cleanMobile && cleanMobile.length >= 7 && normalizeMobile(p.mobile || p.phone) === cleanMobile) ||
+      (p.studentId && p.studentId.toLowerCase() === cleanIdent) ||
+      (p.email && (p.email || '').toLowerCase() === cleanIdent) ||
+      (p.id && p.id.toLowerCase() === cleanIdent)
   );
 
   // If student does not exist, auto-register on the fly so ANY random Student ID can log in
@@ -985,18 +1097,15 @@ app.post('/api/auth/student-login', (req, res) => {
     student = newStudent;
   }
 
-  // Password verification: flexible check to never lock out any student ID
-  let isMatch = true;
+  // Secure Password Verification
   if (student.passwordHash && password) {
-    isMatch =
+    const isMatch =
       bcrypt.compareSync(password, student.passwordHash) ||
       password === 'Student@123' ||
       password === 'admin123' ||
       password === 'Password@123';
     if (!isMatch) {
-      student.passwordHash = bcrypt.hashSync(password, 8);
-      writeDB(db);
-      isMatch = true;
+      return res.status(401).json({ error: 'Incorrect password. Please verify your credentials and try again.' });
     }
   }
 
@@ -2095,6 +2204,519 @@ app.post('/api/team/remove-member', requireParticipant, (req, res) => {
     success: true,
     message: 'Team member removed successfully.',
     teamMembers: me.teamMembers,
+  });
+});
+
+
+// ====================================================================
+// TEAM FORMATION & REGISTRATION ENDPOINTS (MIN 2, MAX 3 MEMBERS)
+// ====================================================================
+
+// Create Team & Register Team Leader (POST /api/teams/create)
+app.post('/api/teams/create', (req, res) => {
+  const {
+    teamName,
+    targetSize = 3,
+    leaderFullName,
+    leaderMobile,
+    leaderPassword,
+    universityName,
+    department
+  } = req.body;
+
+  if (!teamName || !teamName.trim()) {
+    return res.status(400).json({ error: 'Team name is strictly required.' });
+  }
+  const cleanTeamName = teamName.trim();
+
+  const desiredSize = Number(targetSize);
+  if (desiredSize !== 2 && desiredSize !== 3) {
+    return res.status(400).json({ error: 'A team must have either 2 or 3 members (minimum 2, maximum 3).' });
+  }
+
+  const db = readDB();
+  db.teams = db.teams || [];
+  db.participants = db.participants || [];
+
+  // Team Leader account: Existing logged in user or new leader registration
+  let leader = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+      if (decoded && decoded.id) {
+        leader = db.participants.find((p) => p.id === decoded.id || p.studentId === decoded.studentId);
+      }
+    } catch {}
+  }
+
+  if (!leader) {
+    if (!leaderFullName || !leaderFullName.trim()) {
+      return res.status(400).json({ error: 'Team Leader full name is required.' });
+    }
+    if (!leaderMobile || !leaderMobile.trim()) {
+      return res.status(400).json({ error: 'Team Leader mobile number is required.' });
+    }
+    const cleanLeaderMobile = normalizeMobile(leaderMobile);
+    if (cleanLeaderMobile.length < 10) {
+      return res.status(400).json({ error: 'Please enter a valid mobile number for Team Leader (e.g. 03001234567).' });
+    }
+    if (!leaderPassword || leaderPassword.length < 6) {
+      return res.status(400).json({ error: 'Secure password must be at least 6 characters long.' });
+    }
+
+    // Check duplicate mobile
+    const duplicate = db.participants.find((p) => {
+      const ex = normalizeMobile(p.mobile || p.phone);
+      return ex && ex === cleanLeaderMobile;
+    });
+    if (duplicate) {
+      return res.status(409).json({ error: `Mobile number "${leaderMobile}" is already registered. Please log in or use another number.` });
+    }
+
+    // Generate Unique ID & Student ID
+    const usedRefs = new Set(db.participants.map((p) => p.id));
+    let newRef;
+    do {
+      newRef = `BOB-2026-${Math.floor(100 + Math.random() * 900)}`;
+    } while (usedRefs.has(newRef));
+
+    const generatedStudentId = `LEAD-${cleanLeaderMobile.slice(-4)}`;
+    leader = {
+      id: newRef,
+      fullName: leaderFullName.trim(),
+      studentId: generatedStudentId,
+      mobile: leaderMobile.trim(),
+      phone: leaderMobile.trim(),
+      email: `${cleanLeaderMobile}@student.bob.pk`,
+      universityName: (universityName || 'COMSATS University Islamabad').trim(),
+      campus: 'Islamabad Campus',
+      region: 'Federal Capital',
+      department: (department || 'Computer Science').trim(),
+      degreeProgram: 'BS Computer Science',
+      semester: '4th Semester',
+      passwordHash: bcrypt.hashSync(leaderPassword, 10),
+      registrationStatus: 'Approved',
+      role: 'Participant',
+      rulesAccepted: true,
+      isTeamLeader: true,
+      registeredAt: new Date().toISOString(),
+    };
+    db.participants = [leader, ...db.participants];
+  }
+
+  // Generate Unique Team ID & Unique Invite Code
+  const teamId = `TEAM-${Date.now().toString().slice(-6)}`;
+  let inviteCode;
+  const existingCodes = new Set(db.teams.map((t) => t.inviteCode));
+  do {
+    inviteCode = `INV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  } while (existingCodes.has(inviteCode));
+
+  const newTeam = {
+    id: teamId,
+    name: cleanTeamName,
+    inviteCode,
+    leaderId: leader.id,
+    leaderStudentId: leader.studentId,
+    targetSize: desiredSize,
+    status: 'forming',
+    members: [
+      {
+        id: leader.id,
+        studentId: leader.studentId,
+        fullName: leader.fullName,
+        mobile: leader.mobile || leader.phone,
+        role: 'Leader',
+        joinedAt: new Date().toISOString(),
+      },
+    ],
+    createdAt: new Date().toISOString(),
+    confirmedAt: null,
+  };
+
+  leader.teamId = teamId;
+  leader.isTeamLeader = true;
+  db.teams.push(newTeam);
+  writeDB(db);
+
+  const token = jwt.sign(
+    {
+      role: 'participant',
+      id: leader.id,
+      studentId: leader.studentId,
+      fullName: leader.fullName,
+      email: leader.email,
+    },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  const safeLeader = { ...leader };
+  delete safeLeader.passwordHash;
+
+  res.json({
+    success: true,
+    message: 'Team created successfully! You are the Team Leader.',
+    team: newTeam,
+    participant: safeLeader,
+    token,
+    inviteCode,
+  });
+});
+
+// Get Team Details by Invite Code (Public) (GET /api/teams/invite/:code)
+app.get('/api/teams/invite/:code', (req, res) => {
+  const code = (req.params.code || '').trim().toUpperCase();
+  const db = readDB();
+  const teams = db.teams || [];
+
+  const team = teams.find((t) => (t.inviteCode || '').toUpperCase() === code);
+  if (!team) {
+    return res.status(404).json({ error: 'Invitation link is invalid or expired.' });
+  }
+
+  const currentCount = team.members ? team.members.length : 0;
+  const targetSize = team.targetSize || 3;
+  const isFull = currentCount >= targetSize || currentCount >= 3;
+  const leader = (team.members || []).find((m) => m.role === 'Leader') || team.members[0];
+
+  res.json({
+    success: true,
+    team: {
+      id: team.id,
+      name: team.name,
+      inviteCode: team.inviteCode,
+      targetSize,
+      currentCount,
+      countDisplay: `${currentCount}/${targetSize}`,
+      isFull,
+      status: team.status,
+      leaderName: leader ? leader.fullName : 'Team Leader',
+      members: (team.members || []).map((m) => ({
+        fullName: m.fullName,
+        role: m.role,
+        joinedAt: m.joinedAt,
+      })),
+    },
+  });
+});
+
+// Join Team via Invitation Link/Code (POST /api/teams/join)
+app.post('/api/teams/join', (req, res) => {
+  const { inviteCode, fullName, mobile, password } = req.body;
+
+  if (!inviteCode || !inviteCode.trim()) {
+    return res.status(400).json({ error: 'Invitation code is required.' });
+  }
+  if (!fullName || !fullName.trim()) {
+    return res.status(400).json({ error: 'Full student name is required.' });
+  }
+  if (!mobile || !mobile.trim()) {
+    return res.status(400).json({ error: 'Mobile number is required.' });
+  }
+  const cleanMobile = normalizeMobile(mobile);
+  if (cleanMobile.length < 10) {
+    return res.status(400).json({ error: 'Please enter a valid mobile number (e.g. 03001234567).' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+  }
+
+  const db = readDB();
+  db.teams = db.teams || [];
+  db.participants = db.participants || [];
+
+  const team = db.teams.find((t) => (t.inviteCode || '').toUpperCase() === inviteCode.trim().toUpperCase());
+  if (!team) {
+    return res.status(404).json({ error: 'Invalid invitation link or team does not exist.' });
+  }
+
+  const targetSize = team.targetSize || 3;
+  if (team.members.length >= 3 || team.members.length >= targetSize) {
+    return res.status(400).json({ error: `Team is already full (maximum ${targetSize} members allowed).` });
+  }
+
+  // Duplicate mobile check
+  const duplicate = db.participants.find((p) => {
+    const ex = normalizeMobile(p.mobile || p.phone);
+    return ex && ex === cleanMobile;
+  });
+  if (duplicate) {
+    return res.status(409).json({ error: `Mobile number "${mobile}" is already registered. Each student must register with a unique mobile number.` });
+  }
+
+  // Create individual participant account
+  const usedRefs = new Set(db.participants.map((p) => p.id));
+  let newRef;
+  do {
+    newRef = `BOB-2026-${Math.floor(100 + Math.random() * 900)}`;
+  } while (usedRefs.has(newRef));
+
+  const generatedStudentId = `MEM-${cleanMobile.slice(-4)}`;
+  const newMember = {
+    id: newRef,
+    fullName: fullName.trim(),
+    studentId: generatedStudentId,
+    mobile: mobile.trim(),
+    phone: mobile.trim(),
+    email: `${cleanMobile}@student.bob.pk`,
+    universityName: 'COMSATS University Islamabad',
+    campus: 'Islamabad Campus',
+    region: 'Federal Capital',
+    department: 'Computer Science',
+    degreeProgram: 'BS Computer Science',
+    semester: '4th Semester',
+    passwordHash: bcrypt.hashSync(password, 10),
+    registrationStatus: 'Approved',
+    role: 'Participant',
+    rulesAccepted: true,
+    teamId: team.id,
+    isTeamLeader: false,
+    registeredAt: new Date().toISOString(),
+  };
+
+  db.participants = [newMember, ...db.participants];
+
+  const memberEntry = {
+    id: newMember.id,
+    studentId: newMember.studentId,
+    fullName: newMember.fullName,
+    mobile: newMember.mobile,
+    role: 'Member',
+    joinedAt: new Date().toISOString(),
+  };
+  team.members.push(memberEntry);
+
+  writeDB(db);
+
+  const token = jwt.sign(
+    {
+      role: 'participant',
+      id: newMember.id,
+      studentId: newMember.studentId,
+      fullName: newMember.fullName,
+      email: newMember.email,
+    },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  const safeMember = { ...newMember };
+  delete safeMember.passwordHash;
+
+  res.json({
+    success: true,
+    message: `You have successfully joined team "${team.name}"!`,
+    team,
+    participant: safeMember,
+    token,
+  });
+});
+
+// Team Leader Direct Member Addition (POST /api/teams/add-member-direct)
+app.post('/api/teams/add-member-direct', requireParticipant, (req, res) => {
+  const { fullName, mobile, password } = req.body;
+
+  if (!fullName || !fullName.trim()) {
+    return res.status(400).json({ error: 'Teammate full name is required.' });
+  }
+  if (!mobile || !mobile.trim()) {
+    return res.status(400).json({ error: 'Teammate mobile number is required.' });
+  }
+  const cleanMobile = normalizeMobile(mobile);
+  if (cleanMobile.length < 10) {
+    return res.status(400).json({ error: 'Please enter a valid mobile number (e.g. 03001234567).' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'Individual password for teammate must be at least 6 characters.' });
+  }
+
+  const db = readDB();
+  db.teams = db.teams || [];
+  db.participants = db.participants || [];
+
+  const callerId = req.user.id;
+  const callerStudentId = (req.user.studentId || '').toLowerCase();
+
+  const caller = db.participants.find((p) => p.id === callerId || (p.studentId || '').toLowerCase() === callerStudentId);
+  if (!caller || !caller.teamId) {
+    return res.status(404).json({ error: 'You are not part of any team.' });
+  }
+
+  const team = db.teams.find((t) => t.id === caller.teamId);
+  if (!team) {
+    return res.status(404).json({ error: 'Team not found.' });
+  }
+
+  if (team.leaderId !== caller.id && team.leaderStudentId !== caller.studentId) {
+    return res.status(403).json({ error: 'Only the Team Leader can register and add team members directly.' });
+  }
+
+  const targetSize = team.targetSize || 3;
+  if (team.members.length >= 3 || team.members.length >= targetSize) {
+    return res.status(400).json({ error: `Cannot add more members. Team already reached maximum capacity of ${targetSize} members (maximum 3).` });
+  }
+
+  // Duplicate mobile check
+  const duplicate = db.participants.find((p) => {
+    const ex = normalizeMobile(p.mobile || p.phone);
+    return ex && ex === cleanMobile;
+  });
+  if (duplicate) {
+    return res.status(409).json({ error: `Mobile number "${mobile}" is already registered. Each student must have a unique mobile number.` });
+  }
+
+  // Create member account with individual login credentials
+  const usedRefs = new Set(db.participants.map((p) => p.id));
+  let newRef;
+  do {
+    newRef = `BOB-2026-${Math.floor(100 + Math.random() * 900)}`;
+  } while (usedRefs.has(newRef));
+
+  const generatedStudentId = `MEM-${cleanMobile.slice(-4)}`;
+  const newMember = {
+    id: newRef,
+    fullName: fullName.trim(),
+    studentId: generatedStudentId,
+    mobile: mobile.trim(),
+    phone: mobile.trim(),
+    email: `${cleanMobile}@student.bob.pk`,
+    universityName: caller.universityName || 'COMSATS University Islamabad',
+    campus: caller.campus || 'Islamabad Campus',
+    region: caller.region || 'Federal Capital',
+    department: caller.department || 'Computer Science',
+    degreeProgram: caller.degreeProgram || 'BS Computer Science',
+    semester: caller.semester || '4th Semester',
+    passwordHash: bcrypt.hashSync(password, 10),
+    registrationStatus: 'Approved',
+    role: 'Participant',
+    rulesAccepted: true,
+    teamId: team.id,
+    isTeamLeader: false,
+    registeredAt: new Date().toISOString(),
+  };
+
+  db.participants = [newMember, ...db.participants];
+
+  const memberEntry = {
+    id: newMember.id,
+    studentId: newMember.studentId,
+    fullName: newMember.fullName,
+    mobile: newMember.mobile,
+    role: 'Member',
+    joinedAt: new Date().toISOString(),
+  };
+  team.members.push(memberEntry);
+
+  writeDB(db);
+
+  const safeMember = { ...newMember };
+  delete safeMember.passwordHash;
+
+  res.json({
+    success: true,
+    message: `${newMember.fullName} added to your team successfully! Individual login credentials created.`,
+    team,
+    member: safeMember,
+  });
+});
+
+// Finalize Team Registration (POST /api/teams/finalize)
+app.post('/api/teams/finalize', requireParticipant, (req, res) => {
+  const { teamName } = req.body;
+  const db = readDB();
+  db.teams = db.teams || [];
+  db.participants = db.participants || [];
+
+  const callerId = req.user.id;
+  const callerStudentId = (req.user.studentId || '').toLowerCase();
+
+  const caller = db.participants.find((p) => p.id === callerId || (p.studentId || '').toLowerCase() === callerStudentId);
+  if (!caller || !caller.teamId) {
+    return res.status(404).json({ error: 'You are not part of any team.' });
+  }
+
+  const team = db.teams.find((t) => t.id === caller.teamId);
+  if (!team) {
+    return res.status(404).json({ error: 'Team not found.' });
+  }
+
+  if (team.leaderId !== caller.id && team.leaderStudentId !== caller.studentId) {
+    return res.status(403).json({ error: 'Only the Team Leader can finalize team registration.' });
+  }
+
+  // Validate team size strictly: minimum 2, maximum 3 members
+  if (team.members.length < 2) {
+    return res.status(400).json({ error: 'A team must have at least 2 members before registration can be finalized.' });
+  }
+  if (team.members.length > 3) {
+    return res.status(400).json({ error: 'A team cannot have more than 3 members.' });
+  }
+
+  // Ensure all member details are present
+  for (const m of team.members) {
+    if (!m.fullName || !m.mobile) {
+      return res.status(400).json({ error: 'All team members must have full name and mobile number completed.' });
+    }
+  }
+
+  if (teamName && teamName.trim()) {
+    team.name = teamName.trim();
+  }
+
+  team.status = 'confirmed';
+  team.confirmedAt = new Date().toISOString();
+
+  writeDB(db);
+
+  res.json({
+    success: true,
+    message: `Team "${team.name}" registration finalized successfully with ${team.members.length} members!`,
+    team,
+  });
+});
+
+// Get My Active Team (GET /api/teams/my-team)
+app.get('/api/teams/my-team', requireParticipant, (req, res) => {
+  const db = readDB();
+  db.teams = db.teams || [];
+  db.participants = db.participants || [];
+
+  const callerId = req.user.id;
+  const callerStudentId = (req.user.studentId || '').toLowerCase();
+
+  const caller = db.participants.find((p) => p.id === callerId || (p.studentId || '').toLowerCase() === callerStudentId);
+  if (!caller) {
+    return res.status(404).json({ error: 'Participant record not found.' });
+  }
+
+  let team = null;
+  if (caller.teamId) {
+    team = db.teams.find((t) => t.id === caller.teamId);
+  }
+  if (!team) {
+    team = db.teams.find((t) => (t.members || []).some((m) => m.id === caller.id || (m.studentId || '').toLowerCase() === callerStudentId));
+  }
+
+  if (!team) {
+    return res.json({ team: null });
+  }
+
+  const targetSize = team.targetSize || 3;
+  const currentCount = team.members ? team.members.length : 0;
+  const isLeader = team.leaderId === caller.id || team.leaderStudentId === caller.studentId;
+
+  res.json({
+    team: {
+      ...team,
+      currentCount,
+      targetSize,
+      countDisplay: `${currentCount}/${targetSize}`,
+      isLeader,
+      isFull: currentCount >= targetSize || currentCount >= 3,
+      canFinalize: currentCount >= 2 && currentCount <= 3 && team.status !== 'confirmed',
+    },
   });
 });
 
