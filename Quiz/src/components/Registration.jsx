@@ -193,11 +193,12 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
         if (match && match[1]) cleanCode = match[1];
       }
       const res = await apiGetTeamByInvite(cleanCode);
-      if (res.success && res.team) {
+      if (res && res.success && res.team) {
         setInvitedTeamPreview(res.team);
+        setJoinServerError('');
       } else {
         setInvitedTeamPreview(null);
-        setJoinServerError(res.error || 'Invitation code not found.');
+        setJoinServerError(res?.error || 'Invitation code not found.');
       }
     } catch {
       setInvitedTeamPreview(null);
@@ -680,8 +681,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                     placeholder="e.g. 0300 1234567"
                     value={indivForm.mobile}
                     onChange={(e) => setIndivForm({ ...indivForm, mobile: e.target.value })}
-                    className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
-                      indivErrors.mobile ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                    className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
+                      indivErrors.mobile ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                     }`}
                   />
                   {indivErrors.mobile ? (
@@ -710,8 +711,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                       placeholder="Min 6 characters"
                       value={indivForm.password}
                       onChange={(e) => setIndivForm({ ...indivForm, password: e.target.value })}
-                      className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
-                        indivErrors.password ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                      className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
+                        indivErrors.password ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                       }`}
                     />
                     <button
@@ -741,8 +742,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                       placeholder="Re-enter password"
                       value={indivForm.confirmPassword}
                       onChange={(e) => setIndivForm({ ...indivForm, confirmPassword: e.target.value })}
-                      className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
-                        indivErrors.confirmPassword ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                      className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
+                        indivErrors.confirmPassword ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                       }`}
                     />
                     <button
@@ -1327,8 +1328,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                             placeholder="e.g. 0300 1234567"
                             value={createTeamForm.leaderMobile}
                             onChange={(e) => setCreateTeamForm({ ...createTeamForm, leaderMobile: e.target.value })}
-                            className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
-                              createErrors.leaderMobile ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                            className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
+                              createErrors.leaderMobile ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                             }`}
                           />
                           {createErrors.leaderMobile && (
@@ -1350,8 +1351,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                               placeholder="Min 6 characters"
                               value={createTeamForm.leaderPassword}
                               onChange={(e) => setCreateTeamForm({ ...createTeamForm, leaderPassword: e.target.value })}
-                              className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
-                                createErrors.leaderPassword ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                              className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
+                                createErrors.leaderPassword ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                               }`}
                             />
                             <button
@@ -1378,8 +1379,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                               placeholder="Re-enter password"
                               value={createTeamForm.leaderConfirmPassword}
                               onChange={(e) => setCreateTeamForm({ ...createTeamForm, leaderConfirmPassword: e.target.value })}
-                              className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
-                                createErrors.leaderConfirmPassword ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                              className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
+                                createErrors.leaderConfirmPassword ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                               }`}
                             />
                             <button
@@ -1493,15 +1494,15 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                               setJoinForm({ ...joinForm, inviteCode: val });
                               if (val.trim()) fetchTeamPreview(val);
                             }}
-                            className={`flex-1 px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-mono focus:outline-none transition-all placeholder:text-slate-500 ${
-                              joinErrors.inviteCode ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                            className={`flex-1 px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-mono focus:outline-none transition-all placeholder:text-slate-500 ${
+                              joinErrors.inviteCode ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                             }`}
                           />
                           <button
                             type="button"
                             onClick={() => fetchTeamPreview(joinForm.inviteCode)}
                             disabled={previewLoading || !joinForm.inviteCode.trim()}
-                            className="px-4 py-3 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 font-heading font-bold text-xs border border-blue-500/40 cursor-pointer disabled:opacity-50"
+                            className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs shadow-md shadow-blue-600/30 cursor-pointer disabled:opacity-50"
                           >
                             {previewLoading ? 'Checking...' : 'Verify'}
                           </button>
@@ -1542,8 +1543,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                             placeholder="e.g. 0300 7654321"
                             value={joinForm.mobile}
                             onChange={(e) => setJoinForm({ ...joinForm, mobile: e.target.value })}
-                            className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
-                              joinErrors.mobile ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                            className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
+                              joinErrors.mobile ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                             }`}
                           />
                           {joinErrors.mobile && (
@@ -1565,8 +1566,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                               placeholder="Min 6 characters"
                               value={joinForm.password}
                               onChange={(e) => setJoinForm({ ...joinForm, password: e.target.value })}
-                              className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
-                                joinErrors.password ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                              className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
+                                joinErrors.password ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                               }`}
                             />
                             <button
@@ -1593,8 +1594,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                               placeholder="Re-enter password"
                               value={joinForm.confirmPassword}
                               onChange={(e) => setJoinForm({ ...joinForm, confirmPassword: e.target.value })}
-                              className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
-                                joinErrors.confirmPassword ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                              className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 pr-10 ${
+                                joinErrors.confirmPassword ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                               }`}
                             />
                             <button

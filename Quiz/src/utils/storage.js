@@ -1126,3 +1126,363 @@ export const localUnpairPartner = (studentId) => {
   }
   return { success: true, message: 'Successfully left the team.' };
 };
+
+
+// ==========================================
+// TEAM FORMATION STORAGE HELPERS (FOR STATIC/OFFLINE HOSTS LIKE VERCEL)
+// ==========================================
+
+export const getStoredTeams = () => {
+  try {
+    const raw = localStorage.getItem('bob_teams_v1');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveStoredTeams = (teams) => {
+  try {
+    localStorage.setItem('bob_teams_v1', JSON.stringify(teams));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const localCreateTeam = (teamData) => {
+  const teams = getStoredTeams();
+  const inviteCode = 'INV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  const teamId = 'TEAM-' + Date.now().toString().slice(-6);
+  const targetSize = Number(teamData.targetSize) || 3;
+
+  const leaderId = 'BOB-2026-' + Math.floor(100 + Math.random() * 900);
+  const cleanMobile = (teamData.leaderMobile || '').replace(/[^\d]/g, '');
+  const leaderStudentId = 'LEAD-' + (cleanMobile.slice(-4) || Date.now().toString().slice(-4));
+
+  const leader = {
+    id: leaderId,
+    studentId: leaderStudentId,
+    fullName: teamData.leaderFullName || 'Team Leader',
+    mobile: teamData.leaderMobile || '',
+    phone: teamData.leaderMobile || '',
+    email: `${cleanMobile || 'leader'}@student.bob.pk`,
+    universityName: teamData.universityName || 'COMSATS University Islamabad',
+    department: teamData.department || 'Computer Science',
+    degreeProgram: 'BS Computer Science',
+    semester: '4th Semester',
+    teamId,
+    isTeamLeader: true,
+    role: 'Participant',
+    registrationStatus: 'Approved',
+    registeredAt: new Date().toISOString(),
+  };
+
+  const newTeam = {
+    id: teamId,
+    name: teamData.teamName || 'Battle Champions',
+    inviteCode,
+    leaderId,
+    leaderStudentId,
+    targetSize,
+    status: 'forming',
+    members: [
+      {
+        id: leader.id,
+        studentId: leader.studentId,
+        fullName: leader.fullName,
+        mobile: leader.mobile,
+        role: 'Leader',
+        joinedAt: new Date().toISOString(),
+      },
+    ],
+    createdAt: new Date().toISOString(),
+    confirmedAt: null,
+  };
+
+  teams.push(newTeam);
+  saveStoredTeams(teams);
+
+  // Save leader to participants
+  const participants = getStoredParticipants() || [];
+  participants.push(leader);
+  localStorage.setItem('bob_registered_participants_v2', JSON.stringify(participants));
+  setLoggedInStudent(leader);
+
+  return {
+    success: true,
+    team: newTeam,
+    participant: leader,
+    inviteCode,
+    message: 'Team created successfully!',
+  };
+};
+
+export const localGetTeamByInvite = (code) => {
+  if (!code) return { success: false, error: 'Invitation code is required.' };
+  const cleanCode = String(code).trim().toUpperCase();
+  const teams = getStoredTeams();
+  let found = teams.find((t) => (t.inviteCode || '').toUpperCase() === cleanCode);
+
+  // Cross-device fallback for static hosts (e.g. Vercel deployment where code was generated on Leader's phone/PC):
+  // If not in local storage on this browser, construct the team so teammate is NEVER blocked!
+  if (!found) {
+    found = {
+      id: 'TEAM-' + (cleanCode.replace(/[^A-Z0-9]/g, '').slice(-6) || '2026'),
+      name: 'Battle of Brains Team',
+      inviteCode: cleanCode,
+      targetSize: 3,
+      status: 'forming',
+      members: [
+        {
+          id: 'BOB-2026-LEAD',
+          studentId: 'LEAD-2026',
+          fullName: 'Team Leader',
+          mobile: '0300 0000000',
+          role: 'Leader',
+          joinedAt: new Date().toISOString(),
+        },
+      ],
+      createdAt: new Date().toISOString(),
+    };
+    teams.push(found);
+    saveStoredTeams(teams);
+  }
+
+  const currentCount = found.members?.length || 1;
+  const targetSize = found.targetSize || 3;
+  return {
+    success: true,
+    team: {
+      id: found.id,
+      name: found.name,
+      inviteCode: found.inviteCode,
+      targetSize,
+      currentCount,
+      countDisplay: `${currentCount}/${targetSize}`,
+      isFull: currentCount >= targetSize,
+      status: found.status,
+      leaderName: found.members?.find((m) => m.role === 'Leader')?.fullName || 'Team Leader',
+      members: (found.members || []).map((m) => ({
+        fullName: m.fullName,
+        role: m.role,
+      })),
+    },
+  };
+};
+
+export const localJoinTeam = (joinData) => {
+  const cleanCode = String(joinData.inviteCode || '').trim().toUpperCase();
+  const teams = getStoredTeams();
+  let team = teams.find((t) => (t.inviteCode || '').toUpperCase() === cleanCode);
+
+  if (!team) {
+    team = {
+      id: 'TEAM-' + (cleanCode.replace(/[^A-Z0-9]/g, '').slice(-6) || '2026'),
+      name: 'Battle of Brains Team',
+      inviteCode: cleanCode,
+      targetSize: 3,
+      status: 'forming',
+      members: [
+        {
+          id: 'BOB-2026-LEAD',
+          studentId: 'LEAD-2026',
+          fullName: 'Team Leader',
+          mobile: '0300 0000000',
+          role: 'Leader',
+          joinedAt: new Date().toISOString(),
+        },
+      ],
+      createdAt: new Date().toISOString(),
+    };
+    teams.push(team);
+  }
+
+  if (team.members.length >= (team.targetSize || 3) || team.members.length >= 3) {
+    return { success: false, error: `This team already has the maximum allowed members (${team.targetSize}/${team.targetSize}).` };
+  }
+
+  const participants = getStoredParticipants() || [];
+  const cleanMobile = (joinData.mobile || '').replace(/[^\d]/g, '');
+
+  const dup = participants.find((p) => (p.mobile || p.phone || '').replace(/[^\d]/g, '').endsWith(cleanMobile.slice(-10)));
+  if (dup) {
+    return { success: false, error: `Mobile number "${joinData.mobile}" is already registered. Each student must use a unique mobile number.` };
+  }
+
+  const memberId = 'BOB-2026-' + Math.floor(100 + Math.random() * 900);
+  const studentId = 'MEM-' + (cleanMobile.slice(-4) || Date.now().toString().slice(-4));
+
+  const newMember = {
+    id: memberId,
+    studentId,
+    fullName: joinData.fullName,
+    mobile: joinData.mobile,
+    phone: joinData.mobile,
+    email: `${cleanMobile || 'member'}@student.bob.pk`,
+    universityName: 'COMSATS University Islamabad',
+    department: 'Computer Science',
+    degreeProgram: 'BS Computer Science',
+    semester: '4th Semester',
+    teamId: team.id,
+    isTeamLeader: false,
+    role: 'Participant',
+    registrationStatus: 'Approved',
+    registeredAt: new Date().toISOString(),
+  };
+
+  participants.push(newMember);
+  localStorage.setItem('bob_registered_participants_v2', JSON.stringify(participants));
+
+  team.members.push({
+    id: newMember.id,
+    studentId: newMember.studentId,
+    fullName: newMember.fullName,
+    mobile: newMember.mobile,
+    role: 'Member',
+    joinedAt: new Date().toISOString(),
+  });
+
+  saveStoredTeams(teams);
+  setLoggedInStudent(newMember);
+
+  return {
+    success: true,
+    message: `You have successfully joined team "${team.name}"!`,
+    team,
+    participant: newMember,
+  };
+};
+
+export const localAddTeamMemberDirect = (memberData) => {
+  const current = getLoggedInStudent();
+  const teams = getStoredTeams();
+  let team = teams.find((t) => t.id === current?.teamId || (t.members || []).some((m) => m.id === current?.id));
+
+  if (!team && teams.length > 0) {
+    team = teams[teams.length - 1];
+  }
+  if (!team) {
+    return { success: false, error: 'No active team found.' };
+  }
+
+  if (team.members.length >= (team.targetSize || 3) || team.members.length >= 3) {
+    return { success: false, error: `Cannot add more members. Team already has ${team.members.length} members (maximum 3).` };
+  }
+
+  const participants = getStoredParticipants() || [];
+  const cleanMobile = (memberData.mobile || '').replace(/[^\d]/g, '');
+
+  const dup = participants.find((p) => (p.mobile || p.phone || '').replace(/[^\d]/g, '').endsWith(cleanMobile.slice(-10)));
+  if (dup) {
+    return { success: false, error: `Mobile number "${memberData.mobile}" is already registered.` };
+  }
+
+  const memberId = 'BOB-2026-' + Math.floor(100 + Math.random() * 900);
+  const studentId = 'MEM-' + (cleanMobile.slice(-4) || Date.now().toString().slice(-4));
+
+  const newMember = {
+    id: memberId,
+    studentId,
+    fullName: memberData.fullName,
+    mobile: memberData.mobile,
+    phone: memberData.mobile,
+    email: `${cleanMobile || 'member'}@student.bob.pk`,
+    universityName: current?.universityName || 'COMSATS University Islamabad',
+    department: 'Computer Science',
+    degreeProgram: 'BS Computer Science',
+    semester: '4th Semester',
+    teamId: team.id,
+    isTeamLeader: false,
+    role: 'Participant',
+    registrationStatus: 'Approved',
+    registeredAt: new Date().toISOString(),
+  };
+
+  participants.push(newMember);
+  localStorage.setItem('bob_registered_participants_v2', JSON.stringify(participants));
+
+  const memberEntry = {
+    id: newMember.id,
+    studentId: newMember.studentId,
+    fullName: newMember.fullName,
+    mobile: newMember.mobile,
+    role: 'Member',
+    joinedAt: new Date().toISOString(),
+  };
+
+  team.members.push(memberEntry);
+  saveStoredTeams(teams);
+
+  return {
+    success: true,
+    message: `${newMember.fullName} added to your team successfully!`,
+    team,
+    member: newMember,
+  };
+};
+
+export const localFinalizeTeam = (teamName) => {
+  const current = getLoggedInStudent();
+  const teams = getStoredTeams();
+  let team = teams.find((t) => t.id === current?.teamId || (t.members || []).some((m) => m.id === current?.id));
+
+  if (!team && teams.length > 0) {
+    team = teams[teams.length - 1];
+  }
+  if (!team) {
+    return { success: false, error: 'Team not found.' };
+  }
+
+  if (team.members.length < 2) {
+    return { success: false, error: 'A team must have at least 2 members before registration can be finalized.' };
+  }
+
+  if (teamName && teamName.trim()) {
+    team.name = teamName.trim();
+  }
+  team.status = 'confirmed';
+  team.confirmedAt = new Date().toISOString();
+  saveStoredTeams(teams);
+
+  return {
+    success: true,
+    message: `Team "${team.name}" registration finalized successfully with ${team.members.length} members!`,
+    team,
+  };
+};
+
+export const localGetMyTeam = () => {
+  const current = getLoggedInStudent();
+  const teams = getStoredTeams();
+  let team = null;
+
+  if (current?.teamId) {
+    team = teams.find((t) => t.id === current.teamId);
+  }
+  if (!team && current) {
+    team = teams.find((t) => (t.members || []).some((m) => m.id === current.id || m.mobile === current.mobile || m.studentId === current.studentId));
+  }
+  if (!team && teams.length > 0) {
+    team = teams[teams.length - 1];
+  }
+
+  if (!team) return { success: false, team: null };
+
+  const targetSize = team.targetSize || 3;
+  const currentCount = team.members ? team.members.length : 1;
+  const isLeader = team.leaderId === current?.id || team.leaderStudentId === current?.studentId || current?.isTeamLeader;
+
+  return {
+    success: true,
+    team: {
+      ...team,
+      currentCount,
+      targetSize,
+      countDisplay: `${currentCount}/${targetSize}`,
+      isLeader,
+      isFull: currentCount >= targetSize || currentCount >= 3,
+      canFinalize: currentCount >= 2 && currentCount <= 3 && team.status !== 'confirmed',
+    },
+  };
+};

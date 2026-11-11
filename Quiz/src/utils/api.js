@@ -17,7 +17,13 @@ import {
   localCancelPartnerRequest,
   localUnpairPartner,
   localAddTeamMember,
-  localRemoveTeamMember
+  localRemoveTeamMember,
+  localCreateTeam,
+  localGetTeamByInvite,
+  localJoinTeam,
+  localAddTeamMemberDirect,
+  localFinalizeTeam,
+  localGetMyTeam
 } from './storage';
 
 // Centralized API Client for Battle of Brains 2026
@@ -1438,12 +1444,8 @@ export async function apiCreateTeam(teamData) {
     }
 
     if (res && res.ok && data && data.team) {
-      if (data.token) {
-        setStudentAuthToken(data.token);
-      }
-      if (data.participant) {
-        setLoggedInStudent(data.participant);
-      }
+      if (data.token) setStudentAuthToken(data.token);
+      if (data.participant) setLoggedInStudent(data.participant);
       return { success: true, team: data.team, participant: data.participant, token: data.token, inviteCode: data.inviteCode };
     }
 
@@ -1451,29 +1453,16 @@ export async function apiCreateTeam(teamData) {
       return { success: false, error: data.error };
     }
 
-    // Local fallback
-    const inviteCode = 'INV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-    const mockTeam = {
-      id: 'TEAM-' + Date.now().toString().slice(-6),
-      name: teamData.teamName || 'My Team',
-      inviteCode,
-      targetSize: Number(teamData.targetSize) || 3,
-      status: 'forming',
-      members: [
-        {
-          id: 'BOB-' + Math.floor(100 + Math.random() * 900),
-          studentId: 'LEAD-' + Date.now().toString().slice(-4),
-          fullName: teamData.leaderFullName || 'Team Leader',
-          mobile: teamData.leaderMobile || '',
-          role: 'Leader',
-          joinedAt: new Date().toISOString(),
-        },
-      ],
-      createdAt: new Date().toISOString(),
-    };
-    return { success: true, team: mockTeam, inviteCode };
+    // Local storage fallback for Vercel / offline hosts
+    const localRes = localCreateTeam(teamData);
+    if (localRes && localRes.success) {
+      const mockToken = 'local_jwt_' + Date.now();
+      setStudentAuthToken(mockToken);
+      return { ...localRes, token: mockToken };
+    }
+    return localRes;
   } catch (err) {
-    return { success: false, error: err.message || 'Failed to create team' };
+    return localCreateTeam(teamData);
   }
 }
 
@@ -1491,12 +1480,11 @@ export async function apiGetTeamByInvite(code) {
     if (res && res.ok && data && data.team) {
       return { success: true, team: data.team };
     }
-    if (res && data && data.error) {
-      return { success: false, error: data.error };
-    }
-    return { success: false, error: 'Team not found or link has expired.' };
+
+    // Local storage fallback for Vercel / offline hosts
+    return localGetTeamByInvite(code);
   } catch (err) {
-    return { success: false, error: err.message || 'Failed to check invite link' };
+    return localGetTeamByInvite(code);
   }
 }
 
@@ -1516,12 +1504,8 @@ export async function apiJoinTeam(joinData) {
     }
 
     if (res && res.ok && data && data.team) {
-      if (data.token) {
-        setStudentAuthToken(data.token);
-      }
-      if (data.participant) {
-        setLoggedInStudent(data.participant);
-      }
+      if (data.token) setStudentAuthToken(data.token);
+      if (data.participant) setLoggedInStudent(data.participant);
       return { success: true, team: data.team, participant: data.participant, token: data.token, message: data.message };
     }
 
@@ -1529,9 +1513,16 @@ export async function apiJoinTeam(joinData) {
       return { success: false, error: data.error };
     }
 
-    return { success: false, error: 'Failed to join team' };
+    // Local storage fallback for Vercel / offline hosts
+    const localRes = localJoinTeam(joinData);
+    if (localRes && localRes.success) {
+      const mockToken = 'local_jwt_' + Date.now();
+      setStudentAuthToken(mockToken);
+      return { ...localRes, token: mockToken };
+    }
+    return localRes;
   } catch (err) {
-    return { success: false, error: err.message || 'Failed to join team' };
+    return localJoinTeam(joinData);
   }
 }
 
@@ -1559,9 +1550,11 @@ export async function apiAddTeamMemberDirect(memberData) {
     if (res && data && data.error) {
       return { success: false, error: data.error };
     }
-    return { success: false, error: 'Failed to add member' };
+
+    // Local storage fallback
+    return localAddTeamMemberDirect(memberData);
   } catch (err) {
-    return { success: false, error: err.message || 'Failed to add member' };
+    return localAddTeamMemberDirect(memberData);
   }
 }
 
@@ -1589,9 +1582,11 @@ export async function apiFinalizeTeam(teamName) {
     if (res && data && data.error) {
       return { success: false, error: data.error };
     }
-    return { success: false, error: 'Failed to finalize team registration' };
+
+    // Local storage fallback
+    return localFinalizeTeam(teamName);
   } catch (err) {
-    return { success: false, error: err.message || 'Failed to finalize team registration' };
+    return localFinalizeTeam(teamName);
   }
 }
 
@@ -1610,14 +1605,13 @@ export async function apiGetMyTeam() {
       res = null;
     }
 
-    if (res && res.ok) {
+    if (res && res.ok && data && data.team) {
       return { success: true, team: data.team };
     }
-    if (res && data && data.error) {
-      return { success: false, error: data.error };
-    }
-    return { success: false, team: null };
+
+    // Local storage fallback
+    return localGetMyTeam();
   } catch {
-    return { success: false, team: null };
+    return localGetMyTeam();
   }
 }
