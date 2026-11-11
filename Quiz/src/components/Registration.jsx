@@ -615,7 +615,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
         {/* MODE 1: INDIVIDUAL STUDENT REGISTRATION */}
         {/* ============================================================== */}
         {mainMode === 'individual' && (
-          <div className="bg-[#0b1020]/95 border border-white/15 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl relative animate-fadeIn">
+          <div className="registration-card bg-white dark:bg-[#0b1020] border-2 border-slate-200 dark:border-white/15 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl relative animate-fadeIn text-slate-900 dark:text-white">
             
             <div className="flex items-center justify-between pb-6 mb-8 border-b border-white/10">
               <div className="flex items-center gap-3">
@@ -623,10 +623,10 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                   <User className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-heading font-black text-white">
+                  <h3 className="text-xl font-heading font-black text-slate-900 dark:text-white">
                     Individual Student Registration
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium">
                     Create your individual contestant account with full name, mobile number, and password.
                   </p>
                 </div>
@@ -649,7 +649,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
               {/* Full Name & Mobile Number */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                  <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-blue-400" />
                     <span>Full Student Name <strong className="text-rose-500">*</strong></span>
                   </label>
@@ -658,8 +658,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                     placeholder="e.g. Muhammad Ali"
                     value={indivForm.fullName}
                     onChange={(e) => setIndivForm({ ...indivForm, fullName: e.target.value })}
-                    className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
-                      indivErrors.fullName ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                    className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${
+                      indivErrors.fullName ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                     }`}
                   />
                   {indivErrors.fullName && (
@@ -671,7 +671,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                 </div>
 
                 <div>
-                  <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                  <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-blue-400" />
                     <span>Mobile Number (Unique Login ID) <strong className="text-rose-500">*</strong></span>
                   </label>
@@ -700,7 +700,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
               {/* Password & Confirm Password */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                  <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-blue-400" />
                     <span>Account Password <strong className="text-rose-500">*</strong></span>
                   </label>
@@ -731,7 +731,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                 </div>
 
                 <div>
-                  <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                  <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-blue-400" />
                     <span>Confirm Password <strong className="text-rose-500">*</strong></span>
                   </label>
@@ -765,7 +765,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
               {/* Academic Details (Campus & Degree) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5">
+                  <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2">
                     University Campus
                   </label>
                   <select
@@ -782,7 +782,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                 </div>
 
                 <div>
-                  <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5">
+                  <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2">
                     Degree Program
                   </label>
                   <select
@@ -855,7 +855,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
             
             {/* If user currently has an active team session */}
             {activeTeam ? (
-              <div className="bg-[#0b1020]/95 border-2 border-blue-500/40 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl space-y-8">
+              <div className="registration-card bg-white dark:bg-[#0b1020] border-2 border-blue-500/40 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl space-y-8 text-slate-900 dark:text-white">
                 
                 {/* Header & Status Banner */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
@@ -865,7 +865,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                     </div>
                     <div>
                       <div className="flex items-center gap-2.5">
-                        <h3 className="text-2xl font-heading font-black text-white">
+                        <h3 className="text-2xl font-heading font-black text-slate-900 dark:text-white">
                           Team: {activeTeam.name}
                         </h3>
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold uppercase tracking-wider ${
@@ -876,7 +876,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                           {activeTeam.status === 'confirmed' ? 'Registration Confirmed' : 'Forming Team'}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium mt-1">
                         Team Size: strictly {activeTeam.targetSize || 3} members (minimum 2, maximum 3)
                       </p>
                     </div>
@@ -969,7 +969,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                       <Users className="w-4 h-4 text-blue-400" />
                       <span>Registered Team Members</span>
                     </h4>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium">
                       Minimum 2, Maximum 3 Members
                     </span>
                   </div>
@@ -1151,7 +1151,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
                       <span>Finalize Team Registration</span>
                     </div>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium">
                       {activeTeam.members?.length < 2
                         ? 'Need at least 2 members to finalize team registration.'
                         : 'Team meets size requirements (2 or 3 members). Ready to confirm!'}
@@ -1191,7 +1191,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
               </div>
             ) : (
               /* If no active team yet, show Choice between: Create a Team OR Join a Team */
-              <div className="bg-[#0b1020]/95 border border-white/15 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl relative">
+              <div className="registration-card bg-white dark:bg-[#0b1020] border-2 border-slate-200 dark:border-white/15 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl relative text-slate-900 dark:text-white">
                 
                 {/* Sub-mode switcher */}
                 <div className="flex border-b border-white/10 pb-6 mb-8 gap-4">
@@ -1200,8 +1200,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                     onClick={() => setTeamSubMode('create')}
                     className={`pb-3 font-heading font-bold text-sm sm:text-base flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
                       teamSubMode === 'create'
-                        ? 'border-blue-500 text-blue-400'
-                        : 'border-transparent text-slate-400 hover:text-white'
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-black'
+                        : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold'
                     }`}
                   >
                     <Crown className="w-4 h-4" />
@@ -1213,8 +1213,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                     onClick={() => setTeamSubMode('join')}
                     className={`pb-3 font-heading font-bold text-sm sm:text-base flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
                       teamSubMode === 'join'
-                        ? 'border-blue-500 text-blue-400'
-                        : 'border-transparent text-slate-400 hover:text-white'
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-black'
+                        : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold'
                     }`}
                   >
                     <LinkIcon className="w-4 h-4" />
@@ -1226,10 +1226,10 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                 {teamSubMode === 'create' && (
                   <div>
                     <div className="mb-6">
-                      <h3 className="text-xl font-heading font-black text-white">
+                      <h3 className="text-xl font-heading font-black text-slate-900 dark:text-white">
                         Create New Team as Team Leader
                       </h3>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium mt-1">
                         Register your team name, choose team size (2 or 3 members), and create your Team Leader individual credentials.
                       </p>
                     </div>
@@ -1246,7 +1246,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                       {/* Team Name & Size Choice */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
-                          <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                             <Users className="w-3.5 h-3.5 text-blue-400" />
                             <span>Team Name <strong className="text-rose-500">*</strong></span>
                           </label>
@@ -1255,8 +1255,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                             placeholder="e.g. Byte Busters, Algorithm Aces"
                             value={createTeamForm.teamName}
                             onChange={(e) => setCreateTeamForm({ ...createTeamForm, teamName: e.target.value })}
-                            className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
-                              createErrors.teamName ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                            className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${
+                              createErrors.teamName ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                             }`}
                           />
                           {createErrors.teamName && (
@@ -1265,7 +1265,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                         </div>
 
                         <div>
-                          <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5">
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2">
                             Team Size (Strictly 2 or 3 Members) <strong className="text-rose-500">*</strong>
                           </label>
                           <div className="grid grid-cols-2 gap-3">
@@ -1275,7 +1275,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                               className={`py-3 px-3 rounded-xl border text-xs font-heading font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                                 createTeamForm.targetSize === 2
                                   ? 'bg-blue-600/25 border-blue-500 text-blue-300 shadow-md'
-                                  : 'bg-black/50 border-white/15 text-slate-400 hover:text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-200 font-bold'
                               }`}
                             >
                               <span>2 Members (Duo)</span>
@@ -1287,7 +1287,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                               className={`py-3 px-3 rounded-xl border text-xs font-heading font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                                 createTeamForm.targetSize === 3
                                   ? 'bg-blue-600/25 border-blue-500 text-blue-300 shadow-md'
-                                  : 'bg-black/50 border-white/15 text-slate-400 hover:text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-200 font-bold'
                               }`}
                             >
                               <span>3 Members (Trio)</span>
@@ -1299,7 +1299,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                       {/* Team Leader Full Name & Mobile */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
-                          <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                             <Crown className="w-3.5 h-3.5 text-amber-400" />
                             <span>Team Leader Full Name <strong className="text-rose-500">*</strong></span>
                           </label>
@@ -1308,8 +1308,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                             placeholder="e.g. Daniyal Khan"
                             value={createTeamForm.leaderFullName}
                             onChange={(e) => setCreateTeamForm({ ...createTeamForm, leaderFullName: e.target.value })}
-                            className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
-                              createErrors.leaderFullName ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                            className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${
+                              createErrors.leaderFullName ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                             }`}
                           />
                           {createErrors.leaderFullName && (
@@ -1318,7 +1318,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                         </div>
 
                         <div>
-                          <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                             <Phone className="w-3.5 h-3.5 text-blue-400" />
                             <span>Team Leader Mobile (Unique) <strong className="text-rose-500">*</strong></span>
                           </label>
@@ -1340,7 +1340,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                       {/* Password & Confirm */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
-                          <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                             <Lock className="w-3.5 h-3.5 text-blue-400" />
                             <span>Team Leader Password <strong className="text-rose-500">*</strong></span>
                           </label>
@@ -1368,7 +1368,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                         </div>
 
                         <div>
-                          <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                             <Lock className="w-3.5 h-3.5 text-blue-400" />
                             <span>Confirm Password <strong className="text-rose-500">*</strong></span>
                           </label>
@@ -1440,10 +1440,10 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                 {teamSubMode === 'join' && (
                   <div>
                     <div className="mb-6">
-                      <h3 className="text-xl font-heading font-black text-white">
+                      <h3 className="text-xl font-heading font-black text-slate-900 dark:text-white">
                         Join an Existing Team
                       </h3>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium mt-1">
                         Paste the invitation link or code shared by your Team Leader to join their team and create your account.
                       </p>
                     </div>
@@ -1479,7 +1479,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                       
                       {/* Invite Code Input */}
                       <div>
-                        <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                        <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                           <LinkIcon className="w-3.5 h-3.5 text-blue-400" />
                           <span>Invitation Link or Code <strong className="text-rose-500">*</strong></span>
                         </label>
@@ -1514,7 +1514,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                       {/* Teammate Full Name & Mobile */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
-                          <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                             <User className="w-3.5 h-3.5 text-blue-400" />
                             <span>Your Full Student Name <strong className="text-rose-500">*</strong></span>
                           </label>
@@ -1523,8 +1523,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                             placeholder="e.g. Hamza Tariq"
                             value={joinForm.fullName}
                             onChange={(e) => setJoinForm({ ...joinForm, fullName: e.target.value })}
-                            className={`w-full px-4 py-3 rounded-xl bg-black/60 border text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
-                              joinErrors.fullName ? 'border-rose-500' : 'border-white/15 focus:border-blue-500'
+                            className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${
+                              joinErrors.fullName ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                             }`}
                           />
                           {joinErrors.fullName && (
@@ -1533,7 +1533,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                         </div>
 
                         <div>
-                          <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                             <Phone className="w-3.5 h-3.5 text-blue-400" />
                             <span>Your Mobile Number (Unique Login) <strong className="text-rose-500">*</strong></span>
                           </label>
@@ -1555,7 +1555,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                       {/* Password & Confirm */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
-                          <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                             <Lock className="w-3.5 h-3.5 text-blue-400" />
                             <span>Your Account Password <strong className="text-rose-500">*</strong></span>
                           </label>
@@ -1583,7 +1583,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                         </div>
 
                         <div>
-                          <label className="block text-xs font-heading font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                             <Lock className="w-3.5 h-3.5 text-blue-400" />
                             <span>Confirm Password <strong className="text-rose-500">*</strong></span>
                           </label>

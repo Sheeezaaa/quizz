@@ -138,11 +138,46 @@ body.light-theme:not(.admin-mode) select option {
 }
 
 body.light-theme:not(.admin-mode) .bg-\[\#0b1020\],
+body.light-theme:not(.admin-mode) .bg-\[\#0b1020\]\/95,
 body.light-theme:not(.admin-mode) .bg-\[\#0b1020\]\/90,
-body.light-theme:not(.admin-mode) .bg-\[\#0b1020\]\/80 {
+body.light-theme:not(.admin-mode) .bg-\[\#0b1020\]\/80,
+body.light-theme:not(.admin-mode) .registration-card {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  border-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.light-theme:not(.admin-mode) #register {
+  background-color: #f1f5f9 !important;
+}
+
+body.light-theme:not(.admin-mode) #register .bg-slate-900\/90,
+body.light-theme:not(.admin-mode) #register .bg-slate-900\/80 {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-theme:not(.admin-mode) #register label {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+body.light-theme:not(.admin-mode) #register h2,
+body.light-theme:not(.admin-mode) #register h3,
+body.light-theme:not(.admin-mode) #register h4 {
+  color: #0f172a !important;
+}
+
+body.light-theme:not(.admin-mode) #register p {
+  color: #334155 !important;
+}
+
+body.light-theme:not(.admin-mode) #register input,
+body.light-theme:not(.admin-mode) #register select {
+  background-color: #ffffff !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
 }
 
 body.light-theme:not(.admin-mode) .bg-black\/50,
