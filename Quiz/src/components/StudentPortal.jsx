@@ -44,7 +44,10 @@ import {
   Sun,
   Moon,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Copy,
+  Phone,
+  Share2
 } from 'lucide-react';
 import { 
   apiStudentLogin, 
@@ -72,7 +75,7 @@ import {
   setStudentAuthToken,
   getStudentAuthToken
 } from '../utils/api';
-import { getLoggedInStudent, setLoggedInStudent, getStoredParticipants, generateParticipantId, saveParticipant } from '../utils/storage';
+import { getLoggedInStudent, setLoggedInStudent, getStoredParticipants, generateParticipantId, saveParticipant, getStoredTeams, localFinalizeTeam, localCreateTeam, localJoinTeam } from '../utils/storage';
 import { playCorrectChime, playAntiCheatBuzzer, playDisqualificationSiren } from '../utils/soundEffects';
 
 export default function StudentPortal({ 
@@ -1355,770 +1358,455 @@ export default function StudentPortal({
           {/* ======================================================== */}
           {/* TAB 2: MY GROUP & TEAM (EXACTLY MATCHING USER SCREENSHOT) */}
           {/* ======================================================== */}
-          {activeTab === 'team' && (
-            <div className="space-y-6 max-w-6xl mx-auto animate-fadeIn">
-              
-              {/* OFFICIAL TEAM FORMATION HUB BANNER (IF ACTIVE TEAM) */}
-              {teamFormationData && (
-                <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-blue-950/90 to-indigo-950/90 border-2 border-blue-500/50 shadow-2xl space-y-6 text-white">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shadow-lg">
-                        <Crown className="w-7 h-7" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2.5">
-                          <h3 className="text-2xl font-heading font-black text-white">
-                            Team: {teamFormationData.name}
-                          </h3>
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold uppercase tracking-wider ${
-                            teamFormationData.status === 'confirmed'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                          }`}>
-                            {teamFormationData.status === 'confirmed' ? 'Registration Confirmed' : 'Forming Team'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-300 mt-1">
-                          Official Team Roster • Minimum 2, Maximum 3 Members
-                        </p>
-                      </div>
-                    </div>
+          {activeTab === 'team' && (() => {
+            // Resolve official team data from API state, localStorage, or currentUser profile
+            const storedTeamsList = typeof getStoredTeams === 'function' ? getStoredTeams() : [];
+            const matchedStoredTeam = currentUser ? storedTeamsList.find(t => 
+              (currentUser.teamId && t.id === currentUser.teamId) || 
+              (currentUser.teamName && t.name && (t.name.toLowerCase() === currentUser.teamName.toLowerCase())) ||
+              (Array.isArray(t.members) && t.members.some(m => 
+                (currentUser.id && m.id === currentUser.id) || 
+                (currentUser.studentId && m.studentId === currentUser.studentId) || 
+                (currentUser.mobile && m.mobile === currentUser.mobile) ||
+                (currentUser.phone && m.mobile === currentUser.phone)
+              ))
+            ) : null;
 
-                    <div className="flex items-center gap-3">
-                      <div className="px-4 py-2 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-300 text-sm font-mono font-bold flex items-center gap-2">
-                        <Users className="w-4 h-4 text-blue-400" />
-                        <span>{teamFormationData.currentCount || teamFormationData.members?.length || 1} / {teamFormationData.targetSize || 3} Joined</span>
-                      </div>
-                    </div>
-                  </div>
+            // Effective display team
+            const activeTeam = teamFormationData || matchedStoredTeam || (currentUser?.teamName ? {
+              id: currentUser.teamId || `TEAM-${currentUser.studentId || '2026'}`,
+              name: currentUser.teamName,
+              inviteCode: currentUser.inviteCode || `INV-${(currentUser.studentId || '2026').replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase()}`,
+              targetSize: currentUser.targetSize || 3,
+              status: currentUser.teamStatus || 'forming',
+              isLeader: currentUser.role === 'Leader' || true,
+              members: [
+                {
+                  id: currentUser.id,
+                  studentId: currentUser.studentId,
+                  fullName: currentUser.fullName,
+                  mobile: currentUser.mobile || currentUser.phone || 'Registered',
+                  role: currentUser.role || 'Leader',
+                  joinedAt: currentUser.registeredAt || new Date().toISOString()
+                }
+              ]
+            } : null);
 
-                  {/* Shareable Invitation Link */}
-                  <div className="p-4 rounded-2xl bg-black/50 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            const teamMembers = activeTeam?.members || [];
+            const isLeader = activeTeam?.isLeader || activeTeam?.leaderStudentId === currentUser?.studentId || (teamMembers[0]?.id === currentUser?.id || teamMembers[0]?.studentId === currentUser?.studentId);
+            const isConfirmed = activeTeam?.status === 'confirmed';
+            const memberCount = teamMembers.length;
+            const targetSize = activeTeam?.targetSize || 3;
+            const canFinalize = isLeader && memberCount >= 2 && memberCount <= 3 && !isConfirmed;
+
+            const inviteUrl = activeTeam?.inviteCode 
+              ? `${window.location.origin}${window.location.pathname}#register?joinTeam=${activeTeam.inviteCode}`
+              : '';
+
+            return (
+              <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn">
+
+                {/* Feedback message banner if any */}
+                {partnerFeedback?.message && (
+                  <div className={`p-4 rounded-2xl text-xs flex items-center justify-between gap-2 shadow-lg border ${
+                    partnerFeedback.isError
+                      ? 'bg-rose-50 border-rose-300 text-rose-900'
+                      : 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                  }`}>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-heading font-bold text-slate-300">Invite Code:</span>
-                      <span className="px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 font-mono font-bold text-xs border border-blue-500/40">
-                        {teamFormationData.inviteCode}
-                      </span>
+                      {partnerFeedback.isError ? <AlertCircle className="w-5 h-5 text-rose-600" /> : <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+                      <span className="font-semibold text-sm">{partnerFeedback.message}</span>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const base = window.location.origin + window.location.pathname;
-                          const url = `${base}#register?joinTeam=${teamFormationData.inviteCode}`;
-                          navigator.clipboard.writeText(url).then(() => {
-                            setTeamInviteCopied(true);
-                            setTimeout(() => setTeamInviteCopied(false), 2500);
-                          });
-                        }}
-                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/30 transition-all cursor-pointer"
-                      >
-                        {teamInviteCopied ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{teamInviteCopied ? 'Copied Link!' : 'Copy Invitation Link'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const base = window.location.origin + window.location.pathname;
-                          const url = `${base}#register?joinTeam=${teamFormationData.inviteCode}`;
-                          const text = encodeURIComponent(`Join my team "${teamFormationData.name}" for Battle of Brains 2026: ${url}`);
-                          window.open(`https://wa.me/?text=${text}`, '_blank');
-                        }}
-                        className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-xs flex items-center gap-1 shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
-                        title="Share on WhatsApp"
-                      >
-                        <span>WhatsApp</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Registered Team Members */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {teamFormationData.members?.map((m, idx) => {
-                      const isLeader = m.role === 'Leader' || idx === 0;
-                      return (
-                        <div
-                          key={m.id || idx}
-                          className={`p-4 rounded-2xl border-2 flex flex-col justify-between space-y-2 ${
-                            isLeader ? 'bg-amber-950/30 border-amber-500/40 text-amber-200' : 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-base">{isLeader ? '👑' : '👤'}</span>
-                            <div className="min-w-0 flex-1">
-                              <h5 className="font-heading font-bold text-white text-sm truncate">{m.fullName}</h5>
-                              <span className="text-[10px] font-mono text-slate-300">{isLeader ? 'Team Leader' : 'Registered Member'}</span>
-                            </div>
-                          </div>
-                          <div className="text-xs text-slate-300 font-mono pt-2 border-t border-white/10">
-                            📞 {m.mobile || 'N/A'}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Finalize Button for Leader */}
-                  {teamFormationData.isLeader && teamFormationData.status !== 'confirmed' && (
-                    <div className="pt-2 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (teamFormationData.members?.length < 2) {
-                            alert('A team must have at least 2 members before finalizing.');
-                            return;
-                          }
-                          try {
-                            const fRes = await apiFinalizeTeam(teamFormationData.name);
-                            if (fRes.success && fRes.team) {
-                              setTeamFormationData(fRes.team);
-                              alert('Team registration successfully confirmed and locked!');
-                            } else {
-                              alert(fRes.error || 'Failed to finalize team.');
-                            }
-                          } catch (e) {
-                            alert(e.message || 'Error finalizing team.');
-                          }
-                        }}
-                        disabled={teamFormationData.members?.length < 2}
-                        className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-heading font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Confirm & Finalize Team ({teamFormationData.members?.length || 1}/{teamFormationData.targetSize || 3})</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Feedback Alert */}
-              {partnerFeedback.message && (
-                <div className={`p-4 rounded-2xl text-xs flex items-center justify-between gap-2 shadow-lg ${
-                  partnerFeedback.isError
-                    ? 'bg-rose-500/15 border border-rose-500/30 text-rose-300'
-                    : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    {partnerFeedback.isError ? <AlertCircle className="w-5 h-5 text-rose-400" /> : <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
-                    <span className="font-medium text-sm">{partnerFeedback.message}</span>
-                  </div>
-                  <button onClick={() => setPartnerFeedback({ message: '', isError: false })} className="text-slate-400 hover:text-white">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {/* Main Team Members Section Header */}
-              <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-sky-200 shadow-xl shadow-sky-900/5 space-y-6 text-slate-900">
-                
-                {/* Participation Mode Toggle Switch */}
-                <div className="p-4 rounded-2xl bg-sky-50 border-2 border-sky-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-slate-900">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
-                      isGroupMode ? 'bg-blue-600/20 border-blue-500/40 text-blue-400' : 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
-                    }`}>
-                      {isGroupMode ? <Users className="w-5 h-5" /> : <User className="w-5 h-5" />}
-                    </div>
-                    <div>
-                      <div className="font-heading font-bold text-slate-900 text-sm flex items-center gap-2">
-                        <span>Contestant Mode:</span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-mono font-bold ${
-                          isGroupMode ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        }`}>
-                          {isGroupMode ? 'Group / Duo Team Mode' : 'Solo Individual Mode'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 font-medium mt-0.5">
-                        {isGroupMode 
-                          ? 'Group pairing enabled: Invite a peer or accept invitations to compete as a 2-student team.' 
-                          : 'Individual solo competition active. Toggle to Group Mode to invite a teammate.'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-heading font-semibold text-slate-400 hidden sm:inline">
-                      {isGroupMode ? 'Group Enabled' : 'Solo Only'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (partnerData.partner && isGroupMode) {
-                          if (!window.confirm('You are currently linked with a teammate. Toggling to Solo Mode will dissolve your team. Proceed?')) return;
-                          handleUnpairPartner();
-                        }
-                        setIsGroupMode(!isGroupMode);
-                      }}
-                      className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        isGroupMode ? 'bg-blue-600' : 'bg-slate-700'
-                      }`}
-                      role="switch"
-                      aria-checked={isGroupMode}
-                      title="Toggle between Solo and Group Mode"
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                          isGroupMode ? 'translate-x-7' : 'translate-x-0'
-                        }`}
-                      />
+                    <button onClick={() => setPartnerFeedback({ message: '', isError: false })} className="text-slate-500 hover:text-slate-900 p-1">
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
-                </div>
+                )}
 
-                {/* Header Row */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                  <div className="flex items-center gap-2.5">
-                    <Users className="w-5 h-5 text-blue-400" />
-                    <div>
-                      <h3 className="text-lg font-heading font-black text-slate-900">
-                        Team Members
-                      </h3>
-                      <p className="text-xs text-slate-400">
-                        Add any 2 or 3 team members by their Student ID to compete together as a group.
-                      </p>
-                    </div>
-                  </div>
+                {activeTeam ? (
+                  <>
+                    {/* 1. OFFICIAL TEAM HEADER CARD */}
+                    <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-sky-300 shadow-xl shadow-sky-900/10 space-y-6 text-slate-900">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b-2 border-sky-100">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/30">
+                            <Crown className="w-7 h-7 drop-shadow" />
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2.5">
+                              <h3 className="text-2xl sm:text-3xl font-heading font-black text-slate-900 tracking-tight">
+                                Team: <span className="text-blue-700">{activeTeam.name}</span>
+                              </h3>
+                              <span className={`px-3 py-1 rounded-full text-xs font-mono font-black uppercase tracking-wider border ${
+                                isConfirmed
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                  : 'bg-amber-100 text-amber-900 border-amber-300'
+                              }`}>
+                                {isConfirmed ? '✓ Registration Confirmed' : '● Forming Team (2–3 Members)'}
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1">
+                              Battle of Brains 2026 Official Team Roster • Minimum 2, Maximum 3 Members
+                            </p>
+                          </div>
+                        </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-mono font-bold flex items-center gap-1.5">
-                      <UserCheck className="w-3.5 h-3.5" />
-                      <span>{currentTeamTotal} of 4 Enrolled</span>
-                    </div>
-
-                    
-                  </div>
-                </div>
-
-                {/* Team Members Cards Row (Leader + up to 3 teammates) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  
-                  {/* CARD 1: CURRENT STUDENT (LEADER) */}
-                  <div className="p-6 rounded-2xl bg-white border-2 border-amber-400 shadow-lg text-slate-900 relative overflow-hidden flex flex-col justify-between">
-                    <div className="flex items-start gap-4">
-                      {/* Avatar */}
-                      <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-heading font-black text-xl shadow-lg shrink-0">
-                        {currentUser.fullName ? currentUser.fullName.slice(0, 2).toUpperCase() : 'SR'}
+                        {/* Joined Count Pill */}
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <div className="px-4 py-2 rounded-xl bg-blue-50 border-2 border-blue-200 text-blue-900 text-sm font-mono font-black flex items-center gap-2">
+                            <Users className="w-4 h-4 text-blue-600" />
+                            <span>{memberCount} / {targetSize} Members Joined</span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="space-y-1.5 flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-lg font-heading font-black text-slate-900 truncate">
-                            {currentUser.fullName}
-                          </h4>
-                          <span title="Group Leader" className="text-amber-400 text-sm">👑</span>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <span className="font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold">
-                            {currentUser.studentId}
-                          </span>
-                          <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                            {currentUser.degreeProgram || 'BSSE'} • {currentUser.semester || 'Sec A'}
-                          </span>
-                        </div>
-
-                        <div className="pt-2 text-xs text-slate-600 font-medium space-y-1">
-                          <div className="flex items-center gap-2 truncate">
-                            <span className="text-slate-600 font-bold">✉</span>
-                            <span className="truncate">{currentUser.email}</span>
+                      {/* 2. INVITATION LINK CARD */}
+                      <div className="p-5 rounded-2xl bg-gradient-to-r from-sky-50 to-blue-50 border-2 border-sky-200 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-heading font-black uppercase tracking-wider text-slate-700">Team Invite Code:</span>
+                            <span className="px-3 py-1 rounded-lg bg-blue-600 text-white font-mono font-black text-xs shadow-sm">
+                              {activeTeam.inviteCode}
+                            </span>
                           </div>
-                          {currentUser.phone && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-600 font-bold">📞</span>
-                              <span>{currentUser.phone}</span>
+                          <span className="text-xs text-slate-600 font-medium">
+                            Share this link with your teammates so they can join this team.
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
+                          <div className="flex-1 px-3.5 py-2.5 rounded-xl bg-white border border-sky-300 text-xs font-mono text-slate-700 select-all overflow-x-auto whitespace-nowrap shadow-inner">
+                            {inviteUrl}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(inviteUrl).then(() => {
+                                  setTeamInviteCopied(true);
+                                  setTimeout(() => setTeamInviteCopied(false), 2500);
+                                });
+                              }}
+                              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/30 transition-all cursor-pointer"
+                            >
+                              {teamInviteCopied ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                              <span>{teamInviteCopied ? 'Link Copied!' : 'Copy Invitation Link'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const text = encodeURIComponent(`Join my team "${activeTeam.name}" for Battle of Brains 2026! Register here: ${inviteUrl}`);
+                                window.open(`https://wa.me/?text=${text}`, '_blank');
+                              }}
+                              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
+                              title="Share via WhatsApp"
+                            >
+                              <span>WhatsApp</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3. REGISTERED TEAM MEMBERS LIST */}
+                      <div className="space-y-3 pt-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-heading font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                            <UserCheck className="w-4 h-4 text-blue-600" />
+                            <span>Registered Team Members ({memberCount} of {targetSize})</span>
+                          </h4>
+                          <span className="text-xs text-slate-500 font-medium">
+                            {memberCount < 2 ? '⚠️ Need minimum 2 members to finalize' : '✓ Minimum requirement fulfilled'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Member 1: Leader */}
+                          {teamMembers[0] && (
+                            <div className="p-5 rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50/40 shadow-md relative overflow-hidden flex flex-col justify-between space-y-3">
+                              <div className="absolute top-0 right-0 px-3 py-1 bg-amber-500 text-white text-[10px] font-heading font-black uppercase rounded-bl-xl shadow-sm flex items-center gap-1">
+                                <Crown className="w-3 h-3" />
+                                <span>Team Leader</span>
+                              </div>
+                              <div className="pt-2">
+                                <div className="w-10 h-10 rounded-xl bg-amber-200 text-amber-800 flex items-center justify-center font-black text-base mb-2">
+                                  👑
+                                </div>
+                                <h5 className="font-heading font-black text-slate-900 text-base leading-tight">
+                                  {teamMembers[0].fullName}
+                                </h5>
+                                <p className="text-xs text-slate-600 font-medium mt-0.5">
+                                  ID: <span className="font-mono font-bold text-slate-800">{teamMembers[0].studentId || 'Leader'}</span>
+                                </p>
+                              </div>
+
+                              <div className="pt-3 border-t border-amber-200/80 flex items-center gap-2 text-xs text-slate-700 font-mono font-bold">
+                                <Phone className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                <span>{teamMembers[0].mobile || 'Registered'}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Member 2: Teammate or Waiting slot */}
+                          {teamMembers[1] ? (
+                            <div className="p-5 rounded-2xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50/40 shadow-md relative overflow-hidden flex flex-col justify-between space-y-3">
+                              <div className="absolute top-0 right-0 px-3 py-1 bg-emerald-600 text-white text-[10px] font-heading font-black uppercase rounded-bl-xl shadow-sm">
+                                <span>Teammate #2</span>
+                              </div>
+                              <div className="pt-2">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-200 text-emerald-800 flex items-center justify-center font-black text-base mb-2">
+                                  👤
+                                </div>
+                                <h5 className="font-heading font-black text-slate-900 text-base leading-tight">
+                                  {teamMembers[1].fullName}
+                                </h5>
+                                <p className="text-xs text-slate-600 font-medium mt-0.5">
+                                  ID: <span className="font-mono font-bold text-slate-800">{teamMembers[1].studentId || 'Member'}</span>
+                                </p>
+                              </div>
+
+                              <div className="pt-3 border-t border-emerald-200/80 flex items-center gap-2 text-xs text-slate-700 font-mono font-bold">
+                                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>{teamMembers[1].mobile || 'Registered'}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-5 rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50/40 flex flex-col items-center justify-center text-center p-6 space-y-2.5 min-h-[170px]">
+                              <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center font-bold">
+                                +2
+                              </div>
+                              <div>
+                                <h6 className="font-heading font-bold text-slate-800 text-sm">Slot 2: Waiting for Teammate</h6>
+                                <p className="text-[11px] text-slate-600 mt-1 font-medium">
+                                  Teammate will appear here once they register using your invite link.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Member 3: Teammate or Optional slot */}
+                          {teamMembers[2] ? (
+                            <div className="p-5 rounded-2xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50/40 shadow-md relative overflow-hidden flex flex-col justify-between space-y-3">
+                              <div className="absolute top-0 right-0 px-3 py-1 bg-emerald-600 text-white text-[10px] font-heading font-black uppercase rounded-bl-xl shadow-sm">
+                                <span>Teammate #3</span>
+                              </div>
+                              <div className="pt-2">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-200 text-emerald-800 flex items-center justify-center font-black text-base mb-2">
+                                  👤
+                                </div>
+                                <h5 className="font-heading font-black text-slate-900 text-base leading-tight">
+                                  {teamMembers[2].fullName}
+                                </h5>
+                                <p className="text-xs text-slate-600 font-medium mt-0.5">
+                                  ID: <span className="font-mono font-bold text-slate-800">{teamMembers[2].studentId || 'Member'}</span>
+                                </p>
+                              </div>
+
+                              <div className="pt-3 border-t border-emerald-200/80 flex items-center gap-2 text-xs text-slate-700 font-mono font-bold">
+                                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>{teamMembers[2].mobile || 'Registered'}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-5 rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50/40 flex flex-col items-center justify-center text-center p-6 space-y-2.5 min-h-[170px]">
+                              <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center font-bold">
+                                +3
+                              </div>
+                              <div>
+                                <h6 className="font-heading font-bold text-slate-800 text-sm">Slot 3: Optional (Max 3)</h6>
+                                <p className="text-[11px] text-slate-600 mt-1 font-medium">
+                                  Your team can compete with 2 members, or invite a 3rd member.
+                                </p>
+                              </div>
                             </div>
                           )}
                         </div>
                       </div>
-                    </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                      <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
-                        Group Leader
-                      </span>
-                      <span className="text-[11px] text-slate-500 font-mono">Leader (You)</span>
-                    </div>
-                  </div>
-
-                  {/* CARDS FOR ENROLLED TEAMMATES (UP TO 3) */}
-                  {currentMembersList.map((member, index) => (
-                    <div
-                      key={member.studentId || index}
-                      className="p-6 rounded-2xl bg-white border-2 border-emerald-400 shadow-lg text-slate-900 relative overflow-hidden flex flex-col justify-between"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-heading font-black text-xl shadow-lg shrink-0">
-                          {(member.fullName || 'TM').slice(0, 2).toUpperCase()}
+                      {/* 4. LEADER FINALIZATION & STATUS CONTROLS */}
+                      <div className="pt-4 border-t-2 border-sky-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                        <div className="text-xs text-slate-700 font-medium">
+                          {isConfirmed ? (
+                            <span className="inline-flex items-center gap-1.5 text-emerald-700 font-bold">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              Team registration is verified and officially locked for the tournament!
+                            </span>
+                          ) : memberCount < 2 ? (
+                            <span className="inline-flex items-center gap-1.5 text-amber-700 font-bold">
+                              <AlertCircle className="w-4 h-4 text-amber-600" />
+                              Please invite at least 1 more teammate (2 or 3 members needed) before locking.
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-blue-700 font-bold">
+                              <Check className="w-4 h-4 text-blue-600" />
+                              Team is ready! You can now finalize and lock your team registration.
+                            </span>
+                          )}
                         </div>
 
-                        <div className="space-y-1.5 flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-lg font-heading font-black text-slate-900 truncate">
-                              {member.fullName}
-                            </h4>
-                            <span className="text-emerald-400 text-xs">✔</span>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
-                              {member.studentId}
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                              {member.department || 'Computing'}
-                            </span>
-                          </div>
-
-                          <div className="pt-2 text-xs text-slate-600 font-medium space-y-1">
-                            <div className="flex items-center gap-2 truncate">
-                              <span className="text-slate-600 font-bold">✉</span>
-                              <span className="truncate">{member.email || `${(member.studentId || '').toLowerCase()}@student.comsats.edu.pk`}</span>
-                            </div>
-                          </div>
-                        </div>
+                        {isLeader && !isConfirmed && (
+                          <button
+                            type="button"
+                            disabled={!canFinalize}
+                            onClick={async () => {
+                              if (memberCount < 2) {
+                                alert('A team must have at least 2 members before finalizing.');
+                                return;
+                              }
+                              try {
+                                const fRes = await apiFinalizeTeam(activeTeam.name);
+                                if (fRes && fRes.success && fRes.team) {
+                                  setTeamFormationData(fRes.team);
+                                  alert('Team registration successfully confirmed and locked!');
+                                } else {
+                                  // Fallback to local storage
+                                  const localTeam = localFinalizeTeam(activeTeam.name);
+                                  if (localTeam) {
+                                    setTeamFormationData(localTeam);
+                                    alert('Team registration successfully confirmed and locked!');
+                                  } else {
+                                    alert(fRes?.error || 'Failed to finalize team.');
+                                  }
+                                }
+                              } catch (e) {
+                                const localTeam = localFinalizeTeam(activeTeam.name);
+                                if (localTeam) {
+                                  setTeamFormationData(localTeam);
+                                  alert('Team registration successfully confirmed and locked!');
+                                } else {
+                                  alert(e.message || 'Error finalizing team.');
+                                }
+                              }
+                            }}
+                            className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-heading font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Confirm & Finalize Team ({memberCount}/{targetSize})</span>
+                          </button>
+                        )}
                       </div>
+                    </div>
+                  </>
+                ) : (
+                  /* 5. IF NO TEAM YET: CREATE OR JOIN TEAM HUB */
+                  <div className="p-8 rounded-3xl bg-white border-2 border-sky-300 shadow-xl space-y-6 text-slate-900 text-center">
+                    <div className="max-w-md mx-auto space-y-2">
+                      <div className="w-16 h-16 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mx-auto text-2xl font-black">
+                        👥
+                      </div>
+                      <h3 className="text-2xl font-heading font-black text-slate-900">Create or Join a Team</h3>
+                      <p className="text-xs text-slate-600 font-medium">
+                        You are currently registered individually. To participate with peers in Battle of Brains 2026, you can create a team or join via an invitation code.
+                      </p>
+                    </div>
 
-                      <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                        <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
-                          Teammate #{index + 1} Enrolled
-                        </span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto pt-4 text-left">
+                      {/* Option A: Create Team */}
+                      <div className="p-6 rounded-2xl bg-sky-50 border-2 border-sky-200 space-y-4">
+                        <div className="flex items-center gap-2 font-heading font-black text-slate-900 text-base">
+                          <Crown className="w-5 h-5 text-amber-500" />
+                          <span>Create a New Team</span>
+                        </div>
+                        <p className="text-xs text-slate-600 font-medium">
+                          Become the Team Leader, choose a team name, and generate your team invitation link.
+                        </p>
                         <button
                           type="button"
-                          onClick={() => handleRemoveMember(member.studentId, member.fullName)}
-                          disabled={isPartnerLoading}
-                          className="text-xs text-rose-400 hover:text-rose-300 font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          onClick={() => {
+                            const name = prompt('Enter your Team Name:');
+                            if (!name || !name.trim()) return;
+                            const res = localCreateTeam({
+                              teamName: name.trim(),
+                              leaderName: currentUser.fullName,
+                              leaderMobile: currentUser.mobile || currentUser.phone || '03001234567',
+                              leaderPassword: 'password123',
+                              targetSize: 3
+                            });
+                            if (res && res.success && res.team) {
+                              setTeamFormationData(res.team);
+                              const updatedUser = { ...currentUser, teamName: res.team.name, teamId: res.team.id, role: 'Leader' };
+                              setCurrentUser(updatedUser);
+                              setLoggedInStudent(updatedUser);
+                              alert('Team created! Share your invitation link with teammates.');
+                            } else {
+                              alert(res?.error || 'Failed to create team.');
+                            }
+                          }}
+                          className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-black text-xs shadow-md transition-all cursor-pointer"
                         >
-                          <X className="w-3.5 h-3.5" />
-                          <span>Remove</span>
+                          + Create Team Now
+                        </button>
+                      </div>
+
+                      {/* Option B: Join via Code */}
+                      <div className="p-6 rounded-2xl bg-sky-50 border-2 border-sky-200 space-y-4">
+                        <div className="flex items-center gap-2 font-heading font-black text-slate-900 text-base">
+                          <UserPlus className="w-5 h-5 text-blue-600" />
+                          <span>Join With Invite Code</span>
+                        </div>
+                        <p className="text-xs text-slate-600 font-medium">
+                          Have an invitation code from your Team Leader? Enter it to join their team.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = prompt('Enter the Team Invitation Code (e.g. INV-XXXXXX):');
+                            if (!code || !code.trim()) return;
+                            const res = localJoinTeam({
+                              inviteCode: code.trim(),
+                              fullName: currentUser.fullName,
+                              mobile: currentUser.mobile || currentUser.phone || '03001234567',
+                              password: 'password123'
+                            });
+                            if (res && res.success && res.team) {
+                              setTeamFormationData(res.team);
+                              const updatedUser = { ...currentUser, teamName: res.team.name, teamId: res.team.id, role: 'Member' };
+                              setCurrentUser(updatedUser);
+                              setLoggedInStudent(updatedUser);
+                              alert(`Successfully joined team "${res.team.name}"!`);
+                            } else {
+                              alert(res?.error || 'Failed to join team. Please check the code.');
+                            }
+                          }}
+                          className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-heading font-black text-xs shadow-md transition-all cursor-pointer"
+                        >
+                          Enter Invite Code
                         </button>
                       </div>
                     </div>
-                  ))}
-
-                  {/* EMPTY TEAMMATE SLOTS (ALLOWING UP TO 3 TEAMMATES) */}
-                  {Array.from({ length: Math.max(0, 3 - currentMembersList.length) }).map((_, slotIndex) => {
-                    const slotNum = currentMembersList.length + slotIndex + 1;
-                    return (
-                      <div
-                        key={`empty-${slotIndex}`}
-                        className="p-6 rounded-2xl border-2 border-dashed border-slate-700/80 bg-slate-950/40 flex flex-col items-center justify-center text-center space-y-3"
-                      >
-                        <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                          <UserPlus className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-heading font-bold text-white">
-                            Empty Teammate Slot #{slotNum}
-                          </h4>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            Slot open for teammate (Add 2 or 3 members)
-                          </p>
-                        </div>
-                        <div className="text-[11px] text-slate-400 font-medium">Waiting for teammate via invite link</div>
-                      </div>
-                    );
-                  })}
-
-                </div>
-
-                {/* Bottom Action Buttons */}
-                <div className="flex flex-wrap items-center gap-3 pt-2">
-                  {currentMembersList.length < 3 && (
-                    <button
-                      type="button"
-                      onClick={() => console.log('Invite modal removed')}
-                      className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-blue-600/30"
-                    >
-                      <UserPlus className="w-4 h-4" />
-                      <span>+ Add Teammate ({currentMembersList.length}/3 Added)</span>
-                    </button>
-                  )}
-                  {currentMembersList.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleUnpairPartner}
-                      disabled={isPartnerLoading}
-                      className="px-4 py-2.5 rounded-xl border border-rose-500/40 hover:bg-rose-500/10 text-rose-300 text-xs font-heading font-bold cursor-pointer transition-colors"
-                    >
-                      Disband All Teammates
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('overview')}
-                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-heading font-bold cursor-pointer"
-                  >
-                    View Project Details
-                  </button>
-                </div>
-
-              </div>
-
-              {/* INCOMING PARTNER REQUESTS (IF ANYONE INVITED CURRENT USER) */}
-              {partnerData.incoming && partnerData.incoming.length > 0 && (
-                <div className="p-6 rounded-3xl bg-amber-950/20 border border-amber-500/40 shadow-xl space-y-4">
-                  <div className="flex items-center gap-2 text-amber-300 font-heading font-bold text-sm">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-                    <span>Received Team Invitations ({partnerData.incoming.length})</span>
-                  </div>
-
-                  <div className="space-y-3">
-                    {partnerData.incoming.map((req) => (
-                      <div
-                        key={req.id}
-                        className="p-4 rounded-2xl bg-black/50 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h5 className="font-heading font-black text-white text-base">{req.fromName}</h5>
-                            <span className="font-mono text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
-                              {req.fromStudentId}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-400">
-                            {req.fromDepartment || 'Software Engineering'} • Wants you to join their official competition team!
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleRespondPartnerRequest(req.id, 'accept')}
-                            disabled={isPartnerLoading}
-                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-950 transition-all disabled:opacity-50"
-                          >
-                            <Check className="w-4 h-4" />
-                            <span>Accept</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRespondPartnerRequest(req.id, 'reject')}
-                            disabled={isPartnerLoading}
-                            className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 font-heading font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
-                          >
-                            <X className="w-4 h-4" />
-                            <span>Decline</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* PENDING SENT INVITATIONS TABLE (MATCHING SCREENSHOT TABLE) */}
-              <div className="p-6 rounded-3xl bg-[#092d4d]/95 border border-sky-400/30 shadow-2xl space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <Send className="w-4 h-4 text-blue-400" />
-                    <h4 className="font-heading font-black text-slate-900 text-base">Pending Sent Invitations</h4>
-                  </div>
-                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
-                    {partnerData.outgoing && partnerData.outgoing.length ? `${partnerData.outgoing.length} In Flight` : '0 In Flight'}
-                  </span>
-                </div>
-
-                {partnerData.outgoing && partnerData.outgoing.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="border-b-2 border-sky-200 text-slate-600 font-heading font-bold uppercase tracking-wider text-[11px]">
-                          <th className="py-3 px-4">Invited Student</th>
-                          <th className="py-3 px-4">Sent Date</th>
-                          <th className="py-3 px-4">Status</th>
-                          <th className="py-3 px-4 text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60 font-medium">
-                        {partnerData.outgoing.map((inv) => (
-                          <tr key={inv.id} className="hover:bg-slate-800/40 transition-colors">
-                            <td className="py-3.5 px-4">
-                              <div className="font-bold text-white text-sm">{inv.toName}</div>
-                              <div className="text-[11px] font-mono text-slate-400">{inv.toStudentId}</div>
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-300">
-                              {inv.sentDate || new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className="px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[11px] font-bold inline-flex items-center gap-1">
-                                <Clock className="w-3 h-3 animate-spin" />
-                                <span>Pending</span>
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-right">
-                              <button
-                                type="button"
-                                onClick={() => handleCancelPartnerRequest(inv.id)}
-                                disabled={isPartnerLoading}
-                                className="px-3.5 py-1.5 rounded-xl border border-rose-500/40 text-rose-300 hover:bg-rose-500/20 font-bold text-xs inline-flex items-center gap-1 cursor-pointer transition-colors"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                                <span>Cancel</span>
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="py-8 text-center text-slate-500 text-xs">
-                    No pending invitations in flight. Click <strong className="text-blue-400">"+ Invite Teammate"</strong> above to send an invite to any contestant.
                   </div>
                 )}
+
+                {/* 6. TOURNAMENT & TEAM FORMATION RULES BANNER */}
+                <div className="p-6 rounded-3xl bg-slate-900 text-white border-2 border-slate-800 space-y-4">
+                  <h4 className="font-heading font-black text-sm uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Official Team Formation Guidelines</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700">
+                      <strong className="text-white block font-bold mb-1">👥 2 to 3 Members</strong>
+                      <span className="text-slate-300">Each team must have at least 2 members and at most 3 members.</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700">
+                      <strong className="text-white block font-bold mb-1">👑 Team Leader</strong>
+                      <span className="text-slate-300">The first student creates the team, shares the invite link, and locks final registration.</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700">
+                      <strong className="text-white block font-bold mb-1">📱 Unique Mobile</strong>
+                      <span className="text-slate-300">Every member must register with their own unique mobile number and password.</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700">
+                      <strong className="text-white block font-bold mb-1">🔐 Independent Login</strong>
+                      <span className="text-slate-300">Members can log in individually using their Team Name or Mobile Number.</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
-
-            </div>
-          )}
-
-          {/* ======================================================== */}
-          {/* TAB 3: QUIZ ARENA (EXAMINATION ENGINE) */}
-          {/* ======================================================== */}
-          {activeTab === 'quiz' && (
-            <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn">
-              
-              {quizError && (
-                <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
-                  <span>{quizError}</span>
-                </div>
-              )}
-
-              {quizResultSummary && (
-                <div className="p-8 rounded-3xl bg-white border-2 border-sky-300 text-center space-y-4 shadow-xl text-slate-900">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center mx-auto text-2xl font-black">
-                    🏆
-                  </div>
-                  <h3 className="text-2xl font-heading font-black text-slate-900">Quiz Attempt Completed</h3>
-                  <div className="text-3xl font-heading font-black text-blue-700">
-                    Score: {quizResultSummary.score} pts
-                  </div>
-                  <p className="text-xs text-slate-600 font-medium">Your score has been registered in the tournament leaderboard.</p>
-                  <button
-                    onClick={() => {
-                      setQuizResultSummary(null);
-                      setActiveTab('overview');
-                    }}
-                    className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-500"
-                  >
-                    Back to Dashboard
-                  </button>
-                </div>
-              )}
-
-              {!activeQuizAttempt && !quizResultSummary && (
-                <div className="p-8 rounded-3xl bg-white border-2 border-sky-200 space-y-6 text-center shadow-lg text-slate-900">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center mx-auto">
-                    <Zap className="w-8 h-8" />
-                  </div>
-                  <div className="max-w-md mx-auto">
-                    <h3 className="text-2xl font-heading font-black text-slate-900">Championship Quiz Arena</h3>
-                    <p className="text-xs text-slate-600 font-medium mt-2">
-                      Stage 01 Screening: 5 Random MCQs across Programming, OOP, DSA, DBMS, CN, SE, OS. Strict 30s timer per question. Anti-cheat proctoring active.
-                    </p>
-                  </div>
-                  <div className="flex justify-center gap-3">
-                    <button
-                      onClick={() => handleStartAttempt(1)}
-                      className="px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-sm shadow-xl shadow-emerald-950 flex items-center gap-2 cursor-pointer hover:scale-105 transition-all"
-                    >
-                      <Zap className="w-4 h-4" />
-                      <span>Start Round 1 Attempt (Full Lockdown)</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* ACTIVE QUIZ QUESTION CARD */}
-              {activeQuizAttempt && !quizResultSummary && (
-                <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-sky-300 shadow-xl space-y-6 text-slate-900">
-                  {/* Top Bar with Timer */}
-                  <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-                    <div className="text-xs font-mono text-slate-600 font-bold">
-                      Question <strong className="text-blue-700">{currentQIndex + 1}</strong> of {activeQuizAttempt.questions.length}
-                    </div>
-                    <div className={`px-4 py-1.5 rounded-full font-mono text-xs font-black flex items-center gap-1.5 ${
-                      quizTimeRemaining <= 10 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                    }`}>
-                      <Clock className="w-4 h-4" />
-                      <span>{quizTimeRemaining}s Left</span>
-                    </div>
-                  </div>
-
-                  {/* Question Text */}
-                  <div>
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                      {activeQuizAttempt.questions[currentQIndex]?.subject || 'Computer Science'}
-                    </span>
-                    <h3 className="text-lg sm:text-xl font-heading font-bold text-white mt-2 select-none">
-                      {activeQuizAttempt.questions[currentQIndex]?.question}
-                    </h3>
-                  </div>
-
-                  {/* Options */}
-                  <div className="space-y-3">
-                    {(activeQuizAttempt.questions[currentQIndex]?.options || []).map((opt, oIdx) => {
-                      const isSelected = selectedOption === oIdx;
-                      const letter = ['A', 'B', 'C', 'D'][oIdx] || `${oIdx + 1}`;
-                      return (
-                        <button
-                          key={oIdx}
-                          type="button"
-                          onClick={() => handleSelectOption(oIdx)}
-                          className={`w-full p-4 rounded-2xl border text-left flex items-center gap-3.5 transition-all cursor-pointer ${
-                            isSelected 
-                              ? 'bg-blue-600/30 border-blue-500 text-white shadow-lg shadow-blue-900/40' 
-                              : 'bg-white border-2 border-sky-200 text-slate-800 hover:bg-sky-50 hover:border-sky-300 font-medium'
-                          }`}
-                        >
-                          <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                            isSelected ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'
-                          }`}>
-                            {letter}
-                          </span>
-                          <span className="text-sm font-medium">{opt}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Bottom Controls */}
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-                    <button
-                      type="button"
-                      onClick={handleSkipQuestion}
-                      disabled={isSubmittingAnswer}
-                      className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-xs font-bold cursor-pointer"
-                    >
-                      Skip Question (0 pts)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSubmitAnswer}
-                      disabled={selectedOption === null || isSubmittingAnswer}
-                      className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 cursor-pointer disabled:opacity-50"
-                    >
-                      {isSubmittingAnswer ? 'Saving...' : 'Submit Answer'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          )}
-
-          {/* ======================================================== */}
-          {/* TAB 4: ANNOUNCEMENTS */}
-          {/* ======================================================== */}
-          {activeTab === 'announcements' && (
-            <div className="space-y-4 max-w-4xl mx-auto animate-fadeIn">
-              <div className="p-6 rounded-3xl bg-white border-2 border-sky-200 shadow-lg space-y-4 text-slate-900">
-                <h3 className="text-lg font-heading font-black text-slate-900 flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-blue-400" />
-                  <span>Official Championship Bulletins</span>
-                </h3>
-                {announcements.length > 0 ? (
-                  <div className="space-y-3">
-                    {announcements.map((ann) => (
-                      <div key={ann.id} className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-1 text-slate-800">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-slate-900 text-sm">{ann.title}</span>
-                          <span className="text-slate-500">{new Date(ann.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <p className="text-xs text-slate-700 font-medium">{ann.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 py-6 text-center">No new announcements from the tournament jury yet.</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ======================================================== */}
-          {/* TAB 5: RULES & REGULATIONS */}
-          {/* ======================================================== */}
-          {activeTab === 'rules' && (
-            <div className="space-y-4 max-w-4xl mx-auto animate-fadeIn">
-              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
-                <h3 className="text-lg font-heading font-black text-white flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-blue-400" />
-                  <span>Official Tournament Rules & Conduct</span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-1 text-slate-800.5">
-                    <h5 className="font-bold text-slate-900">1. Individual Examination Integrity</h5>
-                    <p className="text-slate-600 font-medium">All tests are evaluated atomically on the central university server. Answer explanations are never transmitted during rounds.</p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-1 text-slate-800.5">
-                    <h5 className="font-bold text-slate-900">2. Anti-Cheating Lockdown</h5>
-                    <p className="text-slate-600 font-medium">Tab switching, exiting fullscreen, or minimizing the window triggers instant proctor alerts. 3 violations cause automatic disqualification.</p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-1 text-slate-800.5">
-                    <h5 className="font-bold text-slate-900">3. Marking & Penalties</h5>
-                    <p className="text-slate-600 font-medium">Round 1 & 2: +1 for correct, 0 for wrong/skip. Round 4 Buzzer Final: +1 for correct, -0.5 for wrong answers.</p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-1 text-slate-800.5">
-                    <h5 className="font-bold text-slate-900">4. Finality of Jury Decision</h5>
-                    <p className="text-slate-600 font-medium">The decision of the COMSATS Faculty Jury and Tournament Director is final and binding on all candidates.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ======================================================== */}
-          {/* TAB 6: ADMIT PASS */}
-          {/* ======================================================== */}
-          {activeTab === 'admit' && (
-            <div className="space-y-4 max-w-2xl mx-auto animate-fadeIn">
-              <div className="p-6 rounded-3xl bg-white border-2 border-sky-300 space-y-6 shadow-xl text-slate-900">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-                  <div>
-                    <h3 className="text-lg font-heading font-black text-white">Official Examination Pass</h3>
-                    <p className="text-xs text-slate-400">Mandatory for entry to university auditorium on Nov 20, 2026</p>
-                  </div>
-                  <button
-                    onClick={() => setShowPassModal(true)}
-                    className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-blue-600/30 hover:bg-blue-500 cursor-pointer"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>Print Admit Card</span>
-                  </button>
-                </div>
-
-                <div className="p-6 rounded-2xl bg-sky-50/90 border-2 border-sky-200 space-y-4 text-slate-900">
-                  <div className="flex items-center justify-between">
-                    <div className="font-heading font-black text-slate-900 text-base">BATTLE OF BRAINS 2026</div>
-                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold">
-                      {currentUser.id}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <span className="text-slate-500 block">Candidate Name</span>
-                      <strong className="text-slate-900 text-sm font-black">{currentUser.fullName}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block">Registration ID</span>
-                      <strong className="text-blue-700 font-mono text-sm font-black">{currentUser.studentId}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block">Department</span>
-                      <span className="text-slate-800 font-bold">{currentUser.degreeProgram || currentUser.department}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block">Assigned Stage</span>
-                      <span className="text-emerald-400 font-bold">Stage 01 • Auditorium</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
         </main>
       </div>
