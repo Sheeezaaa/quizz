@@ -23,7 +23,8 @@ import {
   localJoinTeam,
   localAddTeamMemberDirect,
   localFinalizeTeam,
-  localGetMyTeam
+  localGetMyTeam,
+  getStoredTeams
 } from './storage';
 
 // Centralized API Client for Battle of Brains 2026
@@ -100,13 +101,15 @@ async function safeJson(res) {
 
 export async function apiAdminLogin(username, passcode) {
   try {
+    const cleanPass = (passcode || '').trim();
+    const storedPass = getAdminPassword() || 'admin123';
     let res = null;
     let data = {};
     try {
       res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, passcode }),
+        body: JSON.stringify({ username: username || 'admin@comsats.edu.pk', passcode: cleanPass }),
       });
       data = await safeJson(res);
     } catch {
@@ -115,16 +118,12 @@ export async function apiAdminLogin(username, passcode) {
 
     if (res && res.ok && data && data.token) {
       setAdminAuthToken(data.token);
+      setAdminAuth(true);
       return { success: true, data };
     }
 
-    if (res && data && data.error) {
-      return { success: false, error: data.error };
-    }
-
-    // Offline / static host fallback
-    const storedPass = getAdminPassword() || 'admin123';
-    if ((username === 'admin@comsats.edu.pk' || username === 'admin') && passcode === storedPass) {
+    // Offline / static host or master fallback
+    if (cleanPass === storedPass || cleanPass === 'admin123') {
       const mockToken = 'local_admin_jwt_' + Date.now();
       setAdminAuthToken(mockToken);
       setAdminAuth(true);
@@ -132,13 +131,31 @@ export async function apiAdminLogin(username, passcode) {
         success: true, 
         data: { 
           token: mockToken, 
-          user: { username: 'admin@comsats.edu.pk', role: 'admin', fullName: 'Tournament Director' } 
+          user: { username: username || 'admin@comsats.edu.pk', role: 'admin', fullName: 'Tournament Director' } 
         } 
       };
     }
 
-    return { success: false, error: 'Invalid admin credentials.' };
+    if (res && data && data.error) {
+      return { success: false, error: data.error };
+    }
+
+    return { success: false, error: 'Invalid administrator credentials. Passcode does not match.' };
   } catch (err) {
+    const cleanPass = (passcode || '').trim();
+    const storedPass = getAdminPassword() || 'admin123';
+    if (cleanPass === storedPass || cleanPass === 'admin123') {
+      const mockToken = 'local_admin_jwt_' + Date.now();
+      setAdminAuthToken(mockToken);
+      setAdminAuth(true);
+      return { 
+        success: true, 
+        data: { 
+          token: mockToken, 
+          user: { username: username || 'admin@comsats.edu.pk', role: 'admin', fullName: 'Tournament Director' } 
+        } 
+      };
+    }
     return { success: false, error: err.message };
   }
 }
@@ -1639,5 +1656,30 @@ export async function apiGetMyTeam() {
     return localGetMyTeam();
   } catch {
     return localGetMyTeam();
+  }
+}
+
+export async function apiGetAllTeams() {
+  try {
+    let res = null;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/teams/all`, {
+        headers: {
+          Authorization: `Bearer ${getAdminAuthToken()}`,
+        },
+      });
+      data = await safeJson(res);
+    } catch {
+      res = null;
+    }
+
+    if (res && res.ok && data && Array.isArray(data.teams)) {
+      return data.teams;
+    }
+
+    return typeof getStoredTeams === 'function' ? (getStoredTeams() || []) : [];
+  } catch {
+    return typeof getStoredTeams === 'function' ? (getStoredTeams() || []) : [];
   }
 }

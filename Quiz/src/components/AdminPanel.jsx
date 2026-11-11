@@ -78,7 +78,8 @@ import {
   parseQuestionsFile
 } from '../utils/storage';
 import { 
-  apiAdminLogin, 
+  apiAdminLogin,
+  setAdminAuthToken, 
   apiChangePassword, 
   apiGetCompetition, 
   apiSaveCompetition, 
@@ -95,6 +96,7 @@ import {
 } from '../utils/api';
 import { playAntiCheatBuzzer, playDisqualificationSiren } from '../utils/soundEffects';
 import RegistrationManager from './admin/RegistrationManager';
+import TeamsManager from './admin/TeamsManager';
 import RapidFireConsole from './admin/RapidFireConsole';
 import BuzzerConsole from './admin/BuzzerConsole';
 import ResultsManagement from './admin/ResultsManagement';
@@ -785,7 +787,8 @@ export default function AdminPanel({
   // Nav items configuration
   const navTabs = [
     { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null },
-    { id: 'registrations', label: 'Registration Approval', icon: Users, badge: `${participants.length}` },
+    { id: 'teams', label: 'Teams Roster (2-3)', icon: Users, badge: 'Official' },
+    { id: 'registrations', label: 'Individual Candidates', icon: IdCard, badge: `${participants.length}` },
     { id: 'rapidfire', label: 'Round 3: Rapid Fire', icon: Zap, badge: 'Live' },
     { id: 'buzzer', label: 'Round 4: Buzzer Final', icon: Trophy, badge: 'Live' },
     { id: 'results', label: 'Results & Standings', icon: Award, badge: null },
@@ -922,6 +925,7 @@ export default function AdminPanel({
                     <KeyRound className="w-3.5 h-3.5 text-blue-500" />
                     <span>Secret Passcode</span>
                   </label>
+                  <span className="text-[11px] font-mono font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">Passcode: admin123</span>
                 </div>
                 
                 <div className="relative">
@@ -3189,6 +3193,10 @@ export default function AdminPanel({
           {/* =========================================================================
               NEW MODULES: REGISTRATIONS, RAPID FIRE, BUZZER, RESULTS, ANNOUNCEMENTS, AUDIT
               ========================================================================= */}
+          {activeTab === 'teams' && (
+            <TeamsManager isDark={isDark} />
+          )}
+
           {activeTab === 'registrations' && (
             <RegistrationManager isDark={isDark} />
           )}

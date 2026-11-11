@@ -129,6 +129,19 @@ export default function Navbar({
               <span>Student Portal</span>
             </button>
 
+            <button
+              onClick={onOpenAdmin}
+              className={`px-3.5 py-2 text-xs font-heading font-bold transition-all flex items-center gap-1.5 rounded-xl border shadow-sm shrink-0 cursor-pointer ${
+                currentTheme === 'light' 
+                  ? 'border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 hover:border-purple-400' 
+                  : 'border-purple-500/40 text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 hover:border-purple-400'
+              }`}
+              title="Open Administrator Control Center"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-500" />
+              <span>Admin Portal</span>
+            </button>
+
             <a
               href="#register"
               onClick={onOpenRegister}
@@ -218,6 +231,17 @@ export default function Navbar({
               >
                 <IdCard className="w-4 h-4 text-blue-400" />
                 <span>Student Contestant Portal</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenAdmin && onOpenAdmin();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-heading font-semibold text-white bg-purple-600/30 border border-purple-500/40"
+              >
+                <ShieldCheck className="w-4 h-4 text-purple-400" />
+                <span>Admin Management Portal</span>
               </button>
 
               <a
