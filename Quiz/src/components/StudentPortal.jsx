@@ -831,18 +831,18 @@ export default function StudentPortal({
 
         {/* Centered Login Box */}
         <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
-          <div className="w-full max-w-md rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden bg-slate-900/90 border border-blue-500/30 shadow-blue-950/60 backdrop-blur-xl">
+          <div className="student-portal-card w-full max-w-md rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-blue-500/40 shadow-xl backdrop-blur-xl text-slate-900 dark:text-white">
             
             <div className="text-center mb-6">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600/30 via-indigo-600/20 to-cyan-500/30 border border-blue-500/40 flex items-center justify-center text-blue-400 mx-auto mb-3 shadow-xl shadow-blue-600/20">
                 <IdCard className="w-8 h-8" />
               </div>
 
-              <h2 className="text-2xl sm:text-3xl font-heading font-black tracking-tight text-white">
+              <h2 className="text-2xl sm:text-3xl font-heading font-black tracking-tight text-slate-900 dark:text-white">
                 Contestant Sign In
               </h2>
-              <p className="text-xs mt-1.5 text-slate-400 max-w-xs mx-auto leading-relaxed">
-                Log in to your authorized contestant dashboard, form teams, and access live examination arenas.
+              <p className="text-xs sm:text-sm mt-1.5 text-slate-700 dark:text-slate-300 max-w-xs mx-auto leading-relaxed font-medium">
+                Enter your Team Name, Mobile Number, or Student ID with your password to access your dashboard.
               </p>
             </div>
 
@@ -856,30 +856,30 @@ export default function StudentPortal({
             {authMode === 'login' ? (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Mobile Number, Student ID, or Email</span>
+                  <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-1.5 flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span>Team Name, Mobile Number, or Student ID <strong className="text-rose-500">*</strong></span>
                   </label>
                   <input
                     type="text"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="e.g. 03001234567 or SP24-BSE-043"
-                    className="w-full px-4 py-3 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm font-medium focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-500"
+                    placeholder="e.g. Byte Busters, 03001234567, or SP24-BSE-043"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/90 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-medium focus:border-blue-500 focus:bg-white dark:focus:bg-slate-950 focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     required
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Account Password</span>
+                    <label className="text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                      <Lock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <span>Account Password <strong className="text-rose-500">*</strong></span>
                     </label>
                     <button
                       type="button"
                       onClick={() => setAuthMode('forgot')}
-                      className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors"
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline transition-colors cursor-pointer"
                     >
                       Forgot?
                     </button>
@@ -889,8 +889,8 @@ export default function StudentPortal({
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full pl-4 pr-11 py-3 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm font-medium focus:border-blue-500 focus:outline-none transition-all pr-10"
+                      placeholder="Enter your password"
+                      className="w-full pl-4 pr-11 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/90 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-medium focus:border-blue-500 focus:bg-white dark:focus:bg-slate-950 focus:outline-none transition-all pr-10 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                       required
                     />
                     <button
@@ -925,7 +925,7 @@ export default function StudentPortal({
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Student Registration ID</label>
+                  <label className="block text-xs font-bold text-slate-900 dark:text-slate-200 mb-1">Student Registration ID</label>
                   <input
                     type="text"
                     value={resetId}
@@ -936,7 +936,7 @@ export default function StudentPortal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Registered University Email</label>
+                  <label className="block text-xs font-bold text-slate-900 dark:text-slate-200 mb-1">Registered University Email</label>
                   <input
                     type="email"
                     value={resetEmail}
@@ -977,17 +977,7 @@ export default function StudentPortal({
 
             <div className="mt-6 pt-5 border-t border-slate-800 text-center">
               <p className="text-xs text-slate-400">
-                Not registered yet?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenRegister && onOpenRegister();
-                  }}
-                  className="text-blue-400 hover:text-blue-300 font-bold underline cursor-pointer"
-                >
-                  Register Solo Now
-                </button>
+                Not registered yet? <button type="button" onClick={() => { onClose(); onOpenRegister && onOpenRegister(); }} className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Register Now</button>
               </p>
             </div>
           </div>
@@ -1598,16 +1588,7 @@ export default function StudentPortal({
                       <span>{currentTeamTotal} of 4 Enrolled</span>
                     </div>
 
-                    {currentMembersList.length < 3 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowInviteModal(true)}
-                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        <span>+ Add Team Member</span>
-                      </button>
-                    )}
+                    
                   </div>
                 </div>
 
@@ -1735,14 +1716,7 @@ export default function StudentPortal({
                             Slot open for teammate (Add 2 or 3 members)
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowInviteModal(true)}
-                          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all cursor-pointer"
-                        >
-                          <UserPlus className="w-3.5 h-3.5" />
-                          <span>+ Add Teammate</span>
-                        </button>
+                        <div className="text-[11px] text-slate-400 font-medium">Waiting for teammate via invite link</div>
                       </div>
                     );
                   })}
@@ -1754,7 +1728,7 @@ export default function StudentPortal({
                   {currentMembersList.length < 3 && (
                     <button
                       type="button"
-                      onClick={() => setShowInviteModal(true)}
+                      onClick={() => console.log('Invite modal removed')}
                       className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-blue-600/30"
                     >
                       <UserPlus className="w-4 h-4" />

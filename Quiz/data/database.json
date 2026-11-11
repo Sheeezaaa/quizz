@@ -232,6 +232,27 @@
   },
   "participants": [
     {
+      "id": "BOB-2026-985",
+      "fullName": "Alpha Leader",
+      "studentId": "LEAD-0449",
+      "mobile": "0345220449",
+      "phone": "0345220449",
+      "email": "0345220449@student.bob.pk",
+      "universityName": "COMSATS University Islamabad",
+      "campus": "Islamabad Campus",
+      "region": "Federal Capital",
+      "department": "Computer Science",
+      "degreeProgram": "BS Computer Science",
+      "semester": "4th Semester",
+      "passwordHash": "$2b$10$ZNQNkn8lb/dUMuxp8Ps3MuUird/BnOkUENUBecxLKid6Dg4MjgpYG",
+      "registrationStatus": "Approved",
+      "role": "Participant",
+      "rulesAccepted": true,
+      "isTeamLeader": true,
+      "registeredAt": "2026-11-11T18:03:40.658Z",
+      "teamId": "TEAM-220659"
+    },
+    {
       "id": "BOB-2026-954",
       "fullName": "Teammate Zeeshan",
       "studentId": "MEM-8182",
@@ -18229,6 +18250,27 @@
       ],
       "createdAt": "2026-11-11T17:12:39.491Z",
       "confirmedAt": "2026-11-11T17:12:39.980Z"
+    },
+    {
+      "id": "TEAM-220659",
+      "name": "Alpha Squad 0449",
+      "inviteCode": "INV-Q7EZGG",
+      "leaderId": "BOB-2026-985",
+      "leaderStudentId": "LEAD-0449",
+      "targetSize": 2,
+      "status": "forming",
+      "members": [
+        {
+          "id": "BOB-2026-985",
+          "studentId": "LEAD-0449",
+          "fullName": "Alpha Leader",
+          "mobile": "0345220449",
+          "role": "Leader",
+          "joinedAt": "2026-11-11T18:03:40.659Z"
+        }
+      ],
+      "createdAt": "2026-11-11T18:03:40.659Z",
+      "confirmedAt": null
     }
   ]
 }

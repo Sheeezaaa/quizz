@@ -237,14 +237,40 @@ export async function apiStudentLogin(identifier, password) {
       return { success: false, error: data.error };
     }
 
-    // Offline / static host fallback
+    // Offline / static host fallback (e.g. Vercel deployment)
     const participants = getStoredParticipants() || [];
+    const teams = getStoredTeams ? getStoredTeams() : [];
     const rawId = (identifier || '').trim();
     const cleanId = rawId.toLowerCase();
-    let found = participants.find(p => 
-      (p.studentId && p.studentId.toLowerCase() === cleanId) || 
-      (p.email && p.email.toLowerCase() === cleanId)
-    );
+    const cleanMobile = rawId.replace(/[^\d]/g, '');
+
+    let found = null;
+
+    // 1. Check if identifier is Team Name
+    const teamMatch = teams.find(t => (t.name || '').trim().toLowerCase() === cleanId || (t.id || '').toLowerCase() === cleanId);
+    if (teamMatch) {
+      found = participants.find(p => p.teamId === teamMatch.id || (teamMatch.members || []).some(m => m.id === p.id || m.studentId === p.studentId));
+      if (!found && teamMatch.members && teamMatch.members[0]) {
+        found = {
+          id: teamMatch.members[0].id || 'BOB-TEAM-LEAD',
+          fullName: teamMatch.members[0].fullName || teamMatch.name,
+          studentId: teamMatch.members[0].studentId || `TEAM-${teamMatch.name.replace(/[^A-Za-z0-9]/g, '')}`,
+          teamId: teamMatch.id,
+          teamName: teamMatch.name,
+          role: 'Participant',
+          status: 'Verified',
+        };
+      }
+    }
+
+    // 2. Check mobile number, student ID, or email
+    if (!found) {
+      found = participants.find(p => 
+        (cleanMobile.length >= 7 && (p.mobile || p.phone || '').replace(/[^\d]/g, '').endsWith(cleanMobile.slice(-10))) ||
+        (p.studentId && p.studentId.toLowerCase() === cleanId) || 
+        (p.email && p.email.toLowerCase() === cleanId)
+      );
+    }
 
     if (!found) {
       const upperId = rawId.toUpperCase();

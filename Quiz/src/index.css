@@ -266,3 +266,30 @@ body.light-theme:not(.admin-mode) .proctor-modal-container .proctor-info-box {
 ::-webkit-scrollbar-thumb:hover {
   background: #3b82f6;
 }
+
+body.light-theme:not(.admin-mode) .student-portal-card {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 35px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+body.light-theme:not(.admin-mode) .student-portal-card label {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+body.light-theme:not(.admin-mode) .student-portal-card h2,
+body.light-theme:not(.admin-mode) .student-portal-card h3 {
+  color: #0f172a !important;
+}
+
+body.light-theme:not(.admin-mode) .student-portal-card p {
+  color: #334155 !important;
+}
+
+body.light-theme:not(.admin-mode) .student-portal-card input {
+  background-color: #ffffff !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}

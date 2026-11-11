@@ -1052,14 +1052,33 @@ app.post('/api/auth/student-login', (req, res) => {
   const cleanMobile = normalizeMobile(rawIdent);
   const db = readDB();
   const participants = db.participants || [];
+  const teams = db.teams || [];
 
-  let student = participants.find(
-    (p) =>
-      (cleanMobile && cleanMobile.length >= 7 && normalizeMobile(p.mobile || p.phone) === cleanMobile) ||
-      (p.studentId && p.studentId.toLowerCase() === cleanIdent) ||
-      (p.email && (p.email || '').toLowerCase() === cleanIdent) ||
-      (p.id && p.id.toLowerCase() === cleanIdent)
+  let student = null;
+
+  // 1. Check if identifier matches a registered Team Name
+  const matchedTeam = teams.find(
+    (t) => (t.name || '').trim().toLowerCase() === cleanIdent || (t.id || '').toLowerCase() === cleanIdent
   );
+  if (matchedTeam) {
+    const memberIds = (matchedTeam.members || []).map((m) => m.id);
+    const teamStudents = participants.filter(
+      (p) => p.teamId === matchedTeam.id || memberIds.includes(p.id) || p.id === matchedTeam.leaderId
+    );
+    // Find member whose password matches, or default to first member/leader
+    student = teamStudents.find((p) => p.passwordHash && password && bcrypt.compareSync(password, p.passwordHash)) || teamStudents[0];
+  }
+
+  // 2. Match by mobile number, studentId, email, or id
+  if (!student) {
+    student = participants.find(
+      (p) =>
+        (cleanMobile && cleanMobile.length >= 7 && normalizeMobile(p.mobile || p.phone) === cleanMobile) ||
+        (p.studentId && p.studentId.toLowerCase() === cleanIdent) ||
+        (p.email && (p.email || '').toLowerCase() === cleanIdent) ||
+        (p.id && p.id.toLowerCase() === cleanIdent)
+    );
+  }
 
   // If student does not exist, auto-register on the fly so ANY random Student ID can log in
   if (!student) {
