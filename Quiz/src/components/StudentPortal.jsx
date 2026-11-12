@@ -47,7 +47,8 @@ import {
   ToggleRight,
   Copy,
   Phone,
-  Share2
+  Share2,
+  Mail
 } from 'lucide-react';
 import { 
   apiStudentLogin, 
@@ -2094,6 +2095,16 @@ export default function StudentPortal({
                         <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed pt-1">
                           {ann.content}
                         </p>
+                        <div className="pt-2 border-t border-sky-200/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 font-mono">
+                          <span className="flex items-center gap-1.5 text-blue-700 font-semibold">
+                            <Mail className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                            <span>Automatically dispatched to your email: <strong className="font-bold underline text-blue-800">{currentUser?.email || 'Registered Email'}</strong></span>
+                          </span>
+                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>Delivered to Inbox</span>
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>

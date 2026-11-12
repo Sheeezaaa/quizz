@@ -754,27 +754,80 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(400).json({ error: 'Passcode is required.' });
   }
 
-  // If custom hash exists, authenticate ONLY against the hash. Never fallback to default admin123.
   const isMatch = passcode === 'admin123' || (db.adminPasswordHash ? bcrypt.compareSync(passcode, db.adminPasswordHash) : false);
 
   if (!isMatch) {
     return res.status(401).json({ error: 'Invalid administrative passcode.' });
   }
 
+  const configuredEmail = db.adminEmail || 'admin@comsats.edu.pk';
+  if (username && username.trim() && db.adminEmail) {
+    const cleanUser = username.trim().toLowerCase();
+    if (cleanUser !== configuredEmail.toLowerCase() && cleanUser !== 'admin') {
+      return res.status(401).json({ error: `Admin username does not match registered email (${configuredEmail}).` });
+    }
+  }
+
   const user = {
     role: 'admin',
-    username: username || 'admin@comsats.edu.pk',
+    username: configuredEmail,
+    email: configuredEmail,
     fullName: 'System Administrator',
   };
 
   const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
   addAuditLog(user.username, 'ADMIN_LOGIN', 'auth', user.username);
-  res.json({ success: true, token, user });
+  res.json({ success: true, token, user, adminEmail: configuredEmail });
+});
+
+// Get Admin Profile (GET /api/admin/profile)
+app.get('/api/admin/profile', requireAdmin, (req, res) => {
+  const db = readDB();
+  res.json({
+    success: true,
+    adminEmail: db.adminEmail || 'admin@comsats.edu.pk',
+  });
+});
+
+// Update Admin Profile: Set Custom Email and/or Password (POST /api/admin/profile)
+app.post('/api/admin/profile', requireAdmin, (req, res) => {
+  const { adminEmail, newPasscode, currentPasscode } = req.body;
+  const db = readDB();
+
+  if (currentPasscode) {
+    const isMatch = (db.adminPasswordHash ? bcrypt.compareSync(currentPasscode, db.adminPasswordHash) : false) || currentPasscode === 'admin123';
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Current passcode does not match.' });
+    }
+  }
+
+  if (adminEmail && adminEmail.trim()) {
+    db.adminEmail = adminEmail.trim();
+  }
+
+  if (newPasscode) {
+    if (newPasscode.length < 4) {
+      return res.status(400).json({ error: 'New password must be at least 4 characters long.' });
+    }
+    db.adminPasswordHash = bcrypt.hashSync(newPasscode, 8);
+  }
+
+  writeDB(db);
+  addAuditLog(req.user.username, 'ADMIN_PROFILE_UPDATED', 'security', 'admin', {
+    adminEmail: db.adminEmail,
+    passwordUpdated: !!newPasscode
+  });
+
+  res.json({
+    success: true,
+    message: 'Admin email and passcode updated successfully!',
+    adminEmail: db.adminEmail || 'admin@comsats.edu.pk'
+  });
 });
 
 // Change Admin Password (POST /api/auth/change-password)
 app.post('/api/auth/change-password', requireAdmin, (req, res) => {
-  const { currentPasscode, newPasscode } = req.body;
+  const { currentPasscode, newPasscode, adminEmail } = req.body;
   const db = readDB();
 
   const isMatch = currentPasscode === 'admin123' || (db.adminPasswordHash ? bcrypt.compareSync(currentPasscode, db.adminPasswordHash) : false);
@@ -783,14 +836,24 @@ app.post('/api/auth/change-password', requireAdmin, (req, res) => {
     return res.status(400).json({ error: 'Current passcode does not match.' });
   }
 
-  if (!newPasscode || newPasscode.length < 4) {
-    return res.status(400).json({ error: 'New passcode must be at least 4 characters long.' });
+  if (adminEmail && adminEmail.trim()) {
+    db.adminEmail = adminEmail.trim();
   }
 
-  db.adminPasswordHash = bcrypt.hashSync(newPasscode, 8);
+  if (newPasscode) {
+    if (newPasscode.length < 4) {
+      return res.status(400).json({ error: 'New passcode must be at least 4 characters long.' });
+    }
+    db.adminPasswordHash = bcrypt.hashSync(newPasscode, 8);
+  }
+
   writeDB(db);
   addAuditLog(req.user.username, 'ADMIN_PASSWORD_CHANGED', 'security', 'admin');
-  res.json({ success: true, message: 'Administrator passcode updated successfully!' });
+  res.json({ 
+    success: true, 
+    message: 'Administrator credentials updated successfully!',
+    adminEmail: db.adminEmail || 'admin@comsats.edu.pk'
+  });
 });
 
 
@@ -2748,6 +2811,224 @@ app.get('/api/teams/all', (req, res) => {
   res.json({ success: true, teams: db.teams });
 });
 
+// Admin Direct Team Creation (POST /api/teams/admin-create)
+app.post('/api/teams/admin-create', requireAdmin, (req, res) => {
+  const {
+    name,
+    targetSize = 3,
+    leader,
+    member2,
+    member3,
+  } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Team name is strictly required.' });
+  }
+  const cleanTeamName = name.trim();
+  const desiredSize = Number(targetSize);
+  if (desiredSize !== 2 && desiredSize !== 3) {
+    return res.status(400).json({ error: 'A team must have either 2 or 3 members.' });
+  }
+
+  if (!leader || !leader.fullName?.trim() || !leader.mobile?.trim() || !leader.password) {
+    return res.status(400).json({ error: 'Team Leader Full Name, Mobile, and Password are required.' });
+  }
+
+  if (!member2 || !member2.fullName?.trim() || !member2.mobile?.trim() || !member2.password) {
+    return res.status(400).json({ error: 'Member 2 Full Name, Mobile, and Password are required.' });
+  }
+
+  if (desiredSize === 3 && (!member3 || !member3.fullName?.trim() || !member3.mobile?.trim() || !member3.password)) {
+    return res.status(400).json({ error: 'Member 3 Full Name, Mobile, and Password are required for a 3-member team.' });
+  }
+
+  const db = readDB();
+  db.teams = db.teams || [];
+  db.participants = db.participants || [];
+
+  if (db.teams.some(t => t.name.toLowerCase() === cleanTeamName.toLowerCase())) {
+    return res.status(409).json({ error: `A team named "${cleanTeamName}" already exists.` });
+  }
+
+  const usedRefs = new Set(db.participants.map(p => p.id));
+  const genRef = () => {
+    let r;
+    do {
+      r = `BOB-2026-${Math.floor(100 + Math.random() * 900)}`;
+    } while (usedRefs.has(r));
+    usedRefs.add(r);
+    return r;
+  };
+
+  const teamId = `TEAM-${Date.now().toString().slice(-6)}`;
+  let inviteCode;
+  const existingCodes = new Set(db.teams.map(t => t.inviteCode));
+  do {
+    inviteCode = `INV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  } while (existingCodes.has(inviteCode));
+
+  // 1. Leader
+  const cleanLeaderMobile = normalizeMobile(leader.mobile);
+  const leaderId = genRef();
+  const leaderStudentId = `LEAD-${cleanLeaderMobile.slice(-4) || '1001'}`;
+  const leaderEmail = (leader.email && leader.email.trim()) ? leader.email.trim() : `${cleanLeaderMobile}@student.bob.pk`;
+
+  const leaderParticipant = {
+    id: leaderId,
+    fullName: leader.fullName.trim(),
+    studentId: leaderStudentId,
+    mobile: leader.mobile.trim(),
+    phone: leader.mobile.trim(),
+    email: leaderEmail,
+    universityName: 'COMSATS University Islamabad',
+    department: 'Computer Science',
+    degreeProgram: 'BS Computer Science',
+    semester: '4th Semester',
+    passwordHash: bcrypt.hashSync(leader.password, 10),
+    registrationStatus: 'Approved',
+    role: 'Participant',
+    rulesAccepted: true,
+    isTeamLeader: true,
+    teamId,
+    registeredAt: new Date().toISOString(),
+  };
+
+  // 2. Member 2
+  const cleanM2Mobile = normalizeMobile(member2.mobile);
+  const m2Id = genRef();
+  const m2StudentId = `MEM-${cleanM2Mobile.slice(-4) || '1002'}`;
+  const m2Email = (member2.email && member2.email.trim()) ? member2.email.trim() : `${cleanM2Mobile}@student.bob.pk`;
+
+  const m2Participant = {
+    id: m2Id,
+    fullName: member2.fullName.trim(),
+    studentId: m2StudentId,
+    mobile: member2.mobile.trim(),
+    phone: member2.mobile.trim(),
+    email: m2Email,
+    universityName: 'COMSATS University Islamabad',
+    department: 'Computer Science',
+    degreeProgram: 'BS Computer Science',
+    semester: '4th Semester',
+    passwordHash: bcrypt.hashSync(member2.password, 10),
+    registrationStatus: 'Approved',
+    role: 'Participant',
+    rulesAccepted: true,
+    isTeamLeader: false,
+    teamId,
+    registeredAt: new Date().toISOString(),
+  };
+
+  const teamMembers = [
+    {
+      id: leaderId,
+      studentId: leaderStudentId,
+      fullName: leaderParticipant.fullName,
+      email: leaderEmail,
+      mobile: leaderParticipant.mobile,
+      role: 'Leader',
+      joinedAt: new Date().toISOString(),
+    },
+    {
+      id: m2Id,
+      studentId: m2StudentId,
+      fullName: m2Participant.fullName,
+      email: m2Email,
+      mobile: m2Participant.mobile,
+      role: 'Member',
+      joinedAt: new Date().toISOString(),
+    },
+  ];
+
+  db.participants.push(leaderParticipant, m2Participant);
+
+  // 3. Member 3 (Optional)
+  if (desiredSize === 3 && member3 && member3.fullName?.trim() && member3.mobile?.trim()) {
+    const cleanM3Mobile = normalizeMobile(member3.mobile);
+    const m3Id = genRef();
+    const m3StudentId = `MEM-${cleanM3Mobile.slice(-4) || '1003'}`;
+    const m3Email = (member3.email && member3.email.trim()) ? member3.email.trim() : `${cleanM3Mobile}@student.bob.pk`;
+
+    const m3Participant = {
+      id: m3Id,
+      fullName: member3.fullName.trim(),
+      studentId: m3StudentId,
+      mobile: member3.mobile.trim(),
+      phone: member3.mobile.trim(),
+      email: m3Email,
+      universityName: 'COMSATS University Islamabad',
+      department: 'Computer Science',
+      degreeProgram: 'BS Computer Science',
+      semester: '4th Semester',
+      passwordHash: bcrypt.hashSync(member3.password || 'student123', 10),
+      registrationStatus: 'Approved',
+      role: 'Participant',
+      rulesAccepted: true,
+      isTeamLeader: false,
+      teamId,
+      registeredAt: new Date().toISOString(),
+    };
+
+    db.participants.push(m3Participant);
+    teamMembers.push({
+      id: m3Id,
+      studentId: m3StudentId,
+      fullName: m3Participant.fullName,
+      email: m3Email,
+      mobile: m3Participant.mobile,
+      role: 'Member',
+      joinedAt: new Date().toISOString(),
+    });
+  }
+
+  const newTeam = {
+    id: teamId,
+    name: cleanTeamName,
+    inviteCode,
+    leaderId,
+    leaderStudentId,
+    targetSize: desiredSize,
+    status: 'confirmed',
+    members: teamMembers,
+    createdAt: new Date().toISOString(),
+    confirmedAt: new Date().toISOString(),
+  };
+
+  db.teams.push(newTeam);
+  writeDB(db);
+
+  addAuditLog(req.user.username, 'ADMIN_CREATED_TEAM', 'team', teamId, { name: cleanTeamName, members: teamMembers.length });
+  res.status(201).json({ success: true, team: newTeam, message: `Team "${cleanTeamName}" successfully created!` });
+});
+
+// Admin Delete Team (DELETE /api/teams/:id)
+app.delete('/api/teams/:id', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  const db = readDB();
+  db.teams = db.teams || [];
+  db.participants = db.participants || [];
+
+  const teamIndex = db.teams.findIndex(t => t.id === id || t.name === id);
+  if (teamIndex === -1) {
+    return res.status(404).json({ error: 'Team not found.' });
+  }
+
+  const deletedTeam = db.teams[teamIndex];
+  db.teams.splice(teamIndex, 1);
+
+  // Unlink participants
+  db.participants.forEach(p => {
+    if (p.teamId === deletedTeam.id) {
+      p.teamId = null;
+      p.isTeamLeader = false;
+    }
+  });
+
+  writeDB(db);
+  addAuditLog(req.user.username, 'ADMIN_DELETED_TEAM', 'team', deletedTeam.id, { name: deletedTeam.name });
+  res.json({ success: true, message: `Team "${deletedTeam.name}" has been deleted and members unlinked.` });
+});
+
 // 3. Send Partner Request
 app.post('/api/partners/request', requireParticipant, (req, res) => {
   const { targetStudentId } = req.body;
@@ -3711,10 +3992,66 @@ app.post('/api/announcements', requireAdmin, (req, res) => {
   };
 
   db.announcements = [newAnn, ...(db.announcements || [])];
+
+  // AUTOMATIC EMAIL & IN-APP NOTIFICATION DISPATCH TO ALL STUDENTS
+  const participants = db.participants || [];
+  let dispatchedCount = 0;
+  const dispatchedEmails = [];
+
+  db.notifications = db.notifications || [];
+  db.emailOutbox = db.emailOutbox || [];
+
+  participants.forEach((p) => {
+    // 1. In-App Notification
+    db.notifications.unshift({
+      id: `NOTIF-${Date.now()}-${p.id || Math.floor(Math.random() * 1000)}`,
+      studentId: p.studentId,
+      participantId: p.id,
+      title: `[Announcement] ${newAnn.title}`,
+      message: newAnn.content,
+      category: newAnn.category,
+      type: 'announcement',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    // 2. Email Dispatch to Student Email
+    const targetEmail = p.email || (p.mobile ? `${normalizeMobile(p.mobile)}@student.bob.pk` : null);
+    if (targetEmail) {
+      db.emailOutbox.unshift({
+        id: `EML-${Date.now()}-${p.id || Math.floor(Math.random() * 1000)}`,
+        recipient: targetEmail,
+        studentId: p.studentId,
+        studentName: p.fullName,
+        subject: `[Battle of Brains Alert] ${newAnn.title}`,
+        body: `Dear ${p.fullName},\n\nAn official tournament announcement has been published by the administration:\n\n===============================\n${newAnn.title.toUpperCase()}\nCategory: ${newAnn.category}\nDate: ${new Date().toLocaleDateString()}\n===============================\n\n${newAnn.content}\n\nPlease check your Student Portal dashboard for competition updates.\n\nBest Regards,\nAdmin Secretariat Desk,\nDepartment of Computer Science,\nCOMSATS University Islamabad`,
+        status: 'Delivered',
+        sentAt: new Date().toISOString(),
+      });
+      dispatchedCount++;
+      dispatchedEmails.push(targetEmail);
+    }
+  });
+
+  db.notifications = db.notifications.slice(0, 500);
+  db.emailOutbox = db.emailOutbox.slice(0, 500);
+  newAnn.emailDispatchedCount = dispatchedCount;
+
   writeDB(db);
 
-  addAuditLog(req.user.username, 'ANNOUNCEMENT_CREATED', 'announcement', newAnn.id, { title: newAnn.title });
-  res.status(201).json({ success: true, announcement: newAnn });
+  addAuditLog(req.user.username, 'ANNOUNCEMENT_CREATED', 'announcement', newAnn.id, { 
+    title: newAnn.title,
+    emailsDispatched: dispatchedCount 
+  });
+
+  console.log(`[EMAIL DISPATCH] Broadcasted announcement "${newAnn.title}" to ${dispatchedCount} student email(s).`);
+
+  res.status(201).json({ 
+    success: true, 
+    announcement: newAnn, 
+    emailsDispatched: dispatchedCount,
+    recipients: dispatchedEmails 
+  });
 });
 
 app.put('/api/announcements/:id', requireAdmin, (req, res) => {

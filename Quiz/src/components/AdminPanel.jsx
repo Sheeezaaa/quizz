@@ -80,6 +80,8 @@ import {
 } from '../utils/storage';
 import { 
   apiAdminLogin,
+  apiGetAdminProfile,
+  apiUpdateAdminProfile,
   setAdminAuthToken, 
   apiChangePassword, 
   apiGetCompetition, 
@@ -113,7 +115,8 @@ export default function AdminPanel({
   onToggleTheme
 }) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => getAdminAuth());
-  const [adminUsername, setAdminUsername] = useState('');
+  const [adminUsername, setAdminUsername] = useState(() => getAdminEmail());
+  const [adminEmailInput, setAdminEmailInput] = useState(() => getAdminEmail());
   const [passcode, setPasscode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);

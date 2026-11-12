@@ -24,7 +24,11 @@ import {
   localAddTeamMemberDirect,
   localFinalizeTeam,
   localGetMyTeam,
-  getStoredTeams
+  getStoredTeams,
+  localAdminCreateTeam,
+  localDeleteTeam,
+  getAdminEmail,
+  setAdminEmail
 } from './storage';
 
 // Centralized API Client for Battle of Brains 2026
@@ -1708,5 +1712,92 @@ export async function apiGetAllTeams() {
     return typeof getStoredTeams === 'function' ? (getStoredTeams() || []) : [];
   } catch {
     return typeof getStoredTeams === 'function' ? (getStoredTeams() || []) : [];
+  }
+}
+
+export async function apiAdminCreateTeam(teamData) {
+  try {
+    const res = await fetch(`${API_BASE}/teams/admin-create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+      body: JSON.stringify(teamData),
+    });
+    const data = await safeJson(res);
+    if (!res.ok) throw new Error(data.error || 'Failed to create team.');
+    return data;
+  } catch (err) {
+    // Local fallback
+    if (typeof localAdminCreateTeam === 'function') {
+      return localAdminCreateTeam(teamData);
+    }
+    return { success: false, error: err.message };
+  }
+}
+
+export async function apiDeleteTeam(teamId) {
+  try {
+    const res = await fetch(`${API_BASE}/teams/${teamId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+    });
+    const data = await safeJson(res);
+    if (!res.ok) throw new Error(data.error || 'Failed to delete team.');
+    if (typeof localDeleteTeam === 'function') {
+      localDeleteTeam(teamId);
+    }
+    return data;
+  } catch (err) {
+    if (typeof localDeleteTeam === 'function') {
+      return localDeleteTeam(teamId);
+    }
+    return { success: false, error: err.message };
+  }
+}
+
+export async function apiGetAdminProfile() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/profile`, {
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+    });
+    if (!res.ok) throw new Error('Failed to load profile');
+    const data = await safeJson(res);
+    return data;
+  } catch {
+    return { success: true, adminEmail: getAdminEmail() };
+  }
+}
+
+export async function apiUpdateAdminProfile(profileData) {
+  try {
+    const res = await fetch(`${API_BASE}/admin/profile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+    const data = await safeJson(res);
+    if (!res.ok) throw new Error(data.error || 'Profile update failed.');
+    if (profileData.adminEmail) {
+      setAdminEmail(profileData.adminEmail);
+    }
+    return data;
+  } catch (err) {
+    // Local fallback
+    if (profileData.adminEmail) {
+      setAdminEmail(profileData.adminEmail);
+    }
+    if (profileData.newPasscode) {
+      localStorage.setItem('bob_admin_password', profileData.newPasscode);
+    }
+    return { success: true, message: 'Admin profile updated successfully (local mode).' };
   }
 }

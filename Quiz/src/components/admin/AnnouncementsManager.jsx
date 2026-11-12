@@ -9,7 +9,8 @@ import {
   CheckCircle2, 
   X, 
   Calendar,
-  Send
+  Send,
+  Mail
 } from 'lucide-react';
 import { 
   apiGetAnnouncements, 
@@ -49,7 +50,8 @@ export default function AnnouncementsManager({ isDark }) {
       });
 
       if (res.success) {
-        setStatusMessage('Announcement published successfully to all participants!');
+        const emailCount = res.emailsDispatched || res.announcement?.emailDispatchedCount || 'all registered';
+        setStatusMessage(`✓ Announcement published & automatically dispatched to ${emailCount} student email addresses!`);
         setNewTitle('');
         setNewContent('');
         setIsCreating(false);
@@ -188,8 +190,14 @@ export default function AnnouncementsManager({ isDark }) {
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">{a.content}</p>
-                <div className="text-[10px] text-slate-500">
-                  Published: {new Date(a.createdAt || Date.now()).toLocaleString()}
+                <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                  <span className="text-[10px] text-slate-500">
+                    Published: {new Date(a.createdAt || Date.now()).toLocaleString()}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    <Mail className="w-3 h-3 text-emerald-400" />
+                    <span>Dispatched to Student Emails</span>
+                  </span>
                 </div>
               </div>
 

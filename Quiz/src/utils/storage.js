@@ -88,6 +88,23 @@ export const setAdminPassword = (newPassword) => {
   }
 };
 
+export const getAdminEmail = () => {
+  try {
+    return localStorage.getItem('bob_admin_email') || 'admin@comsats.edu.pk';
+  } catch {
+    return 'admin@comsats.edu.pk';
+  }
+};
+
+export const setAdminEmail = (email) => {
+  try {
+    localStorage.setItem('bob_admin_email', email);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 // Participants
 export const getStoredParticipants = () => {
   try {
@@ -1487,4 +1504,163 @@ export const localGetMyTeam = () => {
       canFinalize: currentCount >= 2 && currentCount <= 3 && team.status !== 'confirmed',
     },
   };
+};
+
+export const localAdminCreateTeam = (teamData) => {
+  const teams = getStoredTeams();
+  const inviteCode = 'INV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  const teamId = 'TEAM-' + Date.now().toString().slice(-6);
+  const targetSize = Number(teamData.targetSize) || 3;
+
+  const participants = getStoredParticipants() || [];
+
+  // 1. Leader
+  const cleanLMobile = (teamData.leader?.mobile || '').replace(/[^\d]/g, '');
+  const leaderId = 'BOB-2026-' + Math.floor(100 + Math.random() * 900);
+  const leaderStudentId = 'LEAD-' + (cleanLMobile.slice(-4) || '1001');
+  const leaderEmail = teamData.leader?.email?.trim() || `${cleanLMobile || 'leader'}@student.bob.pk`;
+
+  const leader = {
+    id: leaderId,
+    studentId: leaderStudentId,
+    fullName: teamData.leader?.fullName || 'Team Leader',
+    mobile: teamData.leader?.mobile || '',
+    phone: teamData.leader?.mobile || '',
+    email: leaderEmail,
+    universityName: 'COMSATS University Islamabad',
+    department: 'Computer Science',
+    degreeProgram: 'BS Computer Science',
+    semester: '4th Semester',
+    teamId,
+    isTeamLeader: true,
+    role: 'Participant',
+    registrationStatus: 'Approved',
+    registeredAt: new Date().toISOString(),
+  };
+
+  // 2. Member 2
+  const cleanM2Mobile = (teamData.member2?.mobile || '').replace(/[^\d]/g, '');
+  const m2Id = 'BOB-2026-' + Math.floor(100 + Math.random() * 900);
+  const m2StudentId = 'MEM-' + (cleanM2Mobile.slice(-4) || '1002');
+  const m2Email = teamData.member2?.email?.trim() || `${cleanM2Mobile || 'member2'}@student.bob.pk`;
+
+  const member2 = {
+    id: m2Id,
+    studentId: m2StudentId,
+    fullName: teamData.member2?.fullName || 'Teammate 2',
+    mobile: teamData.member2?.mobile || '',
+    phone: teamData.member2?.mobile || '',
+    email: m2Email,
+    universityName: 'COMSATS University Islamabad',
+    department: 'Computer Science',
+    degreeProgram: 'BS Computer Science',
+    semester: '4th Semester',
+    teamId,
+    isTeamLeader: false,
+    role: 'Participant',
+    registrationStatus: 'Approved',
+    registeredAt: new Date().toISOString(),
+  };
+
+  participants.push(leader, member2);
+
+  const teamMembers = [
+    {
+      id: leader.id,
+      studentId: leader.studentId,
+      fullName: leader.fullName,
+      email: leader.email,
+      mobile: leader.mobile,
+      role: 'Leader',
+      joinedAt: new Date().toISOString(),
+    },
+    {
+      id: member2.id,
+      studentId: member2.studentId,
+      fullName: member2.fullName,
+      email: member2.email,
+      mobile: member2.mobile,
+      role: 'Member',
+      joinedAt: new Date().toISOString(),
+    },
+  ];
+
+  // 3. Member 3 (if targetSize === 3 and provided)
+  if (targetSize === 3 && teamData.member3 && teamData.member3.fullName?.trim()) {
+    const cleanM3Mobile = (teamData.member3.mobile || '').replace(/[^\d]/g, '');
+    const m3Id = 'BOB-2026-' + Math.floor(100 + Math.random() * 900);
+    const m3StudentId = 'MEM-' + (cleanM3Mobile.slice(-4) || '1003');
+    const m3Email = teamData.member3.email?.trim() || `${cleanM3Mobile || 'member3'}@student.bob.pk`;
+
+    const member3 = {
+      id: m3Id,
+      studentId: m3StudentId,
+      fullName: teamData.member3.fullName,
+      mobile: teamData.member3.mobile || '',
+      phone: teamData.member3.mobile || '',
+      email: m3Email,
+      universityName: 'COMSATS University Islamabad',
+      department: 'Computer Science',
+      degreeProgram: 'BS Computer Science',
+      semester: '4th Semester',
+      teamId,
+      isTeamLeader: false,
+      role: 'Participant',
+      registrationStatus: 'Approved',
+      registeredAt: new Date().toISOString(),
+    };
+    participants.push(member3);
+    teamMembers.push({
+      id: member3.id,
+      studentId: member3.studentId,
+      fullName: member3.fullName,
+      email: member3.email,
+      mobile: member3.mobile,
+      role: 'Member',
+      joinedAt: new Date().toISOString(),
+    });
+  }
+
+  const newTeam = {
+    id: teamId,
+    name: teamData.name || 'Champion Team',
+    inviteCode,
+    leaderId,
+    leaderStudentId,
+    targetSize,
+    status: 'confirmed',
+    members: teamMembers,
+    createdAt: new Date().toISOString(),
+    confirmedAt: new Date().toISOString(),
+  };
+
+  teams.push(newTeam);
+  saveStoredTeams(teams);
+  localStorage.setItem('bob_registered_participants_v2', JSON.stringify(participants));
+
+  return {
+    success: true,
+    team: newTeam,
+    message: `Team "${newTeam.name}" created successfully!`,
+  };
+};
+
+export const localDeleteTeam = (teamId) => {
+  const teams = getStoredTeams();
+  const target = teams.find(t => t.id === teamId || t.name === teamId);
+  if (!target) return { success: false, error: 'Team not found' };
+
+  const updatedTeams = teams.filter(t => t.id !== target.id);
+  saveStoredTeams(updatedTeams);
+
+  const participants = getStoredParticipants() || [];
+  participants.forEach(p => {
+    if (p.teamId === target.id) {
+      p.teamId = null;
+      p.isTeamLeader = false;
+    }
+  });
+  localStorage.setItem('bob_registered_participants_v2', JSON.stringify(participants));
+
+  return { success: true, message: `Team "${target.name}" deleted successfully` };
 };
