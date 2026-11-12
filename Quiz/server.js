@@ -812,6 +812,7 @@ function normalizeMobile(phone) {
 app.post('/api/auth/register-individual', (req, res) => {
   const {
     fullName,
+    email,
     mobile,
     password,
     universityName,
@@ -854,7 +855,7 @@ app.post('/api/auth/register-individual', (req, res) => {
   } while (usedRefs.has(newRef));
 
   const generatedStudentId = `STU-${cleanMobile.slice(-4)}`;
-  const cleanEmail = `${cleanMobile}@student.bob.pk`;
+  const cleanEmail = (email && email.trim()) ? email.trim() : `${cleanMobile}@student.bob.pk`;
 
   const newStudent = {
     id: newRef,
@@ -2233,6 +2234,8 @@ app.post('/api/teams/create', (req, res) => {
     teamName,
     targetSize = 3,
     leaderFullName,
+    leaderEmail,
+    email,
     leaderMobile,
     leaderPassword,
     universityName,
@@ -2303,7 +2306,7 @@ app.post('/api/teams/create', (req, res) => {
       studentId: generatedStudentId,
       mobile: leaderMobile.trim(),
       phone: leaderMobile.trim(),
-      email: `${cleanLeaderMobile}@student.bob.pk`,
+      email: (leaderEmail || email || '').trim() || `${cleanLeaderMobile}@student.bob.pk`,
       universityName: (universityName || 'COMSATS University Islamabad').trim(),
       campus: 'Islamabad Campus',
       region: 'Federal Capital',
@@ -2342,6 +2345,7 @@ app.post('/api/teams/create', (req, res) => {
         studentId: leader.studentId,
         fullName: leader.fullName,
         mobile: leader.mobile || leader.phone,
+        email: leader.email,
         role: 'Leader',
         joinedAt: new Date().toISOString(),
       },
@@ -2419,7 +2423,7 @@ app.get('/api/teams/invite/:code', (req, res) => {
 
 // Join Team via Invitation Link/Code (POST /api/teams/join)
 app.post('/api/teams/join', (req, res) => {
-  const { inviteCode, fullName, mobile, password } = req.body;
+  const { inviteCode, fullName, email, mobile, password } = req.body;
 
   if (!inviteCode || !inviteCode.trim()) {
     return res.status(400).json({ error: 'Invitation code is required.' });
@@ -2475,7 +2479,7 @@ app.post('/api/teams/join', (req, res) => {
     studentId: generatedStudentId,
     mobile: mobile.trim(),
     phone: mobile.trim(),
-    email: `${cleanMobile}@student.bob.pk`,
+    email: (email && email.trim()) ? email.trim() : `${cleanMobile}@student.bob.pk`,
     universityName: 'COMSATS University Islamabad',
     campus: 'Islamabad Campus',
     region: 'Federal Capital',
@@ -2498,6 +2502,8 @@ app.post('/api/teams/join', (req, res) => {
     studentId: newMember.studentId,
     fullName: newMember.fullName,
     mobile: newMember.mobile,
+    email: newMember.email,
+    email: newMember.email,
     role: 'Member',
     joinedAt: new Date().toISOString(),
   };
@@ -2531,7 +2537,7 @@ app.post('/api/teams/join', (req, res) => {
 
 // Team Leader Direct Member Addition (POST /api/teams/add-member-direct)
 app.post('/api/teams/add-member-direct', requireParticipant, (req, res) => {
-  const { fullName, mobile, password } = req.body;
+  const { fullName, email, mobile, password } = req.body;
 
   if (!fullName || !fullName.trim()) {
     return res.status(400).json({ error: 'Teammate full name is required.' });
@@ -2596,7 +2602,7 @@ app.post('/api/teams/add-member-direct', requireParticipant, (req, res) => {
     studentId: generatedStudentId,
     mobile: mobile.trim(),
     phone: mobile.trim(),
-    email: `${cleanMobile}@student.bob.pk`,
+    email: (email && email.trim()) ? email.trim() : `${cleanMobile}@student.bob.pk`,
     universityName: caller.universityName || 'COMSATS University Islamabad',
     campus: caller.campus || 'Islamabad Campus',
     region: caller.region || 'Federal Capital',

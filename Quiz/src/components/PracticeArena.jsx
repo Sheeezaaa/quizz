@@ -35,8 +35,8 @@ export default function PracticeArena({ initialMode = 'round1' }) {
   const [quizFinished, setQuizFinished] = useState(false);
   const [storedQuestionsList, setStoredQuestionsList] = useState(() => getStoredQuestions());
 
-  // Strict Anti-Cheat & Tab Switch Proctoring States (Requested by User)
-  const [antiCheatActive, setAntiCheatActive] = useState(true);
+  // Practice Arena: Anti-cheat disabled on public website browsing so visitors aren't startled by buzzers
+  const [antiCheatActive, setAntiCheatActive] = useState(false);
   const [tabViolations, setTabViolations] = useState([]);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [latestViolationReason, setLatestViolationReason] = useState('');

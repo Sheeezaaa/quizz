@@ -21,7 +21,8 @@ import {
   Link as LinkIcon,
   MessageCircle,
   HelpCircle,
-  RefreshCw
+  RefreshCw,
+  Mail
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { saveParticipant, setLoggedInStudent, getLoggedInStudent } from '../utils/storage';
@@ -54,6 +55,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
   // -------------------------------------------------------------
   const [indivForm, setIndivForm] = useState({
     fullName: '',
+    email: '',
     mobile: '',
     password: '',
     confirmPassword: '',
@@ -77,6 +79,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
     teamName: '',
     targetSize: 3, // 2 or 3
     leaderFullName: '',
+    leaderEmail: '',
     leaderMobile: '',
     leaderPassword: '',
     leaderConfirmPassword: '',
@@ -96,6 +99,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
   const [joinForm, setJoinForm] = useState({
     inviteCode: '',
     fullName: '',
+    email: '',
     mobile: '',
     password: '',
     confirmPassword: '',
@@ -114,6 +118,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
   // -------------------------------------------------------------
   const [directMemberForm, setDirectMemberForm] = useState({
     fullName: '',
+    email: '',
     mobile: '',
     password: '',
   });
@@ -228,6 +233,11 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
     const newErrors = {};
 
     if (!indivForm.fullName.trim()) newErrors.fullName = 'Full student name is strictly required';
+    if (!indivForm.email.trim()) {
+      newErrors.email = 'Email address is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(indivForm.email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
+    }
     if (!indivForm.mobile.trim()) {
       newErrors.mobile = 'Mobile number is required';
     } else {
@@ -268,6 +278,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
       // Reset form
       setIndivForm({
         fullName: '',
+        email: '',
         mobile: '',
         password: '',
         confirmPassword: '',
@@ -294,6 +305,11 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
 
     if (!createTeamForm.teamName.trim()) newErrors.teamName = 'Team name is strictly required';
     if (!createTeamForm.leaderFullName.trim()) newErrors.leaderFullName = 'Leader full name is required';
+    if (!createTeamForm.leaderEmail.trim()) {
+      newErrors.leaderEmail = 'Leader email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createTeamForm.leaderEmail.trim())) {
+      newErrors.leaderEmail = 'Please enter a valid email address';
+    }
     if (!createTeamForm.leaderMobile.trim()) {
       newErrors.leaderMobile = 'Leader mobile number is required';
     } else {
@@ -324,6 +340,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
         teamName: createTeamForm.teamName.trim(),
         targetSize: Number(createTeamForm.targetSize),
         leaderFullName: createTeamForm.leaderFullName.trim(),
+        leaderEmail: createTeamForm.leaderEmail.trim(),
         leaderMobile: createTeamForm.leaderMobile.trim(),
         leaderPassword: createTeamForm.leaderPassword,
         universityName: createTeamForm.universityName,
@@ -346,6 +363,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
         teamName: '',
         targetSize: 3,
         leaderFullName: '',
+        leaderEmail: '',
         leaderMobile: '',
         leaderPassword: '',
         leaderConfirmPassword: '',
@@ -370,6 +388,11 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
 
     if (!joinForm.inviteCode.trim()) newErrors.inviteCode = 'Invitation link or code is required';
     if (!joinForm.fullName.trim()) newErrors.fullName = 'Full student name is required';
+    if (!joinForm.email.trim()) {
+      newErrors.email = 'Student email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(joinForm.email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
+    }
     if (!joinForm.mobile.trim()) {
       newErrors.mobile = 'Mobile number is required';
     } else {
@@ -406,6 +429,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
       const res = await apiJoinTeam({
         inviteCode: cleanCode,
         fullName: joinForm.fullName.trim(),
+        email: joinForm.email.trim(),
         mobile: joinForm.mobile.trim(),
         password: joinForm.password,
       });
@@ -424,6 +448,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
       setJoinForm({
         inviteCode: '',
         fullName: '',
+        email: '',
         mobile: '',
         password: '',
         confirmPassword: '',
@@ -446,6 +471,11 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
     const newErrors = {};
 
     if (!directMemberForm.fullName.trim()) newErrors.fullName = 'Teammate full name is required';
+    if (!directMemberForm.email.trim()) {
+      newErrors.email = 'Teammate email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(directMemberForm.email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
+    }
     if (!directMemberForm.mobile.trim()) {
       newErrors.mobile = 'Teammate mobile number is required';
     } else {
@@ -465,6 +495,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
     try {
       const res = await apiAddTeamMemberDirect({
         fullName: directMemberForm.fullName.trim(),
+        email: directMemberForm.email.trim(),
         mobile: directMemberForm.mobile.trim(),
         password: directMemberForm.password,
       });
@@ -477,7 +508,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
 
       setActiveTeam(res.team);
       fireCelebration();
-      setDirectMemberForm({ fullName: '', mobile: '', password: '' });
+      setDirectMemberForm({ fullName: '', email: '', mobile: '', password: '' });
       setShowDirectForm(false);
     } catch (err) {
       setDirectServerError(err.message || 'Error adding teammate.');
@@ -647,7 +678,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
 
             <form onSubmit={handleIndividualSubmit} className="space-y-6">
               
-              {/* Full Name & Mobile Number */}
+              {/* Full Name & Student Email */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
@@ -673,29 +704,52 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
 
                 <div>
                   <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Mobile Number (Unique Login ID) <strong className="text-rose-500">*</strong></span>
+                    <Mail className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Email Address <strong className="text-rose-500">*</strong></span>
                   </label>
                   <input
-                    type="tel"
-                    placeholder="e.g. 0300 1234567"
-                    value={indivForm.mobile}
-                    onChange={(e) => setIndivForm({ ...indivForm, mobile: e.target.value })}
-                    className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
-                      indivErrors.mobile ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
+                    type="email"
+                    placeholder="e.g. student@comsats.edu.pk"
+                    value={indivForm.email}
+                    onChange={(e) => setIndivForm({ ...indivForm, email: e.target.value })}
+                    className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${
+                      indivErrors.email ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                     }`}
                   />
-                  {indivErrors.mobile ? (
+                  {indivErrors.email && (
                     <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-semibold">
                       <AlertCircle className="w-3 h-3 shrink-0" />
-                      <span>{indivErrors.mobile}</span>
-                    </p>
-                  ) : (
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Each student must have a unique mobile number. You will use this to log in.
+                      <span>{indivErrors.email}</span>
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Mobile Number */}
+              <div>
+                <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Mobile Number (Unique Login ID) <strong className="text-rose-500">*</strong></span>
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 0300 1234567"
+                  value={indivForm.mobile}
+                  onChange={(e) => setIndivForm({ ...indivForm, mobile: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
+                    indivErrors.mobile ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
+                  }`}
+                />
+                {indivErrors.mobile ? (
+                  <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-semibold">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    <span>{indivErrors.mobile}</span>
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Each student must have a unique mobile number. You will use this to log in.
+                  </p>
+                )}
               </div>
 
               {/* Password & Confirm Password */}
@@ -1078,7 +1132,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                           </div>
                         )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                           <div>
                             <label className="block text-xs font-bold text-slate-300 mb-1">
                               Teammate Full Name *
@@ -1095,7 +1149,21 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
 
                           <div>
                             <label className="block text-xs font-bold text-slate-300 mb-1">
-                              Teammate Mobile * (Unique)
+                              Teammate Email *
+                            </label>
+                            <input
+                              type="email"
+                              placeholder="e.g. bilal@comsats.edu.pk"
+                              value={directMemberForm.email}
+                              onChange={(e) => setDirectMemberForm({ ...directMemberForm, email: e.target.value })}
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/15 text-white text-xs font-medium focus:border-blue-500 focus:outline-none"
+                            />
+                            {directErrors.email && <p className="text-[10px] text-rose-400 mt-1">{directErrors.email}</p>}
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-slate-300 mb-1">
+                              Mobile Number * (Unique)
                             </label>
                             <input
                               type="tel"
@@ -1297,7 +1365,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                         </div>
                       </div>
 
-                      {/* Team Leader Full Name & Mobile */}
+                      {/* Team Leader Full Name & Email */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
                           <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
@@ -1320,22 +1388,42 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
 
                         <div>
                           <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
-                            <Phone className="w-3.5 h-3.5 text-blue-400" />
-                            <span>Team Leader Mobile (Unique) <strong className="text-rose-500">*</strong></span>
+                            <Mail className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Team Leader Email <strong className="text-rose-500">*</strong></span>
                           </label>
                           <input
-                            type="tel"
-                            placeholder="e.g. 0300 1234567"
-                            value={createTeamForm.leaderMobile}
-                            onChange={(e) => setCreateTeamForm({ ...createTeamForm, leaderMobile: e.target.value })}
-                            className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
-                              createErrors.leaderMobile ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
+                            type="email"
+                            placeholder="e.g. leader@comsats.edu.pk"
+                            value={createTeamForm.leaderEmail}
+                            onChange={(e) => setCreateTeamForm({ ...createTeamForm, leaderEmail: e.target.value })}
+                            className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${
+                              createErrors.leaderEmail ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
                             }`}
                           />
-                          {createErrors.leaderMobile && (
-                            <p className="text-[11px] text-rose-400 mt-1 font-semibold">{createErrors.leaderMobile}</p>
+                          {createErrors.leaderEmail && (
+                            <p className="text-[11px] text-rose-400 mt-1 font-semibold">{createErrors.leaderEmail}</p>
                           )}
                         </div>
+                      </div>
+
+                      {/* Team Leader Mobile */}
+                      <div>
+                        <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-blue-400" />
+                          <span>Team Leader Mobile (Unique Login ID) <strong className="text-rose-500">*</strong></span>
+                        </label>
+                        <input
+                          type="tel"
+                          placeholder="e.g. 0300 1234567"
+                          value={createTeamForm.leaderMobile}
+                          onChange={(e) => setCreateTeamForm({ ...createTeamForm, leaderMobile: e.target.value })}
+                          className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
+                            createErrors.leaderMobile ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
+                          }`}
+                        />
+                        {createErrors.leaderMobile && (
+                          <p className="text-[11px] text-rose-400 mt-1 font-semibold">{createErrors.leaderMobile}</p>
+                        )}
                       </div>
 
                       {/* Password & Confirm */}

@@ -176,9 +176,10 @@ export default function StudentPortal({
     } catch {}
   };
 
-  // Anti-Cheat Violation Handler (Strictly only during active quiz attempt)
+  // Anti-Cheat Violation Handler: Sounds buzzer whenever logged in team/student opens another browser or tab
+  // User instruction: Limit removed - buzzer rings every time without 3-strike disqualification cutoff
   const recordAntiCheatViolation = (reason = 'Tab switch or external application window detected.', infractionType = 'BROWSER_SWITCH') => {
-    if (!activeQuizAttempt || isDisqualified) return;
+    if (!currentUser || !isOpen) return;
     try {
       playAntiCheatBuzzer();
     } catch {}
@@ -191,54 +192,43 @@ export default function StudentPortal({
       activeQuizAttempt?.roundNumber || 1
     ).catch(() => {});
 
-    setViolationCount((prev) => {
-      const nextCount = prev + 1;
-      if (nextCount >= 3) {
-        try {
-          playDisqualificationSiren();
-        } catch {}
-        setIsDisqualified(true);
-        setTimeout(() => {
-          handleAutoFinishAttempt(true);
-        }, 1500);
-      }
-      return nextCount;
-    });
+    setViolationCount((prev) => prev + 1);
   };
 
   // Dedicated Anti-Cheat & Browser Switch Detection Effect
-  // Strictly active ONLY when student is in an ongoing quiz round
+  // Active whenever a team member/student is LOGGED IN in the Student Portal
+  // Whenever they switch tabs, open another browser window, or blur window: sounds the buzzer!
+  // Public website browsing is exempt (does not trigger buzzer)
   useEffect(() => {
-    if (!currentUser || !activeQuizAttempt || isDisqualified) return;
+    if (!currentUser || !isOpen) return;
 
     let lastReportTime = 0;
     const reportSwitch = (infractionMsg, type = "BROWSER_SWITCH") => {
-      if (!activeQuizAttempt || isDisqualified) return;
       const now = Date.now();
-      if (now - lastReportTime < 2500) return;
+      if (now - lastReportTime < 2000) return;
       lastReportTime = now;
 
-      const sid = currentUser?.studentId || "UNKNOWN_STUDENT";
-      const fullDetail = `Student ID: ${sid} (${currentUser?.fullName || "Contestant"}) switched window or opened another browser during Quiz!`;
+      const sid = currentUser?.studentId || "CONTESTANT";
+      const fullDetail = `${currentUser?.fullName || "Student"} (${sid}): ${infractionMsg}`;
 
-      // Trigger quiz penalty, modal, buzzer and send infraction to admin
+      // Trigger loud buzzer and display alert modal
       recordAntiCheatViolation(fullDetail, type);
     };
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        reportSwitch("Student opened another browser or switched tabs!", "BROWSER_SWITCH");
+        reportSwitch("Another browser window/tab was opened while logged in!", "BROWSER_SWITCH");
       }
     };
 
     const handleWindowBlur = () => {
-      reportSwitch("Student switched window focus or minimized browser window!", "WINDOW_BLUR");
+      reportSwitch("Browser window lost focus (opened another browser or external application)!", "WINDOW_BLUR");
     };
 
     const handleFullscreenChange = () => {
       const inFull = !!document.fullscreenElement;
       setIsFullScreen(inFull);
-      if (!inFull && activeQuizAttempt && !isDisqualified) {
+      if (!inFull && activeQuizAttempt) {
         reportSwitch("Full-screen lockdown mode exited!", "FULLSCREEN_EXIT");
       }
     };
@@ -284,13 +274,13 @@ export default function StudentPortal({
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleWindowBlur);
+      document.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("copy", handleCopy);
     };
-  }, [currentUser, activeQuizAttempt, isDisqualified]);
+  }, [currentUser, isOpen, activeQuizAttempt]);
 
   // Synchronize student data upon open or user state change
   useEffect(() => {
@@ -2478,16 +2468,16 @@ export default function StudentPortal({
                 {isDisqualified ? 'Disqualified: Malpractice Logged' : 'Unauthorized Tab / Browser Switch!'}
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans max-w-md mx-auto pt-1">
-                {violationReason || 'You switched tabs or minimized the active examination window. 3 infractions result in automatic disqualification.'}
+                {violationReason || 'You switched tabs or minimized the active examination window. Opening another browser or switching tabs while logged in triggers the security buzzer.'}
               </p>
             </div>
 
             {/* Details Box */}
             <div className="p-4 sm:p-5 rounded-2xl bg-black/60 border border-rose-500/30 text-left text-xs font-mono space-y-3 shadow-inner">
               <div className="flex justify-between items-center pb-2.5 border-b border-white/10">
-                <span className="text-[11px] font-bold uppercase text-slate-400">Warning Strike:</span>
+                <span className="text-[11px] font-bold uppercase text-slate-400">Total Warnings Recorded:</span>
                 <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold text-xs">
-                  {violationCount} / 3 Maximum Allowed
+                  {violationCount} Alert(s) Logged
                 </span>
               </div>
               <div className="flex items-center justify-between">
