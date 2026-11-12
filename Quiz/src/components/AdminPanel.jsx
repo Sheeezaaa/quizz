@@ -70,6 +70,8 @@ import {
   exportParticipantsToCSV,
   getAdminPassword,
   setAdminPassword,
+  getAdminEmail,
+  setAdminEmail,
   getAdminAuth,
   setAdminAuth,
   getStoredQuestions,
