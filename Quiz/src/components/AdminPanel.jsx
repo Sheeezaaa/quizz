@@ -52,7 +52,8 @@ import {
   Volume2,
   VolumeX,
   AlertTriangle,
-  MailCheck
+  MailCheck,
+  IdCard
 } from 'lucide-react';
 import { 
   saveStoredDetails, 
@@ -177,11 +178,11 @@ export default function AdminPanel({
   const [passChangeMessage, setPassChangeMessage] = useState({ text: '', isError: false });
 
   // Local editable states initialized from props
-  const [details, setDetails] = useState(competitionData.details);
-  const [subjects, setSubjects] = useState(competitionData.subjects);
-  const [rounds, setRounds] = useState(competitionData.rounds);
-  const [rules, setRules] = useState(competitionData.rules);
-  const [participants, setParticipants] = useState(competitionData.participants);
+  const [details, setDetails] = useState(competitionData?.details || {});
+  const [subjects, setSubjects] = useState(competitionData?.subjects || []);
+  const [rounds, setRounds] = useState(competitionData?.rounds || []);
+  const [rules, setRules] = useState(competitionData?.rules || { generalRules: [] });
+  const [participants, setParticipants] = useState(competitionData?.participants || []);
 
   // Participant Management states
   const [newParticipant, setNewParticipant] = useState({
@@ -788,11 +789,11 @@ export default function AdminPanel({
   const navTabs = [
     { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null },
     { id: 'teams', label: 'Teams Roster (2-3)', icon: Users, badge: 'Official' },
-    { id: 'registrations', label: 'Individual Candidates', icon: IdCard, badge: `${participants.length}` },
+    { id: 'registrations', label: 'Individual Candidates', icon: IdCard, badge: `${(participants || []).length}` },
     { id: 'rapidfire', label: 'Round 3: Rapid Fire', icon: Zap, badge: 'Live' },
     { id: 'buzzer', label: 'Round 4: Buzzer Final', icon: Trophy, badge: 'Live' },
     { id: 'results', label: 'Results & Standings', icon: Award, badge: null },
-    { id: 'questions', label: 'Question Bank (Excel)', icon: FileSpreadsheet, badge: `${questions.length}` },
+    { id: 'questions', label: 'Question Bank (Excel)', icon: FileSpreadsheet, badge: `${(questions || []).length}` },
     { id: 'subjects', label: '7 CS Subjects', icon: BookOpen, badge: '7' },
     { id: 'rounds', label: '4 Rounds Config', icon: Layers, badge: '4' },
     { id: 'announcements', label: 'Bulletins & News', icon: Sparkles, badge: null },
@@ -1738,7 +1739,7 @@ export default function AdminPanel({
                       {calculateDaysLeft()}
                     </span>
                     <span className="text-xs text-slate-500 font-mono">
-                      {new Date(details.defaultEventDate).toLocaleDateString()}
+                      {details?.defaultEventDate ? new Date(details.defaultEventDate).toLocaleDateString() : 'November 20, 2026'}
                     </span>
                   </div>
                   <div className="mt-2 text-[11px] text-slate-500 flex items-center justify-between">
