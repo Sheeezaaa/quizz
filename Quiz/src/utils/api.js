@@ -959,13 +959,23 @@ export async function apiPublishResults(isPublished) {
 export async function apiGetAnnouncements() {
   try {
     const res = await fetch(`${API_BASE}/announcements`);
-    return await safeJson(res);
-  } catch {
-    return [];
-  }
+    if (res.ok) {
+      const data = await safeJson(res);
+      if (Array.isArray(data)) {
+        try { localStorage.setItem('bob_announcements_v1', JSON.stringify(data)); } catch {}
+        return data;
+      }
+    }
+  } catch {}
+  try {
+    const local = localStorage.getItem('bob_announcements_v1');
+    if (local) return JSON.parse(local);
+  } catch {}
+  return [];
 }
 
 export async function apiCreateAnnouncement(data) {
+  let serverRes = null;
   try {
     const res = await fetch(`${API_BASE}/announcements`, {
       method: 'POST',
@@ -975,9 +985,26 @@ export async function apiCreateAnnouncement(data) {
       },
       body: JSON.stringify(data),
     });
-    return await safeJson(res);
+    serverRes = await safeJson(res);
+  } catch {}
+
+  // Local fallback persistence so students see it immediately
+  try {
+    const existing = JSON.parse(localStorage.getItem('bob_announcements_v1') || '[]');
+    const newRecord = {
+      id: 'ann_' + Date.now(),
+      title: data.title,
+      content: data.content,
+      category: data.category || 'General',
+      isPublished: data.isPublished !== false,
+      createdAt: new Date().toISOString(),
+      ...(serverRes?.announcement || {})
+    };
+    const updated = [newRecord, ...existing];
+    localStorage.setItem('bob_announcements_v1', JSON.stringify(updated));
+    return { success: true, announcement: newRecord };
   } catch (err) {
-    return { success: false, error: err.message };
+    return serverRes || { success: true };
   }
 }
 

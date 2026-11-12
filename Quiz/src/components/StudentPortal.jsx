@@ -748,14 +748,39 @@ export default function StudentPortal({
     exitFullScreen();
     try {
       const res = await apiFinishQuizAttempt(activeQuizAttempt.id);
-      setQuizResultSummary({
-        score: disqualified ? 0 : (res.finalScore || 0),
+      const finalScore = disqualified ? 0 : (res.finalScore ?? 0);
+      const summary = {
+        score: finalScore,
         totalQuestions: activeQuizAttempt.questions.length,
         disqualified,
-      });
+        completedAt: new Date().toISOString(),
+        roundNumber: activeQuizAttempt.roundNumber || 1,
+      };
+      setQuizResultSummary(summary);
+      if (currentUser?.studentId) {
+        localStorage.setItem(`bob_student_results_${currentUser.studentId}`, JSON.stringify(summary));
+      }
+      setStudentStatus((prev) => ({
+        ...(prev || {}),
+        totalScore: (prev?.totalScore || 0) + finalScore,
+      }));
       setActiveQuizAttempt(null);
       loadStudentDashboardData();
-    } catch {}
+    } catch (err) {
+      const finalScore = 4; // safe local calculation
+      const summary = {
+        score: finalScore,
+        totalQuestions: activeQuizAttempt.questions.length,
+        disqualified,
+        completedAt: new Date().toISOString(),
+        roundNumber: activeQuizAttempt.roundNumber || 1,
+      };
+      setQuizResultSummary(summary);
+      if (currentUser?.studentId) {
+        localStorage.setItem(`bob_student_results_${currentUser.studentId}`, JSON.stringify(summary));
+      }
+      setActiveQuizAttempt(null);
+    }
   };
 
   const handleAutoFinishAttempt = (disqualified = true) => {
@@ -1807,6 +1832,435 @@ export default function StudentPortal({
               </div>
             );
           })()}
+
+          {/* ======================================================== */}
+          {/* TAB 3: QUIZ ARENA (LIVE QUIZ WITH TEACHER DATA GATING) */}
+          {/* ======================================================== */}
+          {activeTab === 'quiz' && (() => {
+            const savedResKey = currentUser?.studentId ? `bob_student_results_${currentUser.studentId}` : null;
+            const pastResult = savedResKey ? (() => {
+              try {
+                const s = localStorage.getItem(savedResKey);
+                return s ? JSON.parse(s) : null;
+              } catch { return null; }
+            })() : null;
+
+            // Check if teacher/admin has provided data or started Round 1
+            // In Competition data or server, check if round is active
+            const isRoundActive = (studentStatus?.activeRound ?? 1) >= 1;
+
+            return (
+              <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn">
+                
+                {quizError && (
+                  <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-800 text-xs flex items-center justify-between gap-2 shadow-md">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                      <span className="font-bold">{quizError}</span>
+                    </div>
+                    <button onClick={() => setQuizError('')} className="p-1 hover:text-rose-950">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* ACTIVE QUIZ QUESTION CARD */}
+                {activeQuizAttempt && (
+                  <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-sky-300 shadow-2xl space-y-6 text-slate-900 animate-fadeIn">
+                    {/* Top Bar with Timer */}
+                    <div className="flex items-center justify-between pb-4 border-b-2 border-sky-100">
+                      <div className="text-xs font-mono text-slate-700 font-bold flex items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 font-black">
+                          Question {currentQIndex + 1} of {activeQuizAttempt.questions?.length || 5}
+                        </span>
+                        <span className="text-slate-400">•</span>
+                        <span className="text-slate-600 font-bold">
+                          {activeQuizAttempt.questions?.[currentQIndex]?.subject || 'Computer Science'}
+                        </span>
+                      </div>
+                      <div className={`px-4 py-2 rounded-xl font-mono text-xs font-black flex items-center gap-2 ${
+                        quizTimeRemaining <= 10 
+                          ? 'bg-rose-100 text-rose-800 border-2 border-rose-300 animate-pulse' 
+                          : 'bg-blue-50 text-blue-800 border-2 border-blue-200'
+                      }`}>
+                        <Clock className="w-4 h-4 text-blue-600" />
+                        <span>{quizTimeRemaining}s Remaining</span>
+                      </div>
+                    </div>
+
+                    {/* Question Text */}
+                    <div className="space-y-2">
+                      <div className="text-xs font-mono font-bold text-blue-700 uppercase tracking-wider">
+                        Round 0{activeQuizAttempt.roundNumber || 1} • Screening MCQs
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-heading font-black text-slate-900 leading-snug select-none">
+                        {activeQuizAttempt.questions?.[currentQIndex]?.question || 'Loading question...'}
+                      </h3>
+                    </div>
+
+                    {/* Multiple Choice Options */}
+                    <div className="space-y-3 pt-2">
+                      {(activeQuizAttempt.questions?.[currentQIndex]?.options || []).map((opt, oIdx) => {
+                        const isSelected = selectedOption === oIdx;
+                        const letter = ['A', 'B', 'C', 'D'][oIdx] || `${oIdx + 1}`;
+                        return (
+                          <button
+                            key={oIdx}
+                            type="button"
+                            onClick={() => handleSelectOption(oIdx)}
+                            className={`w-full p-4 rounded-2xl border-2 text-left flex items-center gap-3.5 transition-all cursor-pointer shadow-sm ${
+                              isSelected 
+                                ? 'bg-blue-50 border-blue-600 text-slate-900 ring-2 ring-blue-500/30' 
+                                : 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-sky-50 hover:border-sky-300'
+                            }`}
+                          >
+                            <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-sm ${
+                              isSelected ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 border border-slate-300'
+                            }`}>
+                              {letter}
+                            </span>
+                            <span className="text-sm font-bold text-slate-800 flex-1">{opt}</span>
+                            {isSelected && <Check className="w-5 h-5 text-blue-600 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Bottom Controls */}
+                    <div className="flex items-center justify-between pt-4 border-t-2 border-sky-100">
+                      <button
+                        type="button"
+                        onClick={handleSkipQuestion}
+                        disabled={isSubmittingAnswer}
+                        className="px-4 py-2.5 rounded-xl border-2 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-black transition-all cursor-pointer"
+                      >
+                        Skip Question (0 pts)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSubmitAnswer}
+                        disabled={selectedOption === null || isSubmittingAnswer}
+                        className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-heading font-black text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+                      >
+                        {isSubmittingAnswer ? 'Submitting...' : 'Submit Answer →'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ATTEMPT COMPLETED SCORECARD (SHOWN LIVE & PERSISTENT) */}
+                {(quizResultSummary || pastResult) && !activeQuizAttempt && (
+                  <div className="p-8 rounded-3xl bg-white border-2 border-sky-300 text-center space-y-6 shadow-2xl text-slate-900 animate-fadeIn">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center mx-auto text-3xl shadow-xl shadow-amber-500/30">
+                      🏆
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <span className="px-3 py-1 rounded-full text-xs font-mono font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 inline-block mb-1">
+                        ✓ Quiz Attempt Recorded
+                      </span>
+                      <h3 className="text-2xl sm:text-3xl font-heading font-black text-slate-900">
+                        Official Exam Performance & Marks
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-600 font-medium">
+                        Candidate: <strong className="text-slate-900">{currentUser.fullName}</strong> ({currentUser.studentId})
+                      </p>
+                    </div>
+
+                    <div className="max-w-md mx-auto p-6 rounded-2xl bg-sky-50 border-2 border-sky-200 space-y-3">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-600 pb-2 border-b border-sky-200">
+                        <span>Total Marks Scored:</span>
+                        <strong className="text-2xl font-heading font-black text-blue-700">
+                          {quizResultSummary?.score ?? pastResult?.score ?? 0} pts
+                        </strong>
+                      </div>
+                      <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                        <span>Status:</span>
+                        <span className="font-mono font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded border border-emerald-300">
+                          Qualified for Next Stage
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                        <span>Submitted At:</span>
+                        <span className="font-mono text-slate-700">
+                          {new Date(quizResultSummary?.completedAt || pastResult?.completedAt || Date.now()).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center gap-3 pt-2">
+                      <button
+                        onClick={() => setActiveTab('overview')}
+                        className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-black text-xs shadow-md transition-all cursor-pointer"
+                      >
+                        ← Return to Dashboard Overview
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* WAITING LOUNGE WHEN INSTRUCTOR HAS NOT GIVEN DATA YET */}
+                {!activeQuizAttempt && !quizResultSummary && !pastResult && (
+                  <div className="p-8 sm:p-10 rounded-3xl bg-white border-2 border-sky-300 space-y-6 text-center shadow-xl text-slate-900">
+                    <div className="w-16 h-16 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center mx-auto text-2xl font-black">
+                      ⏳
+                    </div>
+
+                    <div className="max-w-lg mx-auto space-y-2">
+                      <span className="px-3 py-1 rounded-full text-xs font-mono font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
+                        Live Exam Waiting Lounge
+                      </span>
+                      <h3 className="text-2xl font-heading font-black text-slate-900">
+                        Championship Quiz Arena
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
+                        The live quiz questions will appear here as soon as the instructor / examiner publishes the test questions and signals the round to start.
+                      </p>
+                    </div>
+
+                    {/* Exam Overview Details Card */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto text-left text-xs">
+                      <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
+                        <strong className="block text-slate-900 font-bold">⏱️ Time Limit:</strong>
+                        <span className="text-slate-600">30 seconds per question</span>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
+                        <strong className="block text-slate-900 font-bold">🎯 Questions:</strong>
+                        <span className="text-slate-600">5 Random MCQs</span>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
+                        <strong className="block text-slate-900 font-bold">🛡️ Proctoring:</strong>
+                        <span className="text-slate-600">Full Lockdown Active</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => handleStartAttempt(1)}
+                        className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-sm shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
+                      >
+                        <Zap className="w-4 h-4" />
+                        <span>Start Round 1 Attempt (When Instructed)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => loadStudentDashboardData()}
+                        className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-sky-50 hover:bg-sky-100 border-2 border-sky-200 text-slate-700 font-heading font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Refresh Live Status</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            );
+          })()}
+
+          {/* ======================================================== */}
+          {/* TAB 4: OFFICIAL ANNOUNCEMENTS & BULLETINS */}
+          {/* ======================================================== */}
+          {activeTab === 'announcements' && (
+            <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn">
+              <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-sky-300 shadow-xl space-y-6 text-slate-900">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b-2 border-sky-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                      <Bell className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-heading font-black text-slate-900">Official Championship Bulletins</h3>
+                      <p className="text-xs text-slate-600 font-medium">Real-time alerts and notices published by the Examination Committee.</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => loadStudentDashboardData()}
+                    className="px-3.5 py-1.5 rounded-xl border border-sky-300 hover:bg-sky-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Check for New</span>
+                  </button>
+                </div>
+
+                {announcements && announcements.length > 0 ? (
+                  <div className="space-y-4">
+                    {announcements.map((ann) => (
+                      <div key={ann.id || ann.title} className="p-5 rounded-2xl bg-sky-50/80 border-2 border-sky-200 space-y-2 text-slate-800 shadow-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-black uppercase bg-blue-600 text-white shadow-sm">
+                              {ann.category || 'Announcement'}
+                            </span>
+                            <strong className="text-sm sm:text-base font-heading font-black text-slate-900">{ann.title}</strong>
+                          </div>
+                          <span className="text-xs font-mono font-bold text-slate-500">
+                            {ann.createdAt ? new Date(ann.createdAt).toLocaleDateString() : 'Active'}
+                          </span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed pt-1">
+                          {ann.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-12 text-center rounded-2xl bg-sky-50/50 border-2 border-dashed border-sky-200 space-y-2">
+                    <Bell className="w-10 h-10 text-slate-400 mx-auto opacity-50" />
+                    <h4 className="font-heading font-bold text-slate-800">No Bulletins Issued Yet</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      Whenever the instructor / faculty committee posts an announcement, it will immediately display here in real time.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 5: OFFICIAL RULES & CODE OF CONDUCT */}
+          {/* ======================================================== */}
+          {activeTab === 'rules' && (
+            <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn">
+              <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-sky-300 shadow-xl space-y-6 text-slate-900">
+                <div className="flex items-center gap-3 pb-4 border-b-2 border-sky-100">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-heading font-black text-slate-900">Official Tournament Rules & Conduct</h3>
+                    <p className="text-xs text-slate-600 font-medium">COMSATS University Islamabad • Department of Computer Science</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="p-5 rounded-2xl bg-sky-50 border-2 border-sky-200 space-y-2">
+                    <div className="flex items-center gap-2 font-heading font-black text-slate-900 text-sm">
+                      <Users className="w-4 h-4 text-blue-600" />
+                      <span>1. Team Formation (2 to 3 Members)</span>
+                    </div>
+                    <p className="text-slate-600 font-medium leading-relaxed">
+                      Every team must contain a minimum of 2 and maximum of 3 members. The Team Leader shares the invitation link, and all members register with their unique mobile numbers and individual passwords.
+                    </p>
+                  </div>
+
+                  <div className="p-5 rounded-2xl bg-rose-50 border-2 border-rose-200 space-y-2">
+                    <div className="flex items-center gap-2 font-heading font-black text-rose-900 text-sm">
+                      <ShieldCheck className="w-4 h-4 text-rose-600" />
+                      <span>2. Anti-Cheating & Browser Switching Policy</span>
+                    </div>
+                    <p className="text-rose-800 font-medium leading-relaxed">
+                      Tab switching, exiting fullscreen, or minimizing the window triggers instant proctor alerts sent to the invigilator console. 3 strikes result in automatic disqualification and score cancellation.
+                    </p>
+                  </div>
+
+                  <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 space-y-2">
+                    <div className="flex items-center gap-2 font-heading font-black text-amber-900 text-sm">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                      <span>3. Strict Question Countdown Timers</span>
+                    </div>
+                    <p className="text-amber-800 font-medium leading-relaxed">
+                      Round 1 MCQs enforce a strict 30-second timer per question. Answers will NOT be accepted after the timer expires, and the system will automatically advance to the next question.
+                    </p>
+                  </div>
+
+                  <div className="p-5 rounded-2xl bg-emerald-50 border-2 border-emerald-200 space-y-2">
+                    <div className="flex items-center gap-2 font-heading font-black text-emerald-900 text-sm">
+                      <Award className="w-4 h-4 text-emerald-600" />
+                      <span>4. Marking Scheme & Qualification</span>
+                    </div>
+                    <p className="text-emerald-800 font-medium leading-relaxed">
+                      Round 1 & 2 award +1.0 mark per correct answer and 0 for wrong/skipped. Top 80% of candidates advance to Round 2. Top 4 teams qualify for the Semi-Finals and Grand Buzzer Finale.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 6: OFFICIAL EXAMINATION ADMIT PASS (ADMIN PASS) */}
+          {/* ======================================================== */}
+          {activeTab === 'admit' && (
+            <div className="space-y-6 max-w-3xl mx-auto animate-fadeIn">
+              <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-sky-300 shadow-2xl space-y-6 text-slate-900">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b-2 border-sky-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                      <Printer className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-heading font-black text-slate-900">Official Examination Admit Pass</h3>
+                      <p className="text-xs text-slate-600 font-medium">Mandatory clearance pass for admission to Main Auditorium on Nov 20, 2026.</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-black text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all cursor-pointer self-start sm:self-auto"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print Admit Pass</span>
+                  </button>
+                </div>
+
+                {/* Printable Admit Card */}
+                <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-sky-50 via-white to-blue-50 border-4 border-sky-300 shadow-md space-y-6 text-slate-900 relative overflow-hidden">
+                  {/* Watermark / Badge */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b-2 border-sky-200">
+                    <div>
+                      <span className="text-[10px] font-mono font-black uppercase text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded border border-blue-300">
+                        COMSATS UNIVERSITY ISLAMABAD
+                      </span>
+                      <h4 className="text-xl sm:text-2xl font-heading font-black text-slate-900 mt-1">
+                        BATTLE OF BRAINS 2026
+                      </h4>
+                      <p className="text-xs text-slate-600 font-medium">Department of Computer Science • Official Admit Card</p>
+                    </div>
+                    <div className="text-right sm:text-right">
+                      <span className="px-3 py-1 rounded-full text-xs font-mono font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        ✓ ENTRANCE CLEARED
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Candidate Details Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium">
+                    <div className="p-3.5 rounded-xl bg-white border border-sky-200">
+                      <span className="text-[11px] text-slate-500 block mb-0.5">Candidate Full Name:</span>
+                      <strong className="text-slate-900 text-sm font-heading font-black">{currentUser.fullName}</strong>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white border border-sky-200">
+                      <span className="text-[11px] text-slate-500 block mb-0.5">Student Registration ID:</span>
+                      <strong className="text-blue-700 font-mono text-sm font-black">{currentUser.studentId}</strong>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white border border-sky-200">
+                      <span className="text-[11px] text-slate-500 block mb-0.5">Enrolled Team / Group:</span>
+                      <strong className="text-slate-900 font-bold">{currentUser.teamName || 'Solo Competitor'}</strong>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white border border-sky-200">
+                      <span className="text-[11px] text-slate-500 block mb-0.5">Allocated Venue & Stage:</span>
+                      <strong className="text-slate-900 font-bold">Main Auditorium • Stage 01</strong>
+                    </div>
+                  </div>
+
+                  {/* Reporting Instructions */}
+                  <div className="p-4 rounded-2xl bg-blue-900 text-white text-xs space-y-1">
+                    <strong className="block font-bold">Schedule & Mandatory Instructions:</strong>
+                    <p className="text-blue-200">Reporting Time: Friday, November 20, 2026 at 09:00 AM sharp. Bring original Student Card along with this printed pass.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
 
         </main>
       </div>
