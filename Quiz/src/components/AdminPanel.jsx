@@ -109,6 +109,7 @@ import ResultsManagement from './admin/ResultsManagement';
 import AnnouncementsManager from './admin/AnnouncementsManager';
 import AuditLogsViewer from './admin/AuditLogsViewer';
 import EncryptedVaultManager from './admin/EncryptedVaultManager';
+import winterMountainBg from '../assets/winter-mountain-bg.jpg';
 
 export default function AdminPanel({ 
   isOpen, 
@@ -821,195 +822,156 @@ export default function AdminPanel({
     : 'admin-input bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-blue-500/20';
 
   /* =========================================================================
-     SCREEN 1: FULL SCREEN DEDICATED PROPER ADMIN LOGIN
+     SCREEN 1: FROSTED GLASS WINTER MOUNTAIN ADMIN LOGIN (MATCHING USER IMAGE 2)
      ========================================================================= */
   if (!isAuthenticated) {
     return (
-      <div className={`fixed inset-0 z-50 flex flex-col justify-between overflow-y-auto min-h-screen transition-colors duration-300 ${containerTheme}`}>
-        {/* Subtle grid and ambient backdrop */}
-        {isDark && (
-          <>
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(37,99,235,0.22),rgba(255,255,255,0))] pointer-events-none" />
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b0f_1px,transparent_1px),linear-gradient(to_bottom,#1e293b0f_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-          </>
-        )}
+      <div className="fixed inset-0 z-50 flex flex-col justify-between overflow-y-auto min-h-screen font-sans select-none relative animate-fadeIn">
+        {/* Background Scenic Mountain Image */}
+        <div 
+          className="fixed inset-0 bg-cover bg-center bg-no-repeat transform scale-105"
+          style={{ backgroundImage: `url(${winterMountainBg})` }}
+        />
+        {/* Soft atmospheric dusk/dawn mist overlay */}
+        <div className="fixed inset-0 bg-slate-950/20 backdrop-blur-[2px] pointer-events-none" />
 
         {/* Top Minimal Bar */}
-        <header className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-500 shadow-lg shadow-blue-500/10">
-              <Zap className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-heading font-black text-lg tracking-tight text-blue-600">BATTLE</span>
-                <span className={`font-heading font-black text-lg tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>OF BRAINS</span>
-                <span className="text-[10px] uppercase tracking-widest font-mono bg-blue-500/10 text-blue-600 border border-blue-500/30 px-2 py-0.5 rounded-full font-bold">
-                  ADMIN CONSOLE
-                </span>
-              </div>
-              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Department of Computer Science • Official Competition Portal</p>
-            </div>
-          </div>
+        <header className="relative z-20 w-full max-w-6xl mx-auto px-5 sm:px-8 pt-6 sm:pt-8 flex items-center justify-between">
+          {/* Top-left back chevron button matching Image 2 */}
+          <button
+            onClick={onClose}
+            className="w-11 h-11 rounded-2xl bg-slate-900/60 hover:bg-slate-900/80 text-white backdrop-blur-xl border border-white/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+            title="Return to Public Website"
+            aria-label="Return to Public Website"
+          >
+            <ChevronLeft className="w-5 h-5 text-white stroke-[2.5]" />
+          </button>
 
-          <div className="flex items-center gap-2.5">
-            {/* THEME TOGGLE (Sun / Moon) */}
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/40 backdrop-blur-xl border border-white/20 text-xs font-bold text-white shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              COMSATS • BOB 2026 ADMIN
+            </span>
+
             <button
               onClick={handleToggleThemeClick}
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
-                isDark
-                  ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/20'
-                  : 'bg-amber-500/10 border-amber-500/30 text-amber-600 hover:bg-amber-500/20 shadow-sm'
-              }`}
+              className="w-11 h-11 rounded-2xl bg-slate-900/60 hover:bg-slate-900/80 text-white backdrop-blur-xl border border-white/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
               title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
               aria-label="Toggle Theme"
             >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-
-            <button
-              onClick={onClose}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                isDark 
-                  ? 'text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border-slate-700/60' 
-                  : 'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border-slate-200 shadow-sm'
-              }`}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Return to Public Website</span>
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-200" />}
             </button>
           </div>
         </header>
 
-        {/* Centered Login Box */}
+        {/* Centered Frosted Glass Card (Matching User Image 2 Exactly) */}
         <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
-          <div className={`w-full max-w-md rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden transition-colors ${
-            isDark 
-              ? 'bg-slate-900/90 border border-blue-500/30 shadow-blue-950/60 backdrop-blur-xl' 
-              : 'bg-white border border-slate-200 shadow-xl'
-          }`}>
-            {/* Top decorative glow */}
-            {isDark && (
-              <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-            )}
-
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600/30 via-indigo-600/20 to-cyan-500/30 border border-blue-500/40 flex items-center justify-center text-blue-500 mx-auto mb-4 shadow-xl shadow-blue-600/20">
-                <Lock className="w-8 h-8" />
-              </div>
-
-              <h2 className={`text-2xl sm:text-3xl font-heading font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                Administrator Sign In
+          <div className="w-full max-w-[420px] rounded-[32px] p-7 sm:p-9 shadow-2xl relative overflow-hidden backdrop-blur-2xl bg-white/15 border border-white/30 text-white shadow-black/30 transition-all">
+            
+            {/* Card Title & Subtitle matching Image 2 */}
+            <div className="mb-7">
+              <h2 className="text-3xl font-heading font-black tracking-tight text-white mb-1.5 drop-shadow-sm">
+                Login
               </h2>
-              <p className={`text-xs mt-2 max-w-xs mx-auto leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Authorized management console for COMSATS University organizers, invigilators, and faculty committee.
+              <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed drop-shadow-sm">
+                Welcome back please login to your account
               </p>
             </div>
 
+            {authError && (
+              <div className="mb-4 p-3 rounded-2xl bg-rose-500/25 border border-rose-400/40 text-white text-xs font-medium flex items-center gap-2 backdrop-blur-md animate-fadeIn">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-300" />
+                <span>{authError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className={`block text-xs font-bold mb-1.5 flex items-center gap-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  <User className="w-3.5 h-3.5 text-blue-500" />
-                  <span>Admin ID / Email</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={adminUsername}
-                    onChange={(e) => setAdminUsername(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-xl border text-sm font-medium focus:outline-none transition-all ${
-                      isDark 
-                        ? 'bg-slate-950/90 border-slate-700 text-white focus:border-blue-500' 
-                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:border-blue-600'
-                    }`}
-                    placeholder="Enter administrator email..."
-                    required
-                  />
+              {/* Input 1: User Name / Admin ID with right icon */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={adminUsername}
+                  onChange={(e) => setAdminUsername(e.target.value)}
+                  placeholder="User Name"
+                  className="w-full pl-4 pr-12 py-3.5 rounded-2xl border border-white/30 bg-white/10 hover:bg-white/15 focus:bg-white/20 text-white placeholder-white/70 text-sm font-medium focus:outline-none focus:border-white/60 focus:ring-2 focus:ring-white/20 transition-all backdrop-blur-md"
+                  required
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/70">
+                  <User className="w-5 h-5" />
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className={`text-xs font-bold flex items-center gap-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                    <KeyRound className="w-3.5 h-3.5 text-blue-500" />
-                    <span>Secret Passcode</span>
-                  </label>
-                  
-                </div>
-                
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={passcode}
-                    onChange={(e) => setPasscode(e.target.value)}
-                    className={`w-full pl-4 pr-11 py-3 rounded-xl border text-sm font-mono focus:outline-none transition-all ${
-                      isDark 
-                        ? 'bg-slate-950/90 border-slate-700 text-white focus:border-blue-500' 
-                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:border-blue-600'
-                    }`}
-                    placeholder="Enter confidential passcode..."
-                    autoFocus
-                    required
-                  />
-                  
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+              {/* Input 2: Password / Secret Passcode with eye icon */}
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
+                  placeholder="Password"
+                  className="w-full pl-4 pr-12 py-3.5 rounded-2xl border border-white/30 bg-white/10 hover:bg-white/15 focus:bg-white/20 text-white placeholder-white/70 text-sm font-mono focus:outline-none focus:border-white/60 focus:ring-2 focus:ring-white/20 transition-all backdrop-blur-md"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white p-1 cursor-pointer transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
 
-              {authError && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/40 text-xs text-rose-600 font-medium flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
-                  <span>{authError}</span>
-                </div>
-              )}
-
+              {/* Remember me row matching Image 2 */}
               <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer select-none">
+                <label className="flex items-center gap-2 text-xs text-white/90 cursor-pointer select-none font-medium">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500/30"
+                    className="w-4 h-4 rounded border-white/40 bg-white/20 text-sky-400 focus:ring-sky-400/40 accent-sky-400 cursor-pointer"
                   />
-                  <span>Remember session on this device</span>
+                  <span>Remember me</span>
                 </label>
               </div>
 
+              {/* Action Button matching Image 2 soft teal/blue gradient */}
               <button
                 type="submit"
-                className="w-full mt-2 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-sm shadow-lg shadow-blue-600/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full mt-3 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#4b8a9e] to-[#76abc0] hover:from-[#417a8c] hover:to-[#6599ad] text-white font-heading font-black text-sm tracking-wide shadow-xl shadow-cyan-950/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Verify & Open Full Dashboard</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Login</span>
               </button>
             </form>
 
-            <div className={`mt-6 pt-5 border-t text-center ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            {/* Cancel & Return to Website Link matching Image 2 */}
+            <div className="mt-5 text-center">
               <button
+                type="button"
                 onClick={onClose}
-                className="text-xs text-slate-500 hover:text-blue-600 transition-colors"
+                className="text-xs text-white/80 hover:text-white font-medium hover:underline transition-colors cursor-pointer"
               >
-                ← Cancel & Return to Website
+                Return to Public Website
               </button>
             </div>
+
+            {/* Footer Watermark matching Image 2 */}
+            <div className="mt-6 pt-4 border-t border-white/15 text-center">
+              <span className="text-[10px] tracking-wider text-white/60 font-medium">
+                COMSATS University Islamabad • BOB 2026
+              </span>
+            </div>
+
           </div>
         </main>
 
-        {/* Bottom Status Bar */}
-        <footer className={`relative z-10 w-full py-4 px-6 border-t text-center text-xs ${isDark ? 'border-slate-800/80 text-slate-500' : 'border-slate-200 text-slate-500 bg-white/50'}`}>
-          COMSATS University Islamabad • Battle of Brains 2026 Administrative Suite • Confidential Access Only
+        {/* Bottom status bar */}
+        <footer className="relative z-10 w-full py-4 px-6 text-center text-xs text-white/60 font-medium drop-shadow-sm">
+          Department of Computer Science • Official Competition Portal • Admin Suite
         </footer>
       </div>
     );
   }
+
 
   /* =========================================================================
      SCREEN 2: PROPER FULL-SCREEN ADMIN DASHBOARD ("pore screen pr")
