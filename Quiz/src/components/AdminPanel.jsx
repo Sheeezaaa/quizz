@@ -826,21 +826,19 @@ export default function AdminPanel({
      ========================================================================= */
   if (!isAuthenticated) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col justify-between overflow-y-auto min-h-screen font-sans select-none relative animate-fadeIn">
-        {/* Background Scenic Mountain Image */}
-        <div 
-          className="fixed inset-0 bg-cover bg-center bg-no-repeat transform scale-105"
-          style={{ backgroundImage: `url(${winterMountainBg})` }}
-        />
+      <div 
+        className="fixed inset-0 z-50 flex flex-col justify-between overflow-y-auto min-h-screen w-screen font-sans select-none animate-fadeIn bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${winterMountainBg})` }}
+      >
         {/* Soft atmospheric dusk/dawn mist overlay */}
-        <div className="fixed inset-0 bg-slate-950/20 backdrop-blur-[2px] pointer-events-none" />
+        <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-[2px] pointer-events-none" />
 
         {/* Top Minimal Bar */}
-        <header className="relative z-20 w-full max-w-6xl mx-auto px-5 sm:px-8 pt-6 sm:pt-8 flex items-center justify-between">
+        <header className="relative z-20 w-full max-w-6xl mx-auto px-5 sm:px-8 pt-6 sm:pt-8 flex items-center justify-between shrink-0">
           {/* Top-left back chevron button matching Image 2 */}
           <button
             onClick={onClose}
-            className="w-11 h-11 rounded-2xl bg-slate-900/60 hover:bg-slate-900/80 text-white backdrop-blur-xl border border-white/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+            className="w-11 h-11 rounded-2xl bg-slate-900/70 hover:bg-slate-900 text-white backdrop-blur-xl border border-white/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xl"
             title="Return to Public Website"
             aria-label="Return to Public Website"
           >
@@ -848,14 +846,14 @@ export default function AdminPanel({
           </button>
 
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/40 backdrop-blur-xl border border-white/20 text-xs font-bold text-white shadow-sm">
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/70 backdrop-blur-xl border border-white/20 text-xs font-bold text-white shadow-md">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               COMSATS • BOB 2026 ADMIN
             </span>
 
             <button
               onClick={handleToggleThemeClick}
-              className="w-11 h-11 rounded-2xl bg-slate-900/60 hover:bg-slate-900/80 text-white backdrop-blur-xl border border-white/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+              className="w-11 h-11 rounded-2xl bg-slate-900/70 hover:bg-slate-900 text-white backdrop-blur-xl border border-white/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xl"
               title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
               aria-label="Toggle Theme"
             >
@@ -865,12 +863,12 @@ export default function AdminPanel({
         </header>
 
         {/* Centered Frosted Glass Card (Matching User Image 2 Exactly) */}
-        <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
-          <div className="w-full max-w-[420px] rounded-[32px] p-7 sm:p-9 shadow-2xl relative overflow-hidden backdrop-blur-2xl bg-white/15 border border-white/30 text-white shadow-black/30 transition-all">
+        <main className="relative z-20 flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
+          <div className="w-full max-w-[420px] rounded-[32px] p-7 sm:p-9 shadow-2xl relative overflow-hidden backdrop-blur-2xl bg-slate-900/65 border border-white/30 text-white shadow-black/50 transition-all">
             
             {/* Card Title & Subtitle matching Image 2 */}
             <div className="mb-7">
-              <h2 className="text-3xl font-heading font-black tracking-tight text-white mb-1.5 drop-shadow-sm">
+              <h2 className="text-3xl font-heading font-black tracking-tight text-white mb-1.5 drop-shadow-md">
                 Login
               </h2>
               <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed drop-shadow-sm">
@@ -879,7 +877,7 @@ export default function AdminPanel({
             </div>
 
             {authError && (
-              <div className="mb-4 p-3 rounded-2xl bg-rose-500/25 border border-rose-400/40 text-white text-xs font-medium flex items-center gap-2 backdrop-blur-md animate-fadeIn">
+              <div className="mb-4 p-3 rounded-2xl bg-rose-500/30 border border-rose-400/50 text-white text-xs font-medium flex items-center gap-2 backdrop-blur-md animate-fadeIn">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-300" />
                 <span>{authError}</span>
               </div>
@@ -893,7 +891,7 @@ export default function AdminPanel({
                   value={adminUsername}
                   onChange={(e) => setAdminUsername(e.target.value)}
                   placeholder="User Name"
-                  className="w-full pl-4 pr-12 py-3.5 rounded-2xl border border-white/30 bg-white/10 hover:bg-white/15 focus:bg-white/20 text-white placeholder-white/70 text-sm font-medium focus:outline-none focus:border-white/60 focus:ring-2 focus:ring-white/20 transition-all backdrop-blur-md"
+                  className="w-full pl-4 pr-12 py-3.5 rounded-2xl border border-white/30 bg-white/10 hover:bg-white/15 focus:bg-white/20 text-white placeholder-white/70 text-sm font-medium focus:outline-none focus:border-white/70 focus:ring-2 focus:ring-white/20 transition-all backdrop-blur-md"
                   required
                 />
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/70">
@@ -908,7 +906,7 @@ export default function AdminPanel({
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   placeholder="Password"
-                  className="w-full pl-4 pr-12 py-3.5 rounded-2xl border border-white/30 bg-white/10 hover:bg-white/15 focus:bg-white/20 text-white placeholder-white/70 text-sm font-mono focus:outline-none focus:border-white/60 focus:ring-2 focus:ring-white/20 transition-all backdrop-blur-md"
+                  className="w-full pl-4 pr-12 py-3.5 rounded-2xl border border-white/30 bg-white/10 hover:bg-white/15 focus:bg-white/20 text-white placeholder-white/70 text-sm font-mono focus:outline-none focus:border-white/70 focus:ring-2 focus:ring-white/20 transition-all backdrop-blur-md"
                   required
                 />
                 <button
@@ -937,7 +935,7 @@ export default function AdminPanel({
               {/* Action Button matching Image 2 soft teal/blue gradient */}
               <button
                 type="submit"
-                className="w-full mt-3 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#4b8a9e] to-[#76abc0] hover:from-[#417a8c] hover:to-[#6599ad] text-white font-heading font-black text-sm tracking-wide shadow-xl shadow-cyan-950/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full mt-3 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#4b8a9e] to-[#76abc0] hover:from-[#417a8c] hover:to-[#6599ad] text-white font-heading font-black text-sm tracking-wide shadow-xl shadow-cyan-950/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Login</span>
               </button>
@@ -965,7 +963,7 @@ export default function AdminPanel({
         </main>
 
         {/* Bottom status bar */}
-        <footer className="relative z-10 w-full py-4 px-6 text-center text-xs text-white/60 font-medium drop-shadow-sm">
+        <footer className="relative z-20 w-full py-4 px-6 text-center text-xs text-white/70 font-medium drop-shadow-sm shrink-0">
           Department of Computer Science • Official Competition Portal • Admin Suite
         </footer>
       </div>
