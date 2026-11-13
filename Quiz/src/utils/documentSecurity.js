@@ -86,7 +86,8 @@ async function deriveVaultCryptoKey(salt = 'BOB_VAULT_SALT_2026') {
 export async function encryptAndStoreDocument({
   file,
   uploadedBy = 'ADMIN',
-  authorizedRoles = ['CHIEF_PROCTOR', 'EXAM_CONTROLLER']
+  authorizedRoles = ['CHIEF_PROCTOR', 'EXAM_CONTROLLER'],
+  category = ''
 }) {
   const arrayBuffer = await file.arrayBuffer();
 
@@ -114,12 +115,21 @@ export async function encryptAndStoreDocument({
   const encryptedBase64 = bufferToBase64(encryptedBuffer);
   const ivBase64 = bufferToBase64(iv.buffer);
 
+  const detectedCategory = category || (
+    file.name.toLowerCase().includes('solution') ||
+    file.name.toLowerCase().includes('template') ||
+    file.name.toLowerCase().includes('bank')
+      ? 'BANK_SOLUTION_QUESTION_TEMPLATE'
+      : 'EXAMINATION_DOCUMENT'
+  );
+
   const documentRecord = {
     id: docId,
     fileName: file.name,
     fileSize: file.size,
     mimeType: file.type || 'application/octet-stream',
     sha256Hash: sha256Hash,
+    category: detectedCategory,
     encryptionAlgorithm: 'AES-256-GCM',
     iv: ivBase64,
     encryptedData: encryptedBase64,

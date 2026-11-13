@@ -4352,6 +4352,7 @@ app.get('/api/documents', requireAdmin, (req, res) => {
       fileSize: d.fileSize,
       mimeType: d.mimeType,
       sha256Hash: d.sha256Hash,
+      category: d.category || (d.fileName && (d.fileName.toLowerCase().includes('solution') || d.fileName.toLowerCase().includes('template') || d.fileName.toLowerCase().includes('bank')) ? 'BANK_SOLUTION_QUESTION_TEMPLATE' : 'EXAMINATION_DOCUMENT'),
       encryptionAlgorithm: d.encryptionAlgorithm || 'AES-256-GCM',
       uploadedAt: d.uploadedAt,
       uploadedBy: d.uploadedBy,
@@ -4369,17 +4370,17 @@ app.get('/api/documents', requireAdmin, (req, res) => {
 // POST /api/documents/upload - Automatically encrypts document with AES-256-GCM & SHA-256 hash
 app.post('/api/documents/upload', requireAdmin, (req, res) => {
   try {
-    const { fileName, mimeType, fileBase64, authorizedRoles } = req.body;
+    const { fileName, mimeType, fileBase64, authorizedRoles, category } = req.body;
 
     if (!fileName || !fileBase64) {
       return res.status(400).json({ error: 'File name and file content are required.' });
     }
 
     // Spec 9: File validation
-    const allowedExts = ['.pdf', '.docx', '.xlsx', '.csv', '.txt', '.json', '.png', '.jpg', '.jpeg'];
+    const allowedExts = ['.pdf', '.docx', '.xlsx', '.xls', '.csv', '.txt', '.json', '.png', '.jpg', '.jpeg', '.zip'];
     const ext = path.extname(fileName).toLowerCase();
     if (!allowedExts.includes(ext)) {
-      return res.status(400).json({ error: `Unsupported file type ${ext}. Allowed formats: PDF, DOCX, XLSX, CSV, TXT, JSON, Images.` });
+      return res.status(400).json({ error: `Unsupported file type ${ext}. Allowed formats: PDF, DOCX, XLSX, XLS, CSV, TXT, JSON, ZIP, Images.` });
     }
 
     const rawBuffer = Buffer.from(fileBase64, 'base64');
@@ -4399,6 +4400,14 @@ app.post('/api/documents/upload', requireAdmin, (req, res) => {
     // Spec 3: Wipe raw readable bytes from memory immediately
     rawBuffer.fill(0);
 
+    const detectedCategory = category || (
+      fileName.toLowerCase().includes('solution') ||
+      fileName.toLowerCase().includes('template') ||
+      fileName.toLowerCase().includes('bank')
+        ? 'BANK_SOLUTION_QUESTION_TEMPLATE'
+        : 'EXAMINATION_DOCUMENT'
+    );
+
     const docId = `doc_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
     const docRecord = {
       id: docId,
@@ -4406,6 +4415,7 @@ app.post('/api/documents/upload', requireAdmin, (req, res) => {
       fileSize: encryptedBuffer.length,
       mimeType: mimeType || 'application/octet-stream',
       sha256Hash: sha256Hash,
+      category: detectedCategory,
       encryptionAlgorithm: 'AES-256-GCM',
       iv: iv.toString('base64'),
       authTag: authTag.toString('base64'),

@@ -284,10 +284,10 @@ export default function EncryptedVaultManager({ isDark = true }) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-heading font-black text-lg sm:text-xl">
-              Upload Document for Automatic AES-256-GCM Encryption
+              Upload Document or Bank Solution Question Bank Template for AES-256-GCM Encryption
             </h3>
             <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              Accepts PDF, DOCX, XLSX, CSV, TXT, JSON, and Images. File is encrypted instantly before storing.
+              Accepts Bank Solution Question Bank Templates (.xlsx, .xls, .csv), PDF, DOCX, TXT, JSON, and ZIP. Every document is hashed with SHA-256 and encrypted before storing. Admin preview & download are completely disabled.
             </p>
           </div>
         </div>
@@ -301,6 +301,7 @@ export default function EncryptedVaultManager({ isDark = true }) {
         }`}>
           <input
             type="file"
+            accept=".xlsx,.xls,.csv,.pdf,.docx,.txt,.json,.zip,.png,.jpg"
             onChange={handleFileUpload}
             disabled={isUploading}
             className="hidden"
@@ -395,6 +396,11 @@ export default function EncryptedVaultManager({ isDark = true }) {
                           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">
                             {doc.encryptionAlgorithm || 'AES-256-GCM'}
                           </span>
+                          {(doc.category === 'BANK_SOLUTION_QUESTION_TEMPLATE' || (doc.fileName && (doc.fileName.toLowerCase().includes('solution') || doc.fileName.toLowerCase().includes('template') || doc.fileName.toLowerCase().includes('bank')))) && (
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                              Bank Solution Template
+                            </span>
+                          )}
                           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
                             {(doc.fileSize / 1024).toFixed(1)} KB
                           </span>

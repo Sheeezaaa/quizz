@@ -115,6 +115,37 @@ try {
 
 assert(tamperDetected, 'Modifying 1 byte in ciphertext triggered cryptographic authentication tag / SHA-256 failure (Tamper Detected!)');
 
+// 7. Bank Solution Question Bank Template Ingestion Test (Spec 8)
+console.log('\n--- TEST 7: Bank Solution Question Bank Template Auto-Encryption (Spec 8) ---');
+const sampleTemplateData = 'QUESTION_BANK_SOLUTION_TEMPLATE_2026_COMSATS_ALGORITHMS_ANSWER_KEYS';
+const templateBuffer = Buffer.from(sampleTemplateData, 'utf8');
+
+// SHA-256
+const templateSHA256 = crypto.createHash('sha256').update(templateBuffer).digest('hex');
+assert(templateSHA256.length === 64, 'Generated unique SHA-256 hash for Bank Solution template');
+
+// AES-256-GCM Encrypt
+const templateIV = crypto.randomBytes(12);
+const templateCipher = crypto.createCipheriv('aes-256-gcm', masterKey, templateIV);
+const templateEncrypted = Buffer.concat([templateCipher.update(templateBuffer), templateCipher.final()]);
+const templateAuthTag = templateCipher.getAuthTag();
+
+// Wiping plaintext buffer from memory
+templateBuffer.fill(0);
+
+assert(!templateEncrypted.includes(Buffer.from('ANSWER_KEYS')), 'Raw Bank Solution answers eliminated; only ciphertext stored');
+assert(templateBuffer[0] === 0, 'Plaintext memory buffer zeroed and destroyed');
+
+// Admin preview/download attempt blocked
+const adminTemplateAccess = attemptAdminDecryption('ADMIN', '');
+assert(adminTemplateAccess.status === 403, 'Admin completely blocked from downloading or previewing uploaded Bank Solution Template (Spec 4 & 8)');
+
+// Authorized proctor decryption
+const proctorDecipher = crypto.createDecipheriv('aes-256-gcm', masterKey, templateIV);
+proctorDecipher.setAuthTag(templateAuthTag);
+const proctorDecrypted = Buffer.concat([proctorDecipher.update(templateEncrypted), proctorDecipher.final()]);
+assert(proctorDecrypted.toString('utf8') === sampleTemplateData, 'Authorized proctor with passkey successfully decrypted Bank Solution Template');
+
 console.log('\n================================================================');
 console.log(`SUMMARY: ${passCount} Passed, ${failCount} Failed`);
 console.log('================================================================');

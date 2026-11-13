@@ -1837,7 +1837,11 @@ export async function apiGetEncryptedDocuments() {
   return getStoredDocuments();
 }
 
-export async function apiUploadEncryptedDocument(file, authorizedRoles = ['CHIEF_PROCTOR', 'EXAM_CONTROLLER']) {
+export async function apiUploadEncryptedDocument(file, options = ['CHIEF_PROCTOR', 'EXAM_CONTROLLER']) {
+  // Support both array of roles or options object
+  const authorizedRoles = Array.isArray(options) ? options : (options.authorizedRoles || ['CHIEF_PROCTOR', 'EXAM_CONTROLLER']);
+  const category = (typeof options === 'object' && !Array.isArray(options)) ? (options.category || '') : '';
+
   // Try server first
   try {
     const arrayBuffer = await file.arrayBuffer();
@@ -1858,7 +1862,8 @@ export async function apiUploadEncryptedDocument(file, authorizedRoles = ['CHIEF
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
         fileBase64: fileBase64,
-        authorizedRoles: authorizedRoles
+        authorizedRoles: authorizedRoles,
+        category: category
       })
     });
     const data = await safeJson(res);
@@ -1869,7 +1874,7 @@ export async function apiUploadEncryptedDocument(file, authorizedRoles = ['CHIEF
     // Fall back to client-side Web Crypto AES-256-GCM
   }
 
-  return await encryptAndStoreDocument({ file, uploadedBy: 'ADMIN', authorizedRoles });
+  return await encryptAndStoreDocument({ file, uploadedBy: 'ADMIN', authorizedRoles, category });
 }
 
 export async function apiVerifyDocumentIntegrity(docId) {
