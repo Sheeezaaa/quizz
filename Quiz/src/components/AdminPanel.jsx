@@ -37,6 +37,7 @@ import {
   Menu,
   Zap,
   ShieldCheck,
+  ShieldAlert,
   Mail,
   User,
   ArrowRight,
