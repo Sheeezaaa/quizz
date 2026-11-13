@@ -827,11 +827,11 @@ export default function AdminPanel({
   if (!isAuthenticated) {
     return (
       <div 
-        className="fixed inset-0 z-50 flex flex-col justify-between overflow-y-auto min-h-screen w-screen font-sans select-none animate-fadeIn bg-cover bg-center bg-no-repeat"
+        className="fixed inset-0 z-50 flex flex-col justify-between overflow-y-auto min-h-screen font-sans select-none animate-fadeIn bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${winterMountainBg})` }}
       >
         {/* Soft atmospheric dusk/dawn mist overlay */}
-        <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-[2px] pointer-events-none" />
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] pointer-events-none z-10" />
 
         {/* Top Minimal Bar */}
         <header className="relative z-20 w-full max-w-6xl mx-auto px-5 sm:px-8 pt-6 sm:pt-8 flex items-center justify-between shrink-0">
@@ -863,8 +863,8 @@ export default function AdminPanel({
         </header>
 
         {/* Centered Frosted Glass Card (Matching User Image 2 Exactly) */}
-        <main className="relative z-20 flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
-          <div className="w-full max-w-[420px] rounded-[32px] p-7 sm:p-9 shadow-2xl relative overflow-hidden backdrop-blur-2xl bg-slate-900/65 border border-white/30 text-white shadow-black/50 transition-all">
+        <main className="relative z-20 flex-1 flex items-center justify-center p-4 sm:p-6 min-h-0">
+          <div className="w-full max-w-[420px] rounded-[32px] p-7 sm:p-9 shadow-2xl relative overflow-hidden backdrop-blur-2xl bg-slate-900/75 border border-white/30 text-white shadow-black/60 transition-all">
             
             {/* Card Title & Subtitle matching Image 2 */}
             <div className="mb-7">
