@@ -78,6 +78,7 @@ import {
 } from '../utils/api';
 import { getLoggedInStudent, setLoggedInStudent, getStoredParticipants, generateParticipantId, saveParticipant, getStoredTeams, localFinalizeTeam, localCreateTeam, localJoinTeam } from '../utils/storage';
 import { playCorrectChime, playAntiCheatBuzzer, playDisqualificationSiren } from '../utils/soundEffects';
+import mascotSkyImg from '../assets/mascot-sky.jpg';
 
 export default function StudentPortal({ 
   isOpen, 
@@ -796,214 +797,250 @@ export default function StudentPortal({
   ];
 
   /* =========================================================================
-     SCREEN 1: FULL SCREEN PROPER DEDICATED STUDENT LOGIN
+     SCREEN 1: FULL SCREEN SKY-BLUE MASCOT DEDICATED STUDENT LOGIN
      ========================================================================= */
   if (!currentUser) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col justify-between overflow-y-auto min-h-screen bg-[#070b14] text-slate-100 font-sans transition-colors animate-fadeIn">
+      <div className="fixed inset-0 z-50 flex flex-col justify-between overflow-y-auto min-h-screen bg-gradient-to-b from-[#8fd3fb] via-[#bfe6fc] to-[#e8f6ff] text-slate-900 font-sans transition-colors animate-fadeIn select-none">
         
-        {/* Ambient Top Glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(37,99,235,0.25),rgba(255,255,255,0))] pointer-events-none" />
+        {/* Soft Dreamy Floating Cloud Blobs in the Background */}
+        <div className="absolute top-10 left-12 w-96 h-96 bg-white/40 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 right-12 w-[30rem] h-[30rem] bg-white/50 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-sky-200/50 rounded-full blur-2xl pointer-events-none" />
 
-        {/* Top Minimal Bar */}
-        <header className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
+        {/* Top Floating Controls */}
+        <header className="relative z-20 w-full max-w-6xl mx-auto px-5 sm:px-8 pt-5 sm:pt-7 flex items-center justify-between">
+          {/* Back Button matching Image 1 */}
+          <button
+            onClick={onClose}
+            className="w-11 h-11 rounded-2xl bg-white/90 hover:bg-white text-slate-800 shadow-md shadow-sky-950/10 border border-white/80 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            title="Return to Public Website"
+            aria-label="Return to Public Website"
+          >
+            <ChevronLeft className="w-5 h-5 text-slate-800 stroke-[2.5]" />
+          </button>
+
+          {/* Right badge / quick info */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/10">
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-heading font-black text-lg tracking-tight text-blue-500">BATTLE</span>
-                <span className="font-heading font-black text-lg tracking-tight text-white">OF BRAINS</span>
-                <span className="text-[10px] uppercase tracking-widest font-mono bg-blue-500/15 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-bold">
-                  STUDENT PORTAL
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 font-medium">Department of Computer Science • COMSATS University Islamabad</p>
-            </div>
-          </div>
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/85 backdrop-blur-md border border-white text-xs font-bold text-sky-900 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              COMSATS • BOB 2026
+            </span>
 
-          <div className="flex items-center gap-2.5">
-            {/* THEME TOGGLE (Sun / Moon) */}
             <button
               onClick={handleToggleThemeClick}
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
-                isDark
-                  ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/20'
-                  : 'bg-amber-500/10 border-amber-500/30 text-amber-600 hover:bg-amber-500/20 shadow-sm'
-              }`}
+              className="w-11 h-11 rounded-2xl bg-white/90 hover:bg-white text-slate-800 shadow-md shadow-sky-950/10 border border-white/80 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
               title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
               aria-label="Toggle Theme"
             >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-
-            <button
-              onClick={onClose}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border-slate-700/60 transition-all cursor-pointer shadow-sm"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Return to Public Website</span>
+              {isDark ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-slate-700" />}
             </button>
           </div>
         </header>
 
-        {/* Centered Login Box */}
+        {/* Centered 2-Column Floating Card (Matching Reference Screenshot) */}
         <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
-          <div className="student-portal-card w-full max-w-md rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-blue-500/40 shadow-xl backdrop-blur-xl text-slate-900 dark:text-white">
+          <div className="w-full max-w-4xl bg-white rounded-[32px] p-3 sm:p-4 shadow-2xl shadow-sky-900/15 border border-white/90 flex flex-col md:flex-row items-stretch overflow-hidden transition-all">
             
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600/30 via-indigo-600/20 to-cyan-500/30 border border-blue-500/40 flex items-center justify-center text-blue-400 mx-auto mb-3 shadow-xl shadow-blue-600/20">
-                <IdCard className="w-8 h-8" />
+            {/* LEFT COLUMN: Mascot Hero Banner */}
+            <div className="w-full md:w-[48%] rounded-[24px] overflow-hidden relative bg-gradient-to-b from-[#8ecdf2] to-[#bde5fb] min-h-[280px] md:min-h-[520px] flex items-center justify-center shadow-inner group">
+              <img
+                src={mascotSkyImg}
+                alt="Battle of Brains Mascot"
+                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+              />
+              {/* Subtle glass badge overlay inside image */}
+              <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none">
+                <span className="px-3 py-1 rounded-full bg-white/80 backdrop-blur-md text-[10px] font-extrabold uppercase tracking-widest text-sky-950 shadow-sm border border-white/60">
+                  Quiz Championship
+                </span>
+                <span className="px-2.5 py-1 rounded-full bg-sky-900/70 backdrop-blur-md text-[10px] font-bold text-white shadow-sm">
+                  BOB 2026
+                </span>
               </div>
-
-              <h2 className="text-2xl sm:text-3xl font-heading font-black tracking-tight text-slate-900 dark:text-white">
-                Contestant Sign In
-              </h2>
-              <p className="text-xs sm:text-sm mt-1.5 text-slate-700 dark:text-slate-300 max-w-xs mx-auto leading-relaxed font-medium">
-                Enter your Team Name, Mobile Number, or Student ID with your password to access your dashboard.
-              </p>
             </div>
 
-            {loginError && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-fadeIn">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                <span>{loginError}</span>
-              </div>
-            )}
-
-            {authMode === 'login' ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-1.5 flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span>Team Name, Mobile Number, or Student ID <strong className="text-rose-500">*</strong></span>
-                  </label>
-                  <input
-                    type="text"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="e.g. Byte Busters, 03001234567, or SP24-BSE-043"
-                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/90 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-medium focus:border-blue-500 focus:bg-white dark:focus:bg-slate-950 focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                    required
-                  />
+            {/* RIGHT COLUMN: Clean Pure White Form */}
+            <div className="w-full md:w-[52%] p-6 sm:p-8 md:p-10 flex flex-col justify-center bg-white">
+              
+              {/* Top Mascot Mini Badge & Welcome Back Heading */}
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 mx-auto mb-2.5 shadow-sm">
+                  <GraduationCap className="w-6 h-6" />
                 </div>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-slate-400 font-bold mb-1">
+                  BATTLE OF BRAINS
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-heading font-black tracking-tight text-slate-900">
+                  WELCOME BACK
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
+                  Enter your email or ID and password to access your student dashboard.
+                </p>
+              </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                      <Lock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                      <span>Account Password <strong className="text-rose-500">*</strong></span>
+              {loginError && (
+                <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2 animate-fadeIn">
+                  <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span className="font-medium">{loginError}</span>
+                </div>
+              )}
+
+              {authMode === 'login' ? (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Email, Mobile or Student ID <span className="text-rose-500">*</span>
                     </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={identifier}
+                        onChange={(e) => setIdentifier(e.target.value)}
+                        placeholder="e.g. Byte Busters, 03001234567, or SP24-BSE-043"
+                        className="w-full px-4 py-3.5 rounded-2xl bg-[#f2f6fa] border border-slate-200/80 text-slate-900 text-sm font-medium focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 focus:outline-none transition-all placeholder:text-slate-400"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Password <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter your password"
+                        className="w-full pl-4 pr-11 py-3.5 rounded-2xl bg-[#f2f6fa] border border-slate-200/80 text-slate-900 text-sm font-medium focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 focus:outline-none transition-all placeholder:text-slate-400"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 cursor-pointer transition-colors"
+                        aria-label="Toggle password visibility"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Remember me & Forgot Password Row matching Image 1 */}
+                  <div className="flex items-center justify-between pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        defaultChecked
+                        className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer accent-sky-600"
+                      />
+                      <span className="text-xs text-slate-500 font-medium">Remember me</span>
+                    </label>
+
                     <button
                       type="button"
                       onClick={() => setAuthMode('forgot')}
-                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline transition-colors cursor-pointer"
+                      className="text-xs font-semibold text-slate-600 hover:text-sky-600 transition-colors cursor-pointer"
                     >
-                      Forgot?
+                      Forgot Password?
                     </button>
                   </div>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="w-full pl-4 pr-11 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/90 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-medium focus:border-blue-500 focus:bg-white dark:focus:bg-slate-950 focus:outline-none transition-all pr-10 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoggingIn}
-                  className="w-full mt-2 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-sm shadow-lg shadow-blue-600/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>{isLoggingIn ? 'Authenticating...' : 'Sign In to Student Dashboard'}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </form>
-            ) : (
-              /* Forgot Password Form */
-              <form onSubmit={handleResetPassword} className="space-y-4">
-                {resetMessage.text && (
-                  <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
-                    resetMessage.isError ? 'bg-rose-500/15 border border-rose-500/30 text-rose-300' : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
-                  }`}>
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{resetMessage.text}</span>
-                  </div>
-                )}
-                <div>
-                  <label className="block text-xs font-bold text-slate-900 dark:text-slate-200 mb-1">Student Registration ID</label>
-                  <input
-                    type="text"
-                    value={resetId}
-                    onChange={(e) => setResetId(e.target.value)}
-                    placeholder="e.g. SP24-BSE-043"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-900 dark:text-slate-200 mb-1">Registered University Email</label>
-                  <input
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="e.g. sheezar86@gmail.com"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">New Strong Password</label>
-                  <input
-                    type="password"
-                    value={resetPass}
-                    onChange={(e) => setResetPass(e.target.value)}
-                    placeholder="Min 6 characters"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm"
-                    required
-                  />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode('login')}
-                    className="w-1/2 py-2.5 rounded-xl bg-white/10 text-slate-300 text-xs font-bold hover:bg-white/20"
-                  >
-                    Cancel
-                  </button>
+                  {/* Dark Solid Pill Button matching Image 1 */}
                   <button
                     type="submit"
-                    className="w-1/2 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-500"
+                    disabled={isLoggingIn}
+                    className="w-full mt-3 py-3.5 px-4 rounded-2xl bg-[#0b0f19] hover:bg-slate-800 text-white font-heading font-black text-sm tracking-wide shadow-lg shadow-slate-900/15 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    Save Password
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>{isLoggingIn ? 'Authenticating...' : 'Sign In'}</span>
                   </button>
-                </div>
-              </form>
-            )}
+                </form>
+              ) : (
+                /* Forgot Password Form */
+                <form onSubmit={handleResetPassword} className="space-y-3.5">
+                  {resetMessage.text && (
+                    <div className={`p-3 rounded-2xl text-xs flex items-center gap-2 ${
+                      resetMessage.isError ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                    }`}>
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{resetMessage.text}</span>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Student Registration ID</label>
+                    <input
+                      type="text"
+                      value={resetId}
+                      onChange={(e) => setResetId(e.target.value)}
+                      placeholder="e.g. SP24-BSE-043"
+                      className="w-full px-4 py-3 rounded-2xl bg-[#f2f6fa] border border-slate-200/80 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Registered University Email</label>
+                    <input
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="e.g. student@cuilahore.edu.pk"
+                      className="w-full px-4 py-3 rounded-2xl bg-[#f2f6fa] border border-slate-200/80 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">New Strong Password</label>
+                    <input
+                      type="password"
+                      value={resetPass}
+                      onChange={(e) => setResetPass(e.target.value)}
+                      placeholder="Min 6 characters"
+                      className="w-full px-4 py-3 rounded-2xl bg-[#f2f6fa] border border-slate-200/80 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                      required
+                    />
+                  </div>
+                  <div className="flex gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode('login')}
+                      className="w-1/2 py-3 rounded-2xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="w-1/2 py-3 rounded-2xl bg-[#0b0f19] text-white text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer shadow-md"
+                    >
+                      Save Password
+                    </button>
+                  </div>
+                </form>
+              )}
 
-            <div className="mt-6 pt-5 border-t border-slate-800 text-center">
-              <p className="text-xs text-slate-400">
-                Not registered yet? <button type="button" onClick={() => { onClose(); onOpenRegister && onOpenRegister(); }} className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Register Now</button>
-              </p>
+              {/* Bottom Register Link matching Image 1 */}
+              <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+                <p className="text-xs text-slate-500 font-medium">
+                  Not registered yet?{' '}
+                  <button
+                    type="button"
+                    onClick={() => { onClose(); onOpenRegister && onOpenRegister(); }}
+                    className="text-sky-600 font-bold hover:underline cursor-pointer"
+                  >
+                    Register Now
+                  </button>
+                </p>
+              </div>
             </div>
+
           </div>
         </main>
 
-        <footer className="relative z-10 w-full py-4 px-6 border-t border-slate-800/80 text-center text-xs text-slate-500">
-          COMSATS University Islamabad • Official Computing Championship 2026 • Student Portal
+        {/* Minimal Footer */}
+        <footer className="relative z-10 w-full py-4 px-6 text-center text-xs text-sky-900/60 font-medium">
+          COMSATS University Islamabad • Battle of Brains 2026 • Student Portal
         </footer>
       </div>
     );
