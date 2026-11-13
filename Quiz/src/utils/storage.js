@@ -1358,16 +1358,24 @@ export const localJoinTeam = (joinData) => {
     fullName: newMember.fullName,
     mobile: newMember.mobile,
     email: newMember.email,
+    semester: newMember.semester,
     role: 'Member',
+    status: 'confirmed',
     joinedAt: new Date().toISOString(),
   });
+
+  // Automatically confirm team when reaching 2 or more members
+  if (team.members.length >= 2) {
+    team.status = 'confirmed';
+    team.confirmedAt = new Date().toISOString();
+  }
 
   saveStoredTeams(teams);
   setLoggedInStudent(newMember);
 
   return {
     success: true,
-    message: `You have successfully joined team "${team.name}"!`,
+    message: `You have successfully joined and confirmed in team "${team.name}"!`,
     team,
     participant: newMember,
   };
@@ -1376,13 +1384,15 @@ export const localJoinTeam = (joinData) => {
 export const localAddTeamMemberDirect = (memberData) => {
   const current = getLoggedInStudent();
   const teams = getStoredTeams();
-  let team = teams.find((t) => t.id === current?.teamId || (t.members || []).some((m) => m.id === current?.id));
+  let team = null;
+  if (memberData.teamId) team = teams.find((t) => t.id === memberData.teamId);
+  if (!team && memberData.teamName) team = teams.find((t) => t.name === memberData.teamName || t.id === memberData.teamName);
+  if (!team && current?.teamId) team = teams.find((t) => t.id === current.teamId);
+  if (!team && current) team = teams.find((t) => (t.members || []).some((m) => m.id === current.id));
+  if (!team && teams.length > 0) team = teams[teams.length - 1];
 
-  if (!team && teams.length > 0) {
-    team = teams[teams.length - 1];
-  }
   if (!team) {
-    return { success: false, error: 'No active team found.' };
+    return { success: false, error: 'No active team found to add member to.' };
   }
 
   if (team.members.length >= (team.targetSize || 3) || team.members.length >= 3) {
@@ -1391,11 +1401,6 @@ export const localAddTeamMemberDirect = (memberData) => {
 
   const participants = getStoredParticipants() || [];
   const cleanMobile = (memberData.mobile || '').replace(/[^\d]/g, '');
-
-  const dup = participants.find((p) => (p.mobile || p.phone || '').replace(/[^\d]/g, '').endsWith(cleanMobile.slice(-10)));
-  if (dup) {
-    return { success: false, error: `Mobile number "${memberData.mobile}" is already registered.` };
-  }
 
   const memberId = 'BOB-2026-' + Math.floor(100 + Math.random() * 900);
   const studentId = 'MEM-' + (cleanMobile.slice(-4) || Date.now().toString().slice(-4));
@@ -1407,11 +1412,12 @@ export const localAddTeamMemberDirect = (memberData) => {
     mobile: memberData.mobile,
     phone: memberData.mobile,
     email: (memberData.email && memberData.email.trim()) ? memberData.email.trim() : `${cleanMobile || 'member'}@student.bob.pk`,
-    universityName: current?.universityName || 'COMSATS University Islamabad',
-    department: 'Computer Science',
+    universityName: current?.universityName || team.universityName || 'COMSATS University Islamabad',
+    department: memberData.department || current?.department || 'Computer Science',
     degreeProgram: 'BS Computer Science',
-    semester: '4th Semester',
+    semester: memberData.semester || '4th Semester',
     teamId: team.id,
+    teamName: team.name,
     isTeamLeader: false,
     role: 'Participant',
     registrationStatus: 'Approved',
@@ -1426,35 +1432,43 @@ export const localAddTeamMemberDirect = (memberData) => {
     studentId: newMember.studentId,
     fullName: newMember.fullName,
     mobile: newMember.mobile,
+    email: newMember.email,
+    semester: newMember.semester,
     role: 'Member',
+    status: 'confirmed',
     joinedAt: new Date().toISOString(),
   };
 
   team.members.push(memberEntry);
+
+  // Automatically confirm team when reaching 2 or more members
+  if (team.members.length >= 2) {
+    team.status = 'confirmed';
+    team.confirmedAt = new Date().toISOString();
+  }
+
   saveStoredTeams(teams);
 
   return {
     success: true,
-    message: `${newMember.fullName} added to your team successfully!`,
+    message: `${newMember.fullName} added and confirmed in your team successfully!`,
     team,
     member: newMember,
   };
 };
 
-export const localFinalizeTeam = (teamName) => {
+export const localFinalizeTeam = (teamName, teamId) => {
   const current = getLoggedInStudent();
   const teams = getStoredTeams();
-  let team = teams.find((t) => t.id === current?.teamId || (t.members || []).some((m) => m.id === current?.id));
+  let team = null;
+  if (teamId) team = teams.find((t) => t.id === teamId);
+  if (!team && teamName) team = teams.find((t) => t.name === teamName || t.id === teamName);
+  if (!team && current?.teamId) team = teams.find((t) => t.id === current.teamId);
+  if (!team && current) team = teams.find((t) => (t.members || []).some((m) => m.id === current.id));
+  if (!team && teams.length > 0) team = teams[teams.length - 1];
 
-  if (!team && teams.length > 0) {
-    team = teams[teams.length - 1];
-  }
   if (!team) {
     return { success: false, error: 'Team not found.' };
-  }
-
-  if (team.members.length < 2) {
-    return { success: false, error: 'A team must have at least 2 members before registration can be finalized.' };
   }
 
   if (teamName && teamName.trim()) {
@@ -1462,11 +1476,28 @@ export const localFinalizeTeam = (teamName) => {
   }
   team.status = 'confirmed';
   team.confirmedAt = new Date().toISOString();
+
+  // Mark all members as confirmed
+  (team.members || []).forEach((m) => {
+    m.status = 'confirmed';
+  });
+
   saveStoredTeams(teams);
+
+  // Update participant list
+  const participants = getStoredParticipants() || [];
+  participants.forEach((p) => {
+    if (p.teamId === team.id || (team.members || []).some((m) => m.id === p.id || m.mobile === p.mobile)) {
+      p.teamStatus = 'confirmed';
+      p.registrationStatus = 'Approved';
+      p.teamId = team.id;
+    }
+  });
+  localStorage.setItem('bob_registered_participants_v2', JSON.stringify(participants));
 
   return {
     success: true,
-    message: `Team "${team.name}" registration finalized successfully with ${team.members.length} members!`,
+    message: `Team "${team.name}" registration finalized and confirmed successfully with ${team.members.length} members!`,
     team,
   };
 };

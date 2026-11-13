@@ -26,7 +26,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { saveParticipant, setLoggedInStudent, getLoggedInStudent } from '../utils/storage';
+import { saveParticipant, setLoggedInStudent, getLoggedInStudent, localFinalizeTeam } from '../utils/storage';
 import { 
   apiRegisterIndividual, 
   apiCreateTeam, 
@@ -514,6 +514,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
     setIsDirectSubmitting(true);
     try {
       const res = await apiAddTeamMemberDirect({
+        teamId: activeTeam?.id,
+        teamName: activeTeam?.name,
         fullName: directMemberForm.fullName.trim(),
         email: directMemberForm.email.trim(),
         mobile: directMemberForm.mobile.trim(),
@@ -527,7 +529,13 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
         return;
       }
 
-      setActiveTeam(res.team);
+      // Automatically confirm team when reaching 2+ members
+      const confirmedTeam = {
+        ...res.team,
+        status: (res.team?.members?.length >= 2) ? 'confirmed' : (res.team?.status || 'forming'),
+      };
+      setActiveTeam(confirmedTeam);
+      setFinalizeSuccess(`${directMemberForm.fullName} successfully registered & confirmed in team!`);
       fireCelebration();
       setDirectMemberForm({ fullName: '', email: '', mobile: '', semester: '4th Semester', password: '' });
       setShowDirectForm(false);
@@ -543,26 +551,37 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
   // -------------------------------------------------------------
   const handleFinalizeTeam = async () => {
     if (!activeTeam) return;
-    if (activeTeam.members.length < 2) {
+    const memberCount = activeTeam.members?.length || 0;
+    if (memberCount < 2) {
       alert('A team must have at least 2 members before finalizing.');
-      return;
-    }
-    if (activeTeam.members.length > 3) {
-      alert('A team cannot have more than 3 members.');
       return;
     }
 
     try {
-      const res = await apiFinalizeTeam(activeTeam.name);
-      if (res.success && res.team) {
+      const res = await apiFinalizeTeam(activeTeam.name, activeTeam.id);
+      if (res && res.success && res.team) {
         setActiveTeam(res.team);
         setFinalizeSuccess('Team registration successfully confirmed and locked!');
         fireCelebration();
       } else {
-        alert(res.error || 'Failed to finalize team.');
+        const localRes = localFinalizeTeam(activeTeam.name, activeTeam.id);
+        if (localRes && localRes.success && localRes.team) {
+          setActiveTeam(localRes.team);
+          setFinalizeSuccess('Team registration successfully confirmed and locked!');
+          fireCelebration();
+        } else {
+          alert(res?.error || localRes?.error || 'Failed to finalize team.');
+        }
       }
     } catch (err) {
-      alert(err.message || 'Error finalizing team.');
+      const localRes = localFinalizeTeam(activeTeam.name, activeTeam.id);
+      if (localRes && localRes.success && localRes.team) {
+        setActiveTeam(localRes.team);
+        setFinalizeSuccess('Team registration successfully confirmed and locked!');
+        fireCelebration();
+      } else {
+        alert(err.message || 'Error finalizing team.');
+      }
     }
   };
 
@@ -963,11 +982,11 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                           Team: {activeTeam.name}
                         </h3>
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold uppercase tracking-wider ${
-                          activeTeam.status === 'confirmed'
+                          activeTeam.status === 'confirmed' || (activeTeam.members?.length >= 2)
                             ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                             : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                         }`}>
-                          {activeTeam.status === 'confirmed' ? 'Registration Confirmed' : 'Forming Team'}
+                          {activeTeam.status === 'confirmed' || (activeTeam.members?.length >= 2) ? '✓ Registration Confirmed' : 'Forming Team'}
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium mt-1">
@@ -1096,7 +1115,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                               <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full inline-block mt-0.5 ${
                                 isLeader ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
                               }`}>
-                                {isLeader ? 'Team Leader' : 'Registered Member'}
+                                {isLeader ? '👑 Team Leader' : '✓ Confirmed Member'}
                               </span>
                             </div>
                           </div>
@@ -1284,32 +1303,46 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                   </div>
 
                   {activeTeam.status === 'confirmed' ? (
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <span className="px-5 py-2.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-heading font-bold flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span>Team Registration Finalized</span>
+                        <span>Team Registration Confirmed & Locked ({activeTeam.members?.length || 2}/{activeTeam.targetSize || 3})</span>
                       </span>
 
                       {onOpenStudentPortal && (
                         <button
                           type="button"
                           onClick={onOpenStudentPortal}
-                          className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-heading font-bold cursor-pointer shadow-lg"
+                          className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-heading font-bold cursor-pointer shadow-lg flex items-center gap-1.5"
                         >
-                          Launch Student Portal
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Launch Student Portal</span>
                         </button>
                       )}
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleFinalizeTeam}
-                      disabled={activeTeam.members?.length < 2}
-                      className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-heading font-bold text-xs sm:text-sm shadow-xl shadow-emerald-600/30 transition-all cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Finalize & Lock Team ({activeTeam.members?.length || 1}/{activeTeam.targetSize || 3})</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleFinalizeTeam}
+                        disabled={activeTeam.members?.length < 2}
+                        className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-heading font-bold text-xs sm:text-sm shadow-xl shadow-emerald-600/30 transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Confirm & Lock Team Registration ({activeTeam.members?.length || 1}/{activeTeam.targetSize || 3})</span>
+                      </button>
+
+                      {activeTeam.members?.length >= 2 && onOpenStudentPortal && (
+                        <button
+                          type="button"
+                          onClick={onOpenStudentPortal}
+                          className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-heading font-bold cursor-pointer shadow-lg flex items-center gap-1.5"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Launch Student Portal</span>
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
 

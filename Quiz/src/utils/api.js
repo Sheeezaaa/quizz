@@ -1632,18 +1632,21 @@ export async function apiAddTeamMemberDirect(memberData) {
   }
 }
 
-export async function apiFinalizeTeam(teamName) {
+export async function apiFinalizeTeam(teamName, teamId) {
   try {
     let res = null;
     let data = {};
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      const adminToken = getAdminAuthToken();
+      const studentToken = getStudentAuthToken();
+      if (adminToken) headers.Authorization = `Bearer ${adminToken}`;
+      else if (studentToken) headers.Authorization = `Bearer ${studentToken}`;
+
       res = await fetch(`${API_BASE}/teams/finalize`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getStudentAuthToken()}`,
-        },
-        body: JSON.stringify({ teamName }),
+        headers,
+        body: JSON.stringify({ teamName, teamId }),
       });
       data = await safeJson(res);
     } catch {
@@ -1658,9 +1661,9 @@ export async function apiFinalizeTeam(teamName) {
     }
 
     // Local storage fallback
-    return localFinalizeTeam(teamName);
+    return localFinalizeTeam(teamName, teamId);
   } catch (err) {
-    return localFinalizeTeam(teamName);
+    return localFinalizeTeam(teamName, teamId);
   }
 }
 

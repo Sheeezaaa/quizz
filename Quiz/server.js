@@ -2567,11 +2567,16 @@ app.post('/api/teams/join', (req, res) => {
     fullName: newMember.fullName,
     mobile: newMember.mobile,
     email: newMember.email,
-    email: newMember.email,
     role: 'Member',
+    status: 'confirmed',
     joinedAt: new Date().toISOString(),
   };
   team.members.push(memberEntry);
+
+  if (team.members.length >= 2) {
+    team.status = 'confirmed';
+    team.confirmedAt = new Date().toISOString();
+  }
 
   writeDB(db);
 
@@ -2690,9 +2695,16 @@ app.post('/api/teams/add-member-direct', requireParticipant, (req, res) => {
     fullName: newMember.fullName,
     mobile: newMember.mobile,
     role: 'Member',
+    status: 'confirmed',
     joinedAt: new Date().toISOString(),
   };
   team.members.push(memberEntry);
+
+  // Automatically confirm team when reaching 2 or more members
+  if (team.members.length >= 2) {
+    team.status = 'confirmed';
+    team.confirmedAt = new Date().toISOString();
+  }
 
   writeDB(db);
 
@@ -2701,49 +2713,47 @@ app.post('/api/teams/add-member-direct', requireParticipant, (req, res) => {
 
   res.json({
     success: true,
-    message: `${newMember.fullName} added to your team successfully! Individual login credentials created.`,
+    message: `${newMember.fullName} added to your team successfully! Registration confirmed.`,
     team,
     member: safeMember,
   });
 });
 
 // Finalize Team Registration (POST /api/teams/finalize)
-app.post('/api/teams/finalize', requireParticipant, (req, res) => {
-  const { teamName } = req.body;
+app.post('/api/teams/finalize', (req, res) => {
+  const { teamName, teamId } = req.body;
   const db = readDB();
   db.teams = db.teams || [];
   db.participants = db.participants || [];
 
-  const callerId = req.user.id;
-  const callerStudentId = (req.user.studentId || '').toLowerCase();
+  let caller = null;
+  let isAdmin = false;
 
-  const caller = db.participants.find((p) => p.id === callerId || (p.studentId || '').toLowerCase() === callerStudentId);
-  if (!caller || !caller.teamId) {
-    return res.status(404).json({ error: 'You are not part of any team.' });
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded.role === 'admin') {
+        isAdmin = true;
+      } else {
+        caller = db.participants.find((p) => p.id === decoded.id || (p.studentId || '').toLowerCase() === (decoded.studentId || '').toLowerCase());
+      }
+    } catch {}
   }
 
-  const team = db.teams.find((t) => t.id === caller.teamId);
+  let team = null;
+  if (teamId) team = db.teams.find((t) => t.id === teamId);
+  if (!team && teamName) team = db.teams.find((t) => t.name === teamName.trim() || t.id === teamName.trim());
+  if (!team && caller?.teamId) team = db.teams.find((t) => t.id === caller.teamId);
+  if (!team && caller) team = db.teams.find((t) => (t.members || []).some((m) => m.id === caller.id || m.studentId === caller.studentId));
+
   if (!team) {
     return res.status(404).json({ error: 'Team not found.' });
   }
 
-  if (team.leaderId !== caller.id && team.leaderStudentId !== caller.studentId) {
-    return res.status(403).json({ error: 'Only the Team Leader can finalize team registration.' });
-  }
-
-  // Validate team size strictly: minimum 2, maximum 3 members
   if (team.members.length < 2) {
     return res.status(400).json({ error: 'A team must have at least 2 members before registration can be finalized.' });
-  }
-  if (team.members.length > 3) {
-    return res.status(400).json({ error: 'A team cannot have more than 3 members.' });
-  }
-
-  // Ensure all member details are present
-  for (const m of team.members) {
-    if (!m.fullName || !m.mobile) {
-      return res.status(400).json({ error: 'All team members must have full name and mobile number completed.' });
-    }
   }
 
   if (teamName && teamName.trim()) {
@@ -2752,6 +2762,16 @@ app.post('/api/teams/finalize', requireParticipant, (req, res) => {
 
   team.status = 'confirmed';
   team.confirmedAt = new Date().toISOString();
+
+  // Mark all team members as confirmed & approved
+  (team.members || []).forEach((m) => {
+    m.status = 'confirmed';
+    const p = db.participants.find((pt) => pt.id === m.id || pt.studentId === m.studentId);
+    if (p) {
+      p.registrationStatus = 'Approved';
+      p.teamId = team.id;
+    }
+  });
 
   writeDB(db);
 

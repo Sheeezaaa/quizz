@@ -85,12 +85,14 @@ export default function TeamsManager({ isDark }) {
     });
   };
 
-  const handleAdminFinalize = async (teamName) => {
-    if (!window.confirm(`Force confirm and lock registration for team "${teamName}"?`)) return;
+  const handleAdminFinalize = async (team) => {
+    const tName = typeof team === 'object' ? team.name : team;
+    const tId = typeof team === 'object' ? team.id : undefined;
+    if (!window.confirm(`Force confirm and lock registration for team "${tName}"?`)) return;
     try {
-      await apiFinalizeTeam(teamName);
+      await apiFinalizeTeam(tName, tId);
     } catch {}
-    localFinalizeTeam(teamName);
+    localFinalizeTeam(tName, tId);
     fetchTeams();
   };
 
@@ -492,7 +494,7 @@ export default function TeamsManager({ isDark }) {
                     <button
                       type="button"
                       disabled={count < 2}
-                      onClick={() => handleAdminFinalize(team.name)}
+                      onClick={() => handleAdminFinalize(team)}
                       className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-heading font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />

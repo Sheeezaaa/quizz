@@ -1671,24 +1671,26 @@ export default function StudentPortal({
                                 return;
                               }
                               try {
-                                const fRes = await apiFinalizeTeam(activeTeam.name);
+                                const fRes = await apiFinalizeTeam(activeTeam.name, activeTeam.id);
                                 if (fRes && fRes.success && fRes.team) {
                                   setTeamFormationData(fRes.team);
                                   alert('Team registration successfully confirmed and locked!');
                                 } else {
                                   // Fallback to local storage
-                                  const localTeam = localFinalizeTeam(activeTeam.name);
-                                  if (localTeam) {
-                                    setTeamFormationData(localTeam);
+                                  const localRes = localFinalizeTeam(activeTeam.name, activeTeam.id);
+                                  const resolved = localRes?.team || (localRes?.success ? localRes : null);
+                                  if (resolved) {
+                                    setTeamFormationData(resolved);
                                     alert('Team registration successfully confirmed and locked!');
                                   } else {
-                                    alert(fRes?.error || 'Failed to finalize team.');
+                                    alert(fRes?.error || localRes?.error || 'Failed to finalize team.');
                                   }
                                 }
                               } catch (e) {
-                                const localTeam = localFinalizeTeam(activeTeam.name);
-                                if (localTeam) {
-                                  setTeamFormationData(localTeam);
+                                const localRes = localFinalizeTeam(activeTeam.name, activeTeam.id);
+                                const resolved = localRes?.team || (localRes?.success ? localRes : null);
+                                if (resolved) {
+                                  setTeamFormationData(resolved);
                                   alert('Team registration successfully confirmed and locked!');
                                 } else {
                                   alert(e.message || 'Error finalizing team.');
