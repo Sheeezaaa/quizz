@@ -931,7 +931,7 @@ export default function AdminPanel({
                     <KeyRound className="w-3.5 h-3.5 text-blue-500" />
                     <span>Secret Passcode</span>
                   </label>
-                  <span className="text-[11px] font-mono font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">Passcode: admin123</span>
+                  
                 </div>
                 
                 <div className="relative">
