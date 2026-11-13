@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +15,7 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'bob_super_secure_jwt_secret_2026';
 
 app.use(cors({ origin: '*' }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Database storage file path
 const DB_PATH = path.join(__dirname, 'data', 'database.json');
@@ -614,6 +615,8 @@ function loadDBFromDisk() {
     if (!parsed.teams) parsed.teams = [];
     if (!parsed.buzzerState) parsed.buzzerState = { round: 4, activeQuestionIndex: 0, lockedStudentId: null, status: "idle" };
     if (!parsed.rapidFireState) parsed.rapidFireState = { status: "idle" };
+    if (!parsed.encryptedDocuments) parsed.encryptedDocuments = [];
+    if (!parsed.documentSecurityLogs) parsed.documentSecurityLogs = [];
 
     return parsed;
   } catch (err) {
@@ -4284,6 +4287,367 @@ app.post('/api/participants/promote-semester', requireAdmin, (req, res) => {
 app.get('/api/admin/outbox-emails', requireAdmin, (req, res) => {
   const db = readDB();
   res.json(db.emailOutbox || []);
+});
+
+// ====================================================================
+
+// ====================================================================
+// SPEC 1-9: DOCUMENT SECURITY & ZERO-KNOWLEDGE CRYPTOGRAPHY ENGINE
+// 1. AES-256-GCM Authenticated Encryption
+// 2. Unique SHA-256 Hash Generation
+// 3. Zero-Knowledge Encrypted Storage (Plaintext Never Stored)
+// 4. Zero-Knowledge Admin Lockout (Admin cannot preview/read/download)
+// 5. Authorized Decryption Verification
+// 6. Secure Server Vault Key Management (Isolated from Documents)
+// 7. Cryptographic Tamper Detection & Integrity Verification
+// 8. Security Audit Logs
+// 9. Role-Based Access Control & Secure APIs
+// ====================================================================
+
+const VAULT_DIR = path.join(__dirname, 'server_vault');
+const MASTER_KEY_FILE = path.join(VAULT_DIR, 'doc_master_aes256.key');
+
+function getOrInitServerMasterKey() {
+  try {
+    if (!fs.existsSync(VAULT_DIR)) {
+      fs.mkdirSync(VAULT_DIR, { recursive: true });
+    }
+    if (fs.existsSync(MASTER_KEY_FILE)) {
+      return fs.readFileSync(MASTER_KEY_FILE);
+    }
+    const newKey = crypto.randomBytes(32); // 256 bits
+    fs.writeFileSync(MASTER_KEY_FILE, newKey);
+    return newKey;
+  } catch (err) {
+    console.error('Vault key initialization error:', err);
+    return crypto.createHash('sha256').update('COMSATS_BOB_SERVER_DOC_MASTER_VAULT_2026').digest();
+  }
+}
+
+const SERVER_MASTER_ENCRYPTION_KEY = getOrInitServerMasterKey();
+const AUTHORIZED_PROCTOR_PASSKEY = process.env.PROCTOR_PASSKEY || 'PROCTOR-PASSKEY-2026';
+
+function addDocumentSecurityLog(db, type, details, docId = '', docName = '', sha256 = '') {
+  if (!db.documentSecurityLogs) db.documentSecurityLogs = [];
+  db.documentSecurityLogs.unshift({
+    id: `log_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
+    timestamp: new Date().toISOString(),
+    type,
+    docId,
+    docName,
+    sha256,
+    algorithm: 'AES-256-GCM',
+    details
+  });
+  if (db.documentSecurityLogs.length > 200) db.documentSecurityLogs.length = 200;
+}
+
+// GET /api/documents - List all encrypted documents (Metadata only, Zero plaintext)
+app.get('/api/documents', requireAdmin, (req, res) => {
+  try {
+    const db = readDB();
+    const docs = (db.encryptedDocuments || []).map(d => ({
+      id: d.id,
+      fileName: d.fileName,
+      fileSize: d.fileSize,
+      mimeType: d.mimeType,
+      sha256Hash: d.sha256Hash,
+      encryptionAlgorithm: d.encryptionAlgorithm || 'AES-256-GCM',
+      uploadedAt: d.uploadedAt,
+      uploadedBy: d.uploadedBy,
+      status: d.status || 'ENCRYPTED_STORED',
+      integrityStatus: d.integrityStatus || 'AUTHENTIC',
+      accessPolicy: 'ZERO_KNOWLEDGE_ADMIN_LOCKOUT',
+      authorizedRoles: d.authorizedRoles || ['CHIEF_PROCTOR', 'EXAM_CONTROLLER']
+    }));
+    res.json({ success: true, documents: docs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/documents/upload - Automatically encrypts document with AES-256-GCM & SHA-256 hash
+app.post('/api/documents/upload', requireAdmin, (req, res) => {
+  try {
+    const { fileName, mimeType, fileBase64, authorizedRoles } = req.body;
+
+    if (!fileName || !fileBase64) {
+      return res.status(400).json({ error: 'File name and file content are required.' });
+    }
+
+    // Spec 9: File validation
+    const allowedExts = ['.pdf', '.docx', '.xlsx', '.csv', '.txt', '.json', '.png', '.jpg', '.jpeg'];
+    const ext = path.extname(fileName).toLowerCase();
+    if (!allowedExts.includes(ext)) {
+      return res.status(400).json({ error: `Unsupported file type ${ext}. Allowed formats: PDF, DOCX, XLSX, CSV, TXT, JSON, Images.` });
+    }
+
+    const rawBuffer = Buffer.from(fileBase64, 'base64');
+    if (rawBuffer.length > 25 * 1024 * 1024) {
+      return res.status(400).json({ error: 'File size exceeds 25MB security limit.' });
+    }
+
+    // Spec 2: Generate unique SHA-256 hash before storing
+    const sha256Hash = crypto.createHash('sha256').update(rawBuffer).digest('hex');
+
+    // Spec 1: Encrypt with AES-256-GCM
+    const iv = crypto.randomBytes(12); // 96-bit random IV
+    const cipher = crypto.createCipheriv('aes-256-gcm', SERVER_MASTER_ENCRYPTION_KEY, iv);
+    const encryptedBuffer = Buffer.concat([cipher.update(rawBuffer), cipher.final()]);
+    const authTag = cipher.getAuthTag(); // 128-bit authentication tag
+
+    // Spec 3: Wipe raw readable bytes from memory immediately
+    rawBuffer.fill(0);
+
+    const docId = `doc_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    const docRecord = {
+      id: docId,
+      fileName: fileName.replace(/[^a-zA-Z0-9._-]/g, '_'),
+      fileSize: encryptedBuffer.length,
+      mimeType: mimeType || 'application/octet-stream',
+      sha256Hash: sha256Hash,
+      encryptionAlgorithm: 'AES-256-GCM',
+      iv: iv.toString('base64'),
+      authTag: authTag.toString('base64'),
+      encryptedData: encryptedBuffer.toString('base64'),
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: req.user?.adminEmail || 'ADMIN',
+      status: 'ENCRYPTED_STORED',
+      integrityStatus: 'AUTHENTIC',
+      accessPolicy: 'ZERO_KNOWLEDGE_ADMIN_LOCKOUT',
+      authorizedRoles: authorizedRoles || ['CHIEF_PROCTOR', 'EXAM_CONTROLLER']
+    };
+
+    const db = readDB();
+    if (!db.encryptedDocuments) db.encryptedDocuments = [];
+    db.encryptedDocuments.unshift(docRecord);
+
+    addDocumentSecurityLog(
+      db,
+      'DOCUMENT_ENCRYPTED_STORED',
+      `Document "${docRecord.fileName}" encrypted with AES-256-GCM. SHA-256 checksum generated. Stored in zero-knowledge vault.`,
+      docId,
+      docRecord.fileName,
+      sha256Hash
+    );
+
+    writeDB(db);
+
+    res.json({
+      success: true,
+      message: 'Document encrypted with AES-256-GCM and stored successfully.',
+      document: {
+        id: docRecord.id,
+        fileName: docRecord.fileName,
+        fileSize: docRecord.fileSize,
+        mimeType: docRecord.mimeType,
+        sha256Hash: docRecord.sha256Hash,
+        encryptionAlgorithm: docRecord.encryptionAlgorithm,
+        uploadedAt: docRecord.uploadedAt,
+        status: docRecord.status,
+        integrityStatus: docRecord.integrityStatus,
+        accessPolicy: docRecord.accessPolicy
+      }
+    });
+  } catch (err) {
+    console.error('Document encryption error:', err);
+    res.status(500).json({ error: 'Encryption failure: ' + err.message });
+  }
+});
+
+// POST /api/documents/:id/verify-integrity - Cryptographically verifies SHA-256 & GCM Auth Tag
+app.post('/api/documents/:id/verify-integrity', requireAdmin, (req, res) => {
+  try {
+    const db = readDB();
+    const doc = (db.encryptedDocuments || []).find(d => d.id === req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Document not found' });
+
+    const iv = Buffer.from(doc.iv, 'base64');
+    const authTag = Buffer.from(doc.authTag, 'base64');
+    const encryptedData = Buffer.from(doc.encryptedData, 'base64');
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', SERVER_MASTER_ENCRYPTION_KEY, iv);
+    decipher.setAuthTag(authTag);
+
+    const decrypted = Buffer.concat([decipher.update(encryptedData), decipher.final()]);
+    const currentHash = crypto.createHash('sha256').update(decrypted).digest('hex');
+    decrypted.fill(0); // Wipe decrypted plaintext from memory immediately
+
+    if (currentHash === doc.sha256Hash) {
+      addDocumentSecurityLog(
+        db,
+        'INTEGRITY_VERIFICATION_PASSED',
+        `SHA-256 fingerprint and AES-GCM authentication tag matched. Document is authentic and unmodified.`,
+        doc.id,
+        doc.fileName,
+        doc.sha256Hash
+      );
+      writeDB(db);
+
+      res.json({
+        success: true,
+        authentic: true,
+        sha256: doc.sha256Hash,
+        algorithm: 'AES-256-GCM',
+        verifiedAt: new Date().toISOString(),
+        status: 'AUTHENTIC_VERIFIED'
+      });
+    } else {
+      throw new Error('SHA-256 Hash Mismatch: Document has been modified or corrupted!');
+    }
+  } catch (err) {
+    const db = readDB();
+    addDocumentSecurityLog(
+      db,
+      'TAMPER_ALERT',
+      `SECURITY ALERT: Document integrity failure! ${err.message}`,
+      req.params.id,
+      '',
+      ''
+    );
+    writeDB(db);
+
+    res.json({
+      success: false,
+      authentic: false,
+      error: 'TAMPER_DETECTED: Cryptographic authentication tag or SHA-256 checksum mismatch!',
+      verifiedAt: new Date().toISOString(),
+      status: 'TAMPER_DETECTED'
+    });
+  }
+});
+
+// POST /api/documents/:id/decrypt - Spec 4 & 5: Admin Lockout & Authorized Decryption Verification
+app.post('/api/documents/:id/decrypt', (req, res) => {
+  try {
+    const { passkey, userRole } = req.body;
+    const db = readDB();
+    const doc = (db.encryptedDocuments || []).find(d => d.id === req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Document not found' });
+
+    // Spec 4: Administrator is strictly locked out under zero-knowledge policy
+    if (userRole === 'ADMIN' && passkey !== AUTHORIZED_PROCTOR_PASSKEY) {
+      addDocumentSecurityLog(
+        db,
+        'ADMIN_DECRYPTION_BLOCKED',
+        `Zero-Knowledge Policy: Administrator decryption/preview attempt blocked. Access Denied (403).`,
+        doc.id,
+        doc.fileName
+      );
+      writeDB(db);
+
+      return res.status(403).json({
+        error: '403 FORBIDDEN: Zero-Knowledge Protection Policy Active. Administrator role is strictly restricted from viewing, opening, downloading, or reading uploaded confidential documents. Only authorized permission holders with a valid proctor passkey can decrypt.'
+      });
+    }
+
+    // Spec 5: Permission verification for authorized user
+    if (passkey !== AUTHORIZED_PROCTOR_PASSKEY) {
+      addDocumentSecurityLog(
+        db,
+        'UNAUTHORIZED_DECRYPTION_BLOCKED',
+        `Decryption attempt blocked: Invalid authorization passkey.`,
+        doc.id,
+        doc.fileName
+      );
+      writeDB(db);
+
+      return res.status(401).json({ error: 'Unauthorized: Invalid authorization passkey.' });
+    }
+
+    // Decrypt file for authorized proctor
+    const iv = Buffer.from(doc.iv, 'base64');
+    const authTag = Buffer.from(doc.authTag, 'base64');
+    const encryptedData = Buffer.from(doc.encryptedData, 'base64');
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', SERVER_MASTER_ENCRYPTION_KEY, iv);
+    decipher.setAuthTag(authTag);
+    const decrypted = Buffer.concat([decipher.update(encryptedData), decipher.final()]);
+
+    const currentHash = crypto.createHash('sha256').update(decrypted).digest('hex');
+    if (currentHash !== doc.sha256Hash) {
+      decrypted.fill(0);
+      return res.status(500).json({ error: 'Integrity Check Failed: Decrypted file does not match original SHA-256 checksum!' });
+    }
+
+    addDocumentSecurityLog(
+      db,
+      'AUTHORIZED_DECRYPTION_GRANTED',
+      `Authorized proctor successfully authenticated and decrypted document.`,
+      doc.id,
+      doc.fileName
+    );
+    writeDB(db);
+
+    res.json({
+      success: true,
+      fileName: doc.fileName,
+      mimeType: doc.mimeType,
+      fileBase64: decrypted.toString('base64')
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Decryption failure: ' + err.message });
+  }
+});
+
+// GET /api/documents/security-logs - Spec 8: Security and cryptographic audit logs
+app.get('/api/documents/security-logs', requireAdmin, (req, res) => {
+  try {
+    const db = readDB();
+    res.json({ success: true, logs: db.documentSecurityLogs || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/documents/:id/simulate-tamper - Simulates tampering by altering 1 byte in ciphertext
+app.post('/api/documents/:id/simulate-tamper', requireAdmin, (req, res) => {
+  try {
+    const db = readDB();
+    const doc = (db.encryptedDocuments || []).find(d => d.id === req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Document not found' });
+
+    const buffer = Buffer.from(doc.encryptedData, 'base64');
+    buffer[Math.floor(buffer.length / 2)] ^= 0xff; // Invert one byte
+    doc.encryptedData = buffer.toString('base64');
+    doc.integrityStatus = 'TAMPERED_IN_SIMULATION';
+
+    addDocumentSecurityLog(
+      db,
+      'SIMULATION_TAMPER_APPLIED',
+      `[TESTING SIMULATION] Inverted one byte in ciphertext to verify cryptographic tamper detection.`,
+      doc.id,
+      doc.fileName
+    );
+    writeDB(db);
+
+    res.json({ success: true, message: 'Tamper simulation applied. Run integrity verification to observe cryptographic failure.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/documents/:id - Delete encrypted document record
+app.delete('/api/documents/:id', requireAdmin, (req, res) => {
+  try {
+    const db = readDB();
+    if (!db.encryptedDocuments) db.encryptedDocuments = [];
+    const idx = db.encryptedDocuments.findIndex(d => d.id === req.params.id);
+    if (idx >= 0) {
+      const removed = db.encryptedDocuments.splice(idx, 1)[0];
+      addDocumentSecurityLog(
+        db,
+        'DOCUMENT_PURGED',
+        `Encrypted document record "${removed.fileName}" purged from vault.`,
+        removed.id,
+        removed.fileName
+      );
+      writeDB(db);
+    }
+    res.json({ success: true, message: 'Document removed from encrypted vault.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ====================================================================

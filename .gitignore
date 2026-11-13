@@ -3,3 +3,5 @@ Quiz/node_modules/
 .env
 Quiz/.env
 dist/
+
+Quiz/server_vault/

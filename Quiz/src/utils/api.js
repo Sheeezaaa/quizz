@@ -1804,3 +1804,154 @@ export async function apiUpdateAdminProfile(profileData) {
     return { success: true, message: 'Admin profile updated successfully (local mode).' };
   }
 }
+
+
+// ====================================================================
+// DOCUMENT SECURITY & ENCRYPTION APIS (AES-256-GCM + SHA-256)
+// ====================================================================
+
+import {
+  encryptAndStoreDocument,
+  getStoredDocuments,
+  verifyDocumentIntegrity,
+  attemptDocumentDecryption,
+  getSecurityAuditLogs,
+  deleteStoredDocument,
+  simulateTamperOnDocument
+} from './documentSecurity';
+
+export async function apiGetEncryptedDocuments() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/documents`, {
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`
+      }
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success && Array.isArray(data.documents)) {
+      return data.documents;
+    }
+  } catch (err) {
+    // console.warn('Using local document vault:', err.message);
+  }
+  return getStoredDocuments();
+}
+
+export async function apiUploadEncryptedDocument(file, authorizedRoles = ['CHIEF_PROCTOR', 'EXAM_CONTROLLER']) {
+  // Try server first
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const fileBase64 = window.btoa(binary);
+
+    const res = await fetch(`${API_BASE_URL}/documents/upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAdminAuthToken()}`
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        fileBase64: fileBase64,
+        authorizedRoles: authorizedRoles
+      })
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      return data.document;
+    }
+  } catch (err) {
+    // Fall back to client-side Web Crypto AES-256-GCM
+  }
+
+  return await encryptAndStoreDocument({ file, uploadedBy: 'ADMIN', authorizedRoles });
+}
+
+export async function apiVerifyDocumentIntegrity(docId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/documents/${docId}/verify-integrity`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`
+      }
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      return data;
+    }
+  } catch (err) {}
+
+  return await verifyDocumentIntegrity(docId);
+}
+
+export async function apiAttemptDocumentDecryption(docId, passkey, userRole = 'ADMIN') {
+  try {
+    const res = await fetch(`${API_BASE_URL}/documents/${docId}/decrypt`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ passkey, userRole })
+    });
+    const data = await safeJson(res);
+    if (!res.ok) {
+      throw new Error(data.error || 'Decryption request failed.');
+    }
+    return data;
+  } catch (err) {
+    if (err.message && err.message.includes('403')) {
+      throw err;
+    }
+  }
+
+  return await attemptDocumentDecryption({ docId, userRole, passkey });
+}
+
+export async function apiGetDocumentSecurityLogs() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/documents/security-logs`, {
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`
+      }
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success && Array.isArray(data.logs)) {
+      return data.logs;
+    }
+  } catch (err) {}
+
+  return getSecurityAuditLogs();
+}
+
+export async function apiDeleteEncryptedDocument(docId) {
+  try {
+    await fetch(`${API_BASE_URL}/documents/${docId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`
+      }
+    });
+  } catch (err) {}
+
+  deleteStoredDocument(docId);
+  return { success: true };
+}
+
+export async function apiSimulateTamper(docId) {
+  try {
+    await fetch(`${API_BASE_URL}/documents/${docId}/simulate-tamper`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`
+      }
+    });
+  } catch (err) {}
+
+  simulateTamperOnDocument(docId);
+  return { success: true };
+}

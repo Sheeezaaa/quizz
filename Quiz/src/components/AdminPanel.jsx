@@ -108,6 +108,7 @@ import BuzzerConsole from './admin/BuzzerConsole';
 import ResultsManagement from './admin/ResultsManagement';
 import AnnouncementsManager from './admin/AnnouncementsManager';
 import AuditLogsViewer from './admin/AuditLogsViewer';
+import EncryptedVaultManager from './admin/EncryptedVaultManager';
 
 export default function AdminPanel({ 
   isOpen, 
@@ -803,6 +804,7 @@ export default function AdminPanel({
     { id: 'subjects', label: '7 CS Subjects', icon: BookOpen, badge: '7' },
     { id: 'rounds', label: '4 Rounds Config', icon: Layers, badge: '4' },
     { id: 'announcements', label: 'Bulletins & News', icon: Sparkles, badge: null },
+    { id: 'encryptedVault', label: 'Encrypted Vault (AES-GCM)', icon: Lock, badge: 'Zero-Knowledge' },
     { id: 'audit', label: 'Audit Trail Logs', icon: ShieldCheck, badge: null },
     { id: 'general', label: 'General & Campus', icon: Building2, badge: null },
     { id: 'rules', label: 'Rules & Penalties', icon: Scale, badge: null },
@@ -1617,7 +1619,7 @@ export default function AdminPanel({
               </div>
 
               {/* 5 Primary Metric Stat Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 
                 {/* Metric 1: Total Candidates */}
                 <div 
@@ -3216,6 +3218,10 @@ export default function AdminPanel({
 
           {activeTab === 'announcements' && (
             <AnnouncementsManager isDark={isDark} />
+          )}
+
+          {activeTab === 'encryptedVault' && (
+            <EncryptedVaultManager isDark={isDark} />
           )}
 
           {activeTab === 'audit' && (
