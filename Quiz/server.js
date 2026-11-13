@@ -2302,7 +2302,8 @@ app.post('/api/teams/create', (req, res) => {
     leaderMobile,
     leaderPassword,
     universityName,
-    department
+    department,
+    semester
   } = req.body;
 
   if (!teamName || !teamName.trim()) {
@@ -2375,7 +2376,7 @@ app.post('/api/teams/create', (req, res) => {
       region: 'Federal Capital',
       department: (department || 'Computer Science').trim(),
       degreeProgram: 'BS Computer Science',
-      semester: '4th Semester',
+      semester: (semester || '4th Semester').trim(),
       passwordHash: bcrypt.hashSync(leaderPassword, 10),
       registrationStatus: 'Approved',
       role: 'Participant',
@@ -2486,7 +2487,7 @@ app.get('/api/teams/invite/:code', (req, res) => {
 
 // Join Team via Invitation Link/Code (POST /api/teams/join)
 app.post('/api/teams/join', (req, res) => {
-  const { inviteCode, fullName, email, mobile, password } = req.body;
+  const { inviteCode, fullName, email, mobile, password, semester } = req.body;
 
   if (!inviteCode || !inviteCode.trim()) {
     return res.status(400).json({ error: 'Invitation code is required.' });
@@ -2548,7 +2549,7 @@ app.post('/api/teams/join', (req, res) => {
     region: 'Federal Capital',
     department: 'Computer Science',
     degreeProgram: 'BS Computer Science',
-    semester: '4th Semester',
+    semester: (semester || '4th Semester').trim(),
     passwordHash: bcrypt.hashSync(password, 10),
     registrationStatus: 'Approved',
     role: 'Participant',
@@ -2600,7 +2601,7 @@ app.post('/api/teams/join', (req, res) => {
 
 // Team Leader Direct Member Addition (POST /api/teams/add-member-direct)
 app.post('/api/teams/add-member-direct', requireParticipant, (req, res) => {
-  const { fullName, email, mobile, password } = req.body;
+  const { fullName, email, mobile, password, semester } = req.body;
 
   if (!fullName || !fullName.trim()) {
     return res.status(400).json({ error: 'Teammate full name is required.' });
@@ -2671,7 +2672,7 @@ app.post('/api/teams/add-member-direct', requireParticipant, (req, res) => {
     region: caller.region || 'Federal Capital',
     department: caller.department || 'Computer Science',
     degreeProgram: caller.degreeProgram || 'BS Computer Science',
-    semester: caller.semester || '4th Semester',
+    semester: (semester || caller.semester || '4th Semester').trim(),
     passwordHash: bcrypt.hashSync(password, 10),
     registrationStatus: 'Approved',
     role: 'Participant',
@@ -2883,7 +2884,7 @@ app.post('/api/teams/admin-create', requireAdmin, (req, res) => {
     universityName: 'COMSATS University Islamabad',
     department: 'Computer Science',
     degreeProgram: 'BS Computer Science',
-    semester: '4th Semester',
+    semester: (semester || '4th Semester').trim(),
     passwordHash: bcrypt.hashSync(leader.password, 10),
     registrationStatus: 'Approved',
     role: 'Participant',
@@ -2909,7 +2910,7 @@ app.post('/api/teams/admin-create', requireAdmin, (req, res) => {
     universityName: 'COMSATS University Islamabad',
     department: 'Computer Science',
     degreeProgram: 'BS Computer Science',
-    semester: '4th Semester',
+    semester: (semester || '4th Semester').trim(),
     passwordHash: bcrypt.hashSync(member2.password, 10),
     registrationStatus: 'Approved',
     role: 'Participant',
@@ -2959,7 +2960,7 @@ app.post('/api/teams/admin-create', requireAdmin, (req, res) => {
       universityName: 'COMSATS University Islamabad',
       department: 'Computer Science',
       degreeProgram: 'BS Computer Science',
-      semester: '4th Semester',
+      semester: (semester || '4th Semester').trim(),
       passwordHash: bcrypt.hashSync(member3.password || 'student123', 10),
       registrationStatus: 'Approved',
       role: 'Participant',

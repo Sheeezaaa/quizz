@@ -22,7 +22,8 @@ import {
   MessageCircle,
   HelpCircle,
   RefreshCw,
-  Mail
+  Mail,
+  GraduationCap
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { saveParticipant, setLoggedInStudent, getLoggedInStudent } from '../utils/storage';
@@ -85,6 +86,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
     leaderConfirmPassword: '',
     universityName: 'COMSATS University Islamabad',
     department: 'Computer Science',
+    semester: '4th Semester',
     rulesAccepted: false,
   });
   const [createShowPassword, setCreateShowPassword] = useState(false);
@@ -101,6 +103,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
     fullName: '',
     email: '',
     mobile: '',
+    semester: '4th Semester',
     password: '',
     confirmPassword: '',
     rulesAccepted: false,
@@ -120,6 +123,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
     fullName: '',
     email: '',
     mobile: '',
+    semester: '4th Semester',
     password: '',
   });
   const [directShowPassword, setDirectShowPassword] = useState(false);
@@ -149,6 +153,18 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
     'BS Information Technology',
     'MS Computer Science',
     'Other Computing Program',
+  ];
+
+  const semesters = [
+    '1st Semester',
+    '2nd Semester',
+    '3rd Semester',
+    '4th Semester',
+    '5th Semester',
+    '6th Semester',
+    '7th Semester',
+    '8th Semester',
+    'Postgraduate / Other',
   ];
 
   // Auto-detect invitation code from URL hash or query params
@@ -345,6 +361,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
         leaderPassword: createTeamForm.leaderPassword,
         universityName: createTeamForm.universityName,
         department: createTeamForm.department,
+        semester: createTeamForm.semester,
       };
 
       const res = await apiCreateTeam(payload);
@@ -369,6 +386,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
         leaderConfirmPassword: '',
         universityName: 'COMSATS University Islamabad',
         department: 'Computer Science',
+        semester: '4th Semester',
         rulesAccepted: false,
       });
     } catch (err) {
@@ -431,6 +449,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
         fullName: joinForm.fullName.trim(),
         email: joinForm.email.trim(),
         mobile: joinForm.mobile.trim(),
+        semester: joinForm.semester,
         password: joinForm.password,
       });
 
@@ -450,6 +469,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
         fullName: '',
         email: '',
         mobile: '',
+        semester: '4th Semester',
         password: '',
         confirmPassword: '',
         rulesAccepted: false,
@@ -497,6 +517,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
         fullName: directMemberForm.fullName.trim(),
         email: directMemberForm.email.trim(),
         mobile: directMemberForm.mobile.trim(),
+        semester: directMemberForm.semester,
         password: directMemberForm.password,
       });
 
@@ -508,7 +529,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
 
       setActiveTeam(res.team);
       fireCelebration();
-      setDirectMemberForm({ fullName: '', email: '', mobile: '', password: '' });
+      setDirectMemberForm({ fullName: '', email: '', mobile: '', semester: '4th Semester', password: '' });
       setShowDirectForm(false);
     } catch (err) {
       setDirectServerError(err.message || 'Error adding teammate.');
@@ -817,8 +838,8 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                 </div>
               </div>
 
-              {/* Academic Details (Campus & Degree) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Academic Details (Campus, Degree & Semester) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div>
                   <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2">
                     University Campus
@@ -848,6 +869,24 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                     {degreePrograms.map((d) => (
                       <option key={d} value={d} className="bg-[#0b1020] text-white">
                         {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Academic Semester <strong className="text-rose-500">*</strong></span>
+                  </label>
+                  <select
+                    value={indivForm.semester}
+                    onChange={(e) => setIndivForm({ ...indivForm, semester: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/15 text-white text-sm font-medium focus:border-blue-500 focus:outline-none cursor-pointer"
+                  >
+                    {semesters.map((s) => (
+                      <option key={s} value={s} className="bg-[#0b1020] text-white">
+                        {s}
                       </option>
                     ))}
                   </select>
@@ -1132,7 +1171,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                           </div>
                         )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                           <div>
                             <label className="block text-xs font-bold text-slate-300 mb-1">
                               Teammate Full Name *
@@ -1173,6 +1212,23 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                               className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/15 text-white text-xs font-mono font-medium focus:border-blue-500 focus:outline-none"
                             />
                             {directErrors.mobile && <p className="text-[10px] text-rose-400 mt-1">{directErrors.mobile}</p>}
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-slate-300 mb-1">
+                              Semester *
+                            </label>
+                            <select
+                              value={directMemberForm.semester}
+                              onChange={(e) => setDirectMemberForm({ ...directMemberForm, semester: e.target.value })}
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/15 text-white text-xs font-medium focus:border-blue-500 focus:outline-none cursor-pointer"
+                            >
+                              {semesters.map((s) => (
+                                <option key={s} value={s} className="bg-slate-900 text-white">
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
                           </div>
 
                           <div>
@@ -1406,24 +1462,44 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                         </div>
                       </div>
 
-                      {/* Team Leader Mobile */}
-                      <div>
-                        <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
-                          <Phone className="w-3.5 h-3.5 text-blue-400" />
-                          <span>Team Leader Mobile (Unique Login ID) <strong className="text-rose-500">*</strong></span>
-                        </label>
-                        <input
-                          type="tel"
-                          placeholder="e.g. 0300 1234567"
-                          value={createTeamForm.leaderMobile}
-                          onChange={(e) => setCreateTeamForm({ ...createTeamForm, leaderMobile: e.target.value })}
-                          className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
-                            createErrors.leaderMobile ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
-                          }`}
-                        />
-                        {createErrors.leaderMobile && (
-                          <p className="text-[11px] text-rose-400 mt-1 font-semibold">{createErrors.leaderMobile}</p>
-                        )}
+                      {/* Team Leader Mobile & Academic Semester */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5 text-blue-400" />
+                            <span>Team Leader Mobile (Unique Login ID) <strong className="text-rose-500">*</strong></span>
+                          </label>
+                          <input
+                            type="tel"
+                            placeholder="e.g. 0300 1234567"
+                            value={createTeamForm.leaderMobile}
+                            onChange={(e) => setCreateTeamForm({ ...createTeamForm, leaderMobile: e.target.value })}
+                            className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-mono font-medium focus:outline-none transition-all placeholder:text-slate-500 ${
+                              createErrors.leaderMobile ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
+                            }`}
+                          />
+                          {createErrors.leaderMobile && (
+                            <p className="text-[11px] text-rose-400 mt-1 font-semibold">{createErrors.leaderMobile}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
+                            <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
+                            <span>Academic Semester <strong className="text-rose-500">*</strong></span>
+                          </label>
+                          <select
+                            value={createTeamForm.semester}
+                            onChange={(e) => setCreateTeamForm({ ...createTeamForm, semester: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-medium focus:border-blue-500 focus:outline-none cursor-pointer"
+                          >
+                            {semesters.map((s) => (
+                              <option key={s} value={s} className="bg-slate-900 text-white">
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
 
                       {/* Password & Confirm */}
@@ -1600,7 +1676,7 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                         )}
                       </div>
 
-                      {/* Teammate Full Name & Mobile */}
+                      {/* Teammate Full Name & Email */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
                           <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
@@ -1623,6 +1699,28 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
 
                         <div>
                           <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
+                            <Mail className="w-3.5 h-3.5 text-blue-400" />
+                            <span>Your Email Address <strong className="text-rose-500">*</strong></span>
+                          </label>
+                          <input
+                            type="email"
+                            placeholder="e.g. student@comsats.edu.pk"
+                            value={joinForm.email}
+                            onChange={(e) => setJoinForm({ ...joinForm, email: e.target.value })}
+                            className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border text-slate-900 dark:text-white text-sm font-medium focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${
+                              joinErrors.email ? 'border-rose-500' : 'border-slate-300 dark:border-white/20 focus:border-blue-500'
+                            }`}
+                          />
+                          {joinErrors.email && (
+                            <p className="text-[11px] text-rose-400 mt-1 font-semibold">{joinErrors.email}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Mobile & Academic Semester */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
                             <Phone className="w-3.5 h-3.5 text-blue-400" />
                             <span>Your Mobile Number (Unique Login) <strong className="text-rose-500">*</strong></span>
                           </label>
@@ -1638,6 +1736,24 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                           {joinErrors.mobile && (
                             <p className="text-[11px] text-rose-400 mt-1 font-semibold">{joinErrors.mobile}</p>
                           )}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs sm:text-sm font-heading font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
+                            <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
+                            <span>Academic Semester <strong className="text-rose-500">*</strong></span>
+                          </label>
+                          <select
+                            value={joinForm.semester}
+                            onChange={(e) => setJoinForm({ ...joinForm, semester: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white text-sm font-medium focus:border-blue-500 focus:outline-none cursor-pointer"
+                          >
+                            {semesters.map((s) => (
+                              <option key={s} value={s} className="bg-slate-900 text-white">
+                                {s}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </div>
 
@@ -1788,6 +1904,10 @@ export default function Registration({ onParticipantRegistered, onOpenStudentPor
                 <div>
                   <span className="text-slate-400 block text-[11px]">Student ID:</span>
                   <span className="text-white block font-mono">{successIndividual.studentId}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Academic Semester:</span>
+                  <span className="text-blue-300 font-bold block">{successIndividual.semester || '4th Semester'}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[11px]">Status:</span>
