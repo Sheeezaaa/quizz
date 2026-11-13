@@ -178,10 +178,11 @@ export default function StudentPortal({
     } catch {}
   };
 
-  // Anti-Cheat Violation Handler: Sounds buzzer whenever logged in team/student opens another browser or tab
-  // User instruction: Limit removed - buzzer rings every time without 3-strike disqualification cutoff
+  // Anti-Cheat Violation Handler: Sounds buzzer ONLY when a LIVE quiz is in progress (activeQuizAttempt)
+  // When student is browsing dashboard, announcements, rules, admit card or outside live exam, buzzer is completely silent
   const recordAntiCheatViolation = (reason = 'Tab switch or external application window detected.', infractionType = 'BROWSER_SWITCH') => {
-    if (!currentUser || !isOpen) return;
+    // Siren and violation report MUST ONLY occur if the quiz is LIVE (activeQuizAttempt is running)
+    if (!currentUser || !isOpen || !activeQuizAttempt) return;
     try {
       playAntiCheatBuzzer();
     } catch {}
@@ -198,14 +199,15 @@ export default function StudentPortal({
   };
 
   // Dedicated Anti-Cheat & Browser Switch Detection Effect
-  // Active whenever a team member/student is LOGGED IN in the Student Portal
-  // Whenever they switch tabs, open another browser window, or blur window: sounds the buzzer!
-  // Public website browsing is exempt (does not trigger buzzer)
+  // ACTIVE ONLY WHEN A LIVE QUIZ ATTEMPT IS IN PROGRESS (activeQuizAttempt)
+  // When student is simply viewing dashboard/announcements/rules, NO siren or admin alert is triggered
   useEffect(() => {
-    if (!currentUser || !isOpen) return;
+    // Strictly activate proctoring only during active live quiz attempt
+    if (!currentUser || !isOpen || !activeQuizAttempt) return;
 
     let lastReportTime = 0;
     const reportSwitch = (infractionMsg, type = "BROWSER_SWITCH") => {
+      if (!activeQuizAttempt) return;
       const now = Date.now();
       if (now - lastReportTime < 2000) return;
       lastReportTime = now;
@@ -213,45 +215,48 @@ export default function StudentPortal({
       const sid = currentUser?.studentId || "CONTESTANT";
       const fullDetail = `${currentUser?.fullName || "Student"} (${sid}): ${infractionMsg}`;
 
-      // Trigger loud buzzer and display alert modal
+      // Trigger loud buzzer and report to invigilator console ONLY during live quiz
       recordAntiCheatViolation(fullDetail, type);
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        reportSwitch("Another browser window/tab was opened while logged in!", "BROWSER_SWITCH");
+      if (document.hidden && activeQuizAttempt) {
+        reportSwitch("Another browser window/tab was opened during LIVE quiz attempt!", "BROWSER_SWITCH");
       }
     };
 
     const handleWindowBlur = () => {
-      reportSwitch("Browser window lost focus (opened another browser or external application)!", "WINDOW_BLUR");
+      if (activeQuizAttempt) {
+        reportSwitch("Browser window lost focus (switched to another browser or app) during LIVE quiz attempt!", "WINDOW_BLUR");
+      }
     };
 
     const handleFullscreenChange = () => {
       const inFull = !!document.fullscreenElement;
       setIsFullScreen(inFull);
       if (!inFull && activeQuizAttempt) {
-        reportSwitch("Full-screen lockdown mode exited!", "FULLSCREEN_EXIT");
+        reportSwitch("Full-screen lockdown mode exited during LIVE quiz attempt!", "FULLSCREEN_EXIT");
       }
     };
 
     const handleKeyDown = (e) => {
+      if (!activeQuizAttempt) return;
       if (e.key === "F12") {
         e.preventDefault();
-        reportSwitch("Developer tools / F12 shortcut attempted.", "DEVTOOLS_ATTEMPT");
+        reportSwitch("Developer tools / F12 shortcut attempted during LIVE quiz.", "DEVTOOLS_ATTEMPT");
         return false;
       }
       if (e.ctrlKey || e.metaKey) {
         const blockedKeys = ["c", "v", "x", "t", "n", "w", "u", "p", "i", "j", "r"];
         if (blockedKeys.includes(e.key.toLowerCase())) {
           e.preventDefault();
-          reportSwitch(`Keyboard shortcut (Ctrl+${e.key.toUpperCase()}) attempted.`, "SHORTCUT_ATTEMPT");
+          reportSwitch(`Keyboard shortcut (Ctrl+${e.key.toUpperCase()}) attempted during LIVE quiz.`, "SHORTCUT_ATTEMPT");
           return false;
         }
       }
       if (e.altKey && (e.key === "Tab" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         e.preventDefault();
-        reportSwitch("Alt-Tab window switch navigation attempted.", "ALT_TAB_SWITCH");
+        reportSwitch("Alt-Tab window switch navigation attempted during LIVE quiz.", "ALT_TAB_SWITCH");
         return false;
       }
     };
@@ -263,7 +268,7 @@ export default function StudentPortal({
     const handleCopy = (e) => {
       if (activeQuizAttempt) {
         e.preventDefault();
-        reportSwitch("Copying content attempted.", "COPY_ATTEMPT");
+        reportSwitch("Copying content attempted during LIVE quiz.", "COPY_ATTEMPT");
       }
     };
 
@@ -283,6 +288,13 @@ export default function StudentPortal({
       document.removeEventListener("copy", handleCopy);
     };
   }, [currentUser, isOpen, activeQuizAttempt]);
+
+  // Automatically request Full Screen upon student login or opening the portal
+  useEffect(() => {
+    if (isOpen && currentUser && !document.fullscreenElement) {
+      requestFullScreen();
+    }
+  }, [isOpen, currentUser]);
 
   // Synchronize student data upon open or user state change
   useEffect(() => {
@@ -470,6 +482,7 @@ export default function StudentPortal({
       }
       setIdentifier('');
       setPassword('');
+      requestFullScreen();
     } catch (err) {
       // Fallback in case of network issue
       const existing = getStoredParticipants() || [];
@@ -1096,6 +1109,21 @@ export default function StudentPortal({
             <span>Marks: <strong className="text-white font-black">{studentStatus?.totalScore ?? 0} pts</strong></span>
           </div>
           
+          {/* FULL SCREEN TOGGLE BUTTON */}
+          <button
+            onClick={isFullScreen ? exitFullScreen : requestFullScreen}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              isFullScreen 
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 shadow-sm'
+                : 'border-sky-200 bg-sky-50 text-slate-700 hover:text-blue-700 hover:bg-sky-100 shadow-sm'
+            }`}
+            title={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen Mode"}
+            aria-label="Toggle Fullscreen"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">{isFullScreen ? "Full Screen ✓" : "Full Screen"}</span>
+          </button>
+
           {/* THEME TOGGLE (Sun / Moon) */}
           <button
             onClick={handleToggleThemeClick}
