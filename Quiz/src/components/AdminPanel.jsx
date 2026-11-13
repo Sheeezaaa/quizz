@@ -1307,44 +1307,46 @@ export default function AdminPanel({
                 </div>
               </div>
 
-              {/* LIVE PROCTORING & BROWSER SWITCH MALPRACTICE MONITOR - ULTRA HIGH-CONTRAST READABLE DISPLAY */}
-              <div className={`p-6 rounded-3xl border-2 shadow-2xl space-y-6 transition-all ${
+              {/* LIVE PROCTORING & BROWSER SWITCH MALPRACTICE MONITOR - REFINED MODERN ENTERPRISE UI */}
+              <div className={`p-6 rounded-3xl border shadow-xl space-y-6 transition-all ${
                 isDark
-                  ? 'bg-slate-900 border-rose-500/40 text-white shadow-rose-950/40'
-                  : 'bg-white border-rose-400 text-slate-900 shadow-xl shadow-slate-200/50'
+                  ? 'bg-slate-900/90 border-slate-800 text-white shadow-slate-950/40'
+                  : 'bg-white border-slate-200/90 text-slate-900 shadow-xl shadow-slate-200/40'
               }`}>
                 
                 {/* Header Banner */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-rose-500/20">
+                <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b ${
+                  isDark ? 'border-slate-800' : 'border-slate-100'
+                }`}>
                   <div className="flex items-start sm:items-center gap-3.5">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md ${
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
                       unackViolators.length > 0
-                        ? 'bg-rose-600 text-white shadow-rose-600/40'
+                        ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
                         : isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-300'
                     }`}>
-                      <AlertTriangle className="w-6 h-6" />
+                      <ShieldAlert className="w-6 h-6" />
                     </div>
                     <div>
                       <div className="flex flex-wrap items-center gap-2.5">
                         <h3 className={`font-heading font-black text-lg sm:text-xl tracking-tight ${
-                          isDark ? 'text-white' : 'text-slate-950'
+                          isDark ? 'text-white' : 'text-slate-900'
                         }`}>
                           Live Browser Switch & Tab Malpractice Monitor
                         </h3>
                         {unackViolators.length > 0 ? (
-                          <span className="px-3 py-1 rounded-full text-xs font-mono font-black bg-rose-600 text-white shadow-sm border border-rose-400 animate-pulse">
-                            ⚠️ {unackViolators.length} ACTIVE BREACH{unackViolators.length > 1 ? 'ES' : ''} DETECTED
+                          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shadow-sm">
+                            ⚠️ {unackViolators.length} ACTIVE INCIDENT{unackViolators.length > 1 ? 'S' : ''} DETECTED
                           </span>
                         ) : (
                           <span className={`px-3 py-1 rounded-full text-xs font-mono font-bold border ${
-                            isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black'
+                            isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold'
                           }`}>
                             LOCKDOWN SECURE
                           </span>
                         )}
                       </div>
                       <p className={`text-xs sm:text-sm mt-1 font-medium ${
-                        isDark ? 'text-slate-300' : 'text-slate-600'
+                        isDark ? 'text-slate-400' : 'text-slate-500'
                       }`}>
                         Real-time tracking of students opening another browser, switching tabs, or leaving full-screen examination mode.
                       </p>
@@ -1356,22 +1358,22 @@ export default function AdminPanel({
                       <button
                         type="button"
                         onClick={handleDismissAllAlerts}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-all cursor-pointer shadow-md"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
                         title="Dismiss all malpractice alerts"
                       >
-                        <CheckCircle2 className="w-4 h-4 text-white" />
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                         <span>Dismiss All Alerts</span>
                       </button>
                     )}
                     <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border ${
-                      isDark ? 'bg-slate-800 text-slate-200 border-slate-700' : 'bg-slate-100 text-slate-900 border-slate-300'
+                      isDark ? 'bg-slate-800/80 text-slate-200 border-slate-700' : 'bg-slate-100 text-slate-800 border-slate-200'
                     }`}>
-                      Total Violations: <strong className={isDark ? 'text-white' : 'text-slate-950'}>{liveProctorAlerts.length}</strong>
+                      Total Violations: <strong className={isDark ? 'text-white' : 'text-slate-900'}>{liveProctorAlerts.length}</strong>
                     </span>
                     <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border ${
-                      isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-rose-100 text-rose-900 border-rose-300'
+                      isDark ? 'bg-sky-500/10 text-sky-300 border-sky-500/30' : 'bg-sky-50 text-sky-900 border-sky-200'
                     }`}>
-                      Violating Students: <strong className={isDark ? 'text-white' : 'text-slate-950'}>{activeViolatorsByStudent.length}</strong>
+                      Violating Students: <strong className={isDark ? 'text-white' : 'text-slate-900'}>{activeViolatorsByStudent.length}</strong>
                     </span>
                   </div>
                 </div>
@@ -1380,21 +1382,21 @@ export default function AdminPanel({
                 <div>
                   <div className="flex items-center justify-between mb-3.5">
                     <span className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${
-                      isDark ? 'text-rose-400' : 'text-rose-700'
+                      isDark ? 'text-slate-300' : 'text-slate-700'
                     }`}>
-                      <Siren className="w-4 h-4 shrink-0" />
+                      <ShieldAlert className="w-4 h-4 shrink-0 text-sky-500" />
                       <span>All Offending Student IDs ({activeViolatorsByStudent.length} Detected)</span>
                     </span>
                     {activeViolatorsByStudent.length > 0 && (
                       <div className="flex items-center gap-1.5 text-xs">
-                        <span className={`font-bold text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>Filter:</span>
+                        <span className={`font-bold text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Filter:</span>
                         <select
                           value={proctorFilterId}
                           onChange={(e) => setProctorFilterId(e.target.value)}
                           className={`px-2.5 py-1 rounded-lg font-mono text-xs font-bold border cursor-pointer focus:outline-none ${
                             isDark
-                              ? 'bg-slate-800 text-white border-slate-700 focus:border-rose-500'
-                              : 'bg-white text-slate-900 border-slate-300 shadow-sm focus:border-rose-500'
+                              ? 'bg-slate-800 text-white border-slate-700 focus:border-sky-500'
+                              : 'bg-white text-slate-900 border-slate-200 shadow-sm focus:border-sky-500'
                           }`}
                         >
                           <option value="ALL">All Student IDs ({activeViolatorsByStudent.length})</option>
@@ -1410,7 +1412,7 @@ export default function AdminPanel({
 
                   {activeViolatorsByStudent.length === 0 ? (
                     <div className={`p-5 rounded-2xl border text-xs flex items-center gap-3.5 ${
-                      isDark ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                      isDark ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                     }`}>
                       <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
                       <div>
@@ -1427,29 +1429,25 @@ export default function AdminPanel({
                           return (
                             <div
                               key={violator.studentId}
-                              className={`p-4 sm:p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-3.5 shadow-md ${
-                                isUnack
-                                  ? isDark
-                                    ? 'bg-rose-950/50 border-rose-500 text-white shadow-rose-950/40'
-                                    : 'bg-rose-50/90 border-rose-400 text-slate-950 shadow-rose-200/60'
-                                  : isDark
-                                    ? 'bg-slate-950/60 border-slate-800 text-slate-200'
-                                    : 'bg-slate-50 border-slate-300 text-slate-900'
+                              className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between gap-3.5 shadow-sm hover:shadow-md ${
+                                isDark
+                                  ? 'bg-slate-800/60 border-slate-700 text-slate-100'
+                                  : 'bg-white border-slate-200 text-slate-900'
                               }`}
                             >
                               <div>
                                 {/* TOP ROW: STUDENT ID BADGE & COUNT */}
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="px-3 py-1 rounded-xl bg-rose-600 text-white font-mono font-black text-sm flex items-center gap-1.5 shadow-md shadow-rose-600/30 select-all">
-                                    <span className="text-[10px] text-rose-200 font-sans uppercase font-bold">ID:</span>
+                                  <div className="px-3 py-1 rounded-xl bg-slate-900 text-white font-mono font-bold text-xs flex items-center gap-1.5 shadow-sm select-all">
+                                    <span className="text-[10px] text-sky-400 uppercase font-bold">ID:</span>
                                     <span>{violator.studentId}</span>
                                   </div>
-                                  <span className={`text-xs font-mono font-black px-2.5 py-0.5 rounded-lg border ${
+                                  <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border ${
                                     isUnack
-                                      ? 'bg-rose-600 text-white border-rose-400 animate-pulse'
+                                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400/40'
                                       : isDark
                                         ? 'bg-slate-800 text-slate-300 border-slate-700'
-                                        : 'bg-slate-200 text-slate-800 border-slate-300'
+                                        : 'bg-slate-100 text-slate-700 border-slate-200'
                                   }`}>
                                     ⚠️ {violator.totalCount}x Switched
                                   </span>
@@ -1458,33 +1456,33 @@ export default function AdminPanel({
                                 {/* STUDENT NAME & PROGRAM */}
                                 <div className="mt-3">
                                   <strong className={`text-base font-heading font-black block truncate ${
-                                    isDark ? 'text-white' : 'text-slate-950'
+                                    isDark ? 'text-white' : 'text-slate-900'
                                   }`}>
                                     {violator.studentName}
                                   </strong>
-                                  <span className={`text-xs font-mono font-bold block mt-0.5 ${
-                                    isDark ? 'text-slate-300' : 'text-slate-600'
+                                  <span className={`text-xs font-mono font-semibold block mt-0.5 ${
+                                    isDark ? 'text-slate-400' : 'text-slate-500'
                                   }`}>
                                     {violator.campus} • {violator.semester || violator.degreeProgram}
                                   </span>
                                 </div>
 
-                                {/* LATEST VIOLATION DETAILS - HIGH CONTRAST */}
+                                {/* LATEST VIOLATION DETAILS - CLEAN HIGH CONTRAST */}
                                 <div className={`mt-3 p-3 rounded-xl border text-xs ${
                                   isDark
-                                    ? 'bg-black/60 border-rose-500/30 text-rose-200'
-                                    : 'bg-white border-rose-300 text-rose-950 shadow-sm'
+                                    ? 'bg-slate-900/80 border-slate-700/60 text-slate-200'
+                                    : 'bg-slate-50 border-slate-200 text-slate-800'
                                 }`}>
-                                  <div className={`flex items-center gap-1 text-[10px] uppercase font-black ${
-                                    isDark ? 'text-slate-400' : 'text-slate-600'
+                                  <div className={`flex items-center gap-1 text-[10px] uppercase font-bold ${
+                                    isDark ? 'text-slate-400' : 'text-slate-500'
                                   }`}>
                                     <ExternalLink className="w-3.5 h-3.5" />
                                     <span>Latest Infraction:</span>
                                   </div>
-                                  <p className="mt-1 font-bold leading-snug line-clamp-2">
+                                  <p className="mt-1 font-medium leading-snug line-clamp-2">
                                     {violator.latestAlert.details}
                                   </p>
-                                  <span className={`text-[11px] font-mono font-bold block mt-1.5 ${
+                                  <span className={`text-[11px] font-mono font-medium block mt-1.5 ${
                                     isDark ? 'text-slate-400' : 'text-slate-500'
                                   }`}>
                                     Detected at: {new Date(violator.latestTimestamp).toLocaleTimeString()}
@@ -1493,21 +1491,23 @@ export default function AdminPanel({
                               </div>
 
                               {/* ACTIONS */}
-                              <div className="pt-2.5 border-t border-rose-500/20 flex items-center gap-2">
+                              <div className={`pt-2.5 border-t flex items-center gap-2 ${
+                                isDark ? 'border-slate-700/60' : 'border-slate-100'
+                              }`}>
                                 <button
                                   type="button"
                                   onClick={() => setActiveCheatingAlert(violator.latestAlert)}
-                                  className="flex-1 py-2 px-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-heading font-black text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer text-center"
+                                  className="flex-1 py-2 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-heading font-bold text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer text-center"
                                 >
                                   Review ID
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleActionOnCheatingAlert(violator.latestAlert.id, 'WARN_STUDENT')}
-                                  className={`py-2 px-3 rounded-xl border text-xs font-black transition-all cursor-pointer ${
+                                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                                     isDark
-                                      ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 text-amber-300'
-                                      : 'bg-amber-100 hover:bg-amber-200 border-amber-400 text-amber-900'
+                                      ? 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/40 text-amber-300'
+                                      : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800'
                                   }`}
                                   title="Issue formal warning to candidate"
                                 >
@@ -1516,10 +1516,10 @@ export default function AdminPanel({
                                 <button
                                   type="button"
                                   onClick={() => handleDismissStudentAlerts(violator.studentId)}
-                                  className={`py-2 px-3 rounded-xl border text-xs font-black transition-all cursor-pointer ${
+                                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                                     isDark
                                       ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
-                                      : 'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-800'
+                                      : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
                                   }`}
                                   title="Dismiss all alerts for this student ID"
                                 >
@@ -1533,12 +1533,12 @@ export default function AdminPanel({
                   )}
                 </div>
 
-                {/* 2. CHRONOLOGICAL INCIDENT LOG - CRYSTAL-CLEAR CONTRAST */}
+                {/* 2. CHRONOLOGICAL INCIDENT LOG */}
                 {liveProctorAlerts.length > 0 && (
-                  <div className="pt-5 border-t border-rose-500/20">
+                  <div className={`pt-5 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
                     <div className="flex items-center justify-between mb-3">
-                      <span className={`text-xs font-mono font-black uppercase tracking-wider ${
-                        isDark ? 'text-slate-300' : 'text-slate-800'
+                      <span className={`text-xs font-mono font-bold uppercase tracking-wider ${
+                        isDark ? 'text-slate-300' : 'text-slate-700'
                       }`}>
                         Full Chronological Incident Log ({liveProctorAlerts.length} Events)
                       </span>
@@ -1551,49 +1551,43 @@ export default function AdminPanel({
                           return (
                             <div
                               key={alert.id}
-                              className={`p-3.5 rounded-xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-all shadow-sm ${
-                                isUnack
-                                  ? isDark
-                                    ? 'bg-rose-950/70 border-rose-500 text-white'
-                                    : 'bg-rose-50 border-rose-400 text-slate-950 shadow-rose-200/50'
-                                  : isDark
-                                    ? 'bg-slate-950/70 border-slate-800 text-slate-200'
-                                    : 'bg-white border-slate-300 text-slate-900'
+                              className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-all shadow-sm ${
+                                isDark
+                                  ? 'bg-slate-800/40 border-slate-700 text-slate-200'
+                                  : 'bg-white border-slate-200 text-slate-900'
                               }`}
                             >
                               <div className="flex flex-wrap items-center gap-2.5 min-w-0">
-                                {/* STUDENT ID BADGE - ALWAYS SOLID HIGH CONTRAST */}
-                                <span className="px-3 py-1 rounded-lg bg-rose-600 text-white font-mono font-black text-sm shadow-sm shrink-0 select-all">
+                                {/* STUDENT ID BADGE - SLEEK SLATE */}
+                                <span className="px-3 py-1 rounded-lg bg-slate-900 text-white font-mono font-bold text-xs shadow-sm shrink-0 select-all">
                                   {alert.studentId}
                                 </span>
 
                                 {/* STUDENT NAME */}
                                 <strong className={`font-heading font-black text-sm truncate ${
-                                  isDark ? 'text-white' : 'text-slate-950'
+                                  isDark ? 'text-white' : 'text-slate-900'
                                 }`}>
                                   {alert.studentName}
                                 </strong>
 
                                 {/* STAGE / ROUND */}
                                 <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded ${
-                                  isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-800'
+                                  isDark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-700 border border-slate-200'
                                 }`}>
                                   Round 0{alert.roundNumber}
                                 </span>
 
                                 {/* DETAILS */}
-                                <span className={`font-semibold truncate max-w-sm ${
-                                  isUnack
-                                    ? isDark ? 'text-rose-200 font-bold' : 'text-rose-900 font-bold'
-                                    : isDark ? 'text-slate-300' : 'text-slate-700'
+                                <span className={`font-medium truncate max-w-sm ${
+                                  isDark ? 'text-slate-300' : 'text-slate-600'
                                 }`}>
                                   {alert.details}
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-2.5 shrink-0">
-                                <span className={`text-xs font-mono font-bold ${
-                                  isDark ? 'text-slate-400' : 'text-slate-600'
+                                <span className={`text-xs font-mono font-medium ${
+                                  isDark ? 'text-slate-400' : 'text-slate-500'
                                 }`}>
                                   {new Date(alert.timestamp).toLocaleTimeString()}
                                 </span>
@@ -1601,13 +1595,13 @@ export default function AdminPanel({
                                   <button
                                     type="button"
                                     onClick={() => handleActionOnCheatingAlert(alert.id, 'DISMISS')}
-                                    className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs cursor-pointer shadow-sm"
+                                    className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer shadow-sm transition-all"
                                   >
                                     Dismiss
                                   </button>
                                 ) : (
                                   <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
-                                    isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-700 border border-slate-300'
+                                    isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600 border border-slate-200'
                                   }`}>
                                     {alert.actionTaken || 'RESOLVED'}
                                   </span>
