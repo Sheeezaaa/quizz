@@ -1,7 +1,7 @@
 export const PRACTICE_QUESTIONS = {
   round1: [
     {
-      id: 1,
+      id: 'p1',
       subject: "Data Structures & Algorithms",
       question: "What is the worst-case time complexity of searching for an element in a balanced Binary Search Tree (AVL Tree) with n nodes?",
       options: ["O(1)", "O(log n)", "O(n)", "O(n log n)"],
@@ -9,7 +9,7 @@ export const PRACTICE_QUESTIONS = {
       explanation: "A balanced BST like an AVL tree maintains a maximum height of O(log n), ensuring searches take at most O(log n) comparisons in the worst case.",
     },
     {
-      id: 2,
+      id: 'p2',
       subject: "Object Oriented Programming",
       question: "In C++ or Java, which concept allows a subclass to provide a specific implementation of a method that is already provided by its superclass?",
       options: ["Method Overloading", "Method Overriding", "Data Encapsulation", "Multiple Inheritance"],
@@ -17,7 +17,7 @@ export const PRACTICE_QUESTIONS = {
       explanation: "Method Overriding occurs when a child class provides a new implementation of an inherited virtual or abstract method with identical signature.",
     },
     {
-      id: 3,
+      id: 'p3',
       subject: "Database Systems",
       question: "Which normal form requires removing transitive dependencies of non-prime attributes on candidate keys?",
       options: ["First Normal Form (1NF)", "Second Normal Form (2NF)", "Third Normal Form (3NF)", "Boyce-Codd Normal Form (BCNF)"],
@@ -25,7 +25,7 @@ export const PRACTICE_QUESTIONS = {
       explanation: "3NF is satisfied if the table is in 2NF and has no transitive dependencies (X -> Y and Y -> Z where Z is non-prime).",
     },
     {
-      id: 4,
+      id: 'p4',
       subject: "Computer Networks",
       question: "At which layer of the OSI model does the Address Resolution Protocol (ARP) primarily operate to map IP addresses to MAC addresses?",
       options: ["Transport Layer", "Data Link / Network Interface", "Application Layer", "Session Layer"],
@@ -33,54 +33,85 @@ export const PRACTICE_QUESTIONS = {
       explanation: "ARP functions at the boundary between Network Layer (Layer 3) and Data Link Layer (Layer 2) to resolve 32-bit IPv4 addresses into 48-bit physical MAC addresses.",
     },
     {
-      id: 5,
+      id: 'p5',
       subject: "Operating Systems",
       question: "Which condition is NOT one of Coffman's four necessary conditions for a system deadlock to occur?",
       options: ["Mutual Exclusion", "Hold and Wait", "Preemption Allowed", "Circular Wait"],
       correct: 2,
       explanation: "For deadlock to occur, resources must be NON-preemptive (No Preemption). If preemption is allowed, deadlock cannot form.",
     },
+    {
+      id: 'p6',
+      subject: "Programming Fundamentals",
+      question: "Which of the following data types in C/C++ guarantees at least 32 bits of storage according to standard specifications?",
+      options: ["char", "short", "long", "bool"],
+      correct: 2,
+      explanation: "The C/C++ standard mandates that 'long' must provide at least 32 bits of precision.",
+    },
+    {
+      id: 'p7',
+      subject: "Artificial Intelligence",
+      question: "Which uninformed search algorithm is guaranteed to find the shallowest goal state first when all step costs are equal?",
+      options: ["Depth-First Search (DFS)", "Breadth-First Search (BFS)", "Depth-Limited Search", "Bidirectional DFS"],
+      correct: 1,
+      explanation: "Breadth-First Search explores all nodes level-by-level, ensuring the shallowest solution is encountered first.",
+    },
+    {
+      id: 'p8',
+      subject: "Software Engineering",
+      question: "In object-oriented design, which SOLID principle states that high-level modules should not depend upon low-level modules, but both should depend upon abstractions?",
+      options: ["Single Responsibility", "Open/Closed Principle", "Interface Segregation", "Dependency Inversion"],
+      correct: 3,
+      explanation: "The Dependency Inversion Principle dictates decoupling modules via interfaces and abstract types.",
+    }
   ],
   rapidFire: [
     {
-      id: 1,
+      id: 'rf1',
       subject: "Programming Fundamentals",
       question: "What operator is used in C to access the value pointed to by a pointer variable?",
       options: ["&", "*", "->", "."],
       correct: 1,
     },
     {
-      id: 2,
+      id: 'rf2',
       subject: "Software Engineering",
       question: "In Agile Scrum, what is the recommended standard duration of a Sprint?",
       options: ["1 to 4 Weeks", "6 Months", "1 Day", "1 Year"],
       correct: 0,
     },
     {
-      id: 3,
+      id: 'rf3',
       subject: "Computer Networks",
       question: "What is the standard port number utilized by default for secure HTTPS web traffic?",
       options: ["80", "22", "443", "8080"],
       correct: 2,
     },
     {
-      id: 4,
+      id: 'rf4',
       subject: "Operating Systems",
       question: "What CPU scheduling algorithm guarantees prevention of starvation: FCFS or Round Robin?",
       options: ["Round Robin", "FCFS", "Shortest Job First", "Priority Non-preemptive"],
       correct: 0,
     },
     {
-      id: 5,
+      id: 'rf5',
       subject: "Data Structures",
       question: "Which data structure follows the LIFO (Last In First Out) principle?",
       options: ["Queue", "Stack", "Binary Heap", "Linked List"],
       correct: 1,
     },
+    {
+      id: 'rf6',
+      subject: "Database Systems",
+      question: "Which SQL clause is used to filter groups created by the GROUP BY statement?",
+      options: ["WHERE", "HAVING", "FILTER", "ORDER BY"],
+      correct: 1,
+    }
   ],
   buzzer: [
     {
-      id: 1,
+      id: 'bz1',
       subject: "Computer Science Grand Final",
       question: "Who formulated the seminal problem of the 'Dining Philosophers' to illustrate concurrency synchronization in 1965?",
       options: ["Edsger W. Dijkstra", "Alan Turing", "Donald Knuth", "John von Neumann"],
@@ -88,7 +119,7 @@ export const PRACTICE_QUESTIONS = {
       tip: "Remember: Press buzzer first! Correct = +1 pt, Wrong = -0.5 pts deduction!",
     },
     {
-      id: 2,
+      id: 'bz2',
       subject: "Software Engineering",
       question: "Which Gang of Four (GoF) design pattern ensures a class has only one instance while providing a global point of access to it?",
       options: ["Factory Pattern", "Singleton Pattern", "Observer Pattern", "Adapter Pattern"],
@@ -96,12 +127,20 @@ export const PRACTICE_QUESTIONS = {
       tip: "You have 10 seconds to submit your answer once you press the buzzer.",
     },
     {
-      id: 3,
+      id: 'bz3',
       subject: "Operating Systems & Hardware",
       question: "What term describes the phenomenon when a virtual memory system spends more time swapping pages in and out than executing instructions?",
       options: ["Thrashing", "Deadlock", "Fragmentation", "Pipelining Stall"],
       correct: 0,
       tip: "Careful! An incorrect buzzer answer incurs a -0.5 points penalty.",
     },
+    {
+      id: 'bz4',
+      subject: "Data Structures & Algorithms",
+      question: "Which sorting algorithm achieves an average-case time complexity of O(n log n) and is traditionally implemented in-place?",
+      options: ["Merge Sort", "Quick Sort", "Counting Sort", "Bubble Sort"],
+      correct: 1,
+      tip: "Quick Sort partitions the array in-place around a pivot with O(n log n) expected time.",
+    }
   ],
 };

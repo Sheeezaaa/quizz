@@ -16,7 +16,6 @@ import {
   Check
 } from 'lucide-react';
 import { PRACTICE_QUESTIONS } from '../data/sampleQuestions';
-import { getStoredQuestions } from '../utils/storage';
 import { 
   playAntiCheatBuzzer, 
   playDisqualificationSiren, 
@@ -24,8 +23,15 @@ import {
   playCorrectChime 
 } from '../utils/soundEffects';
 
+// Helper to shuffle mock questions so public website visitors get fresh random practice
+const getRandomizedPracticePool = (tabKey) => {
+  const pool = PRACTICE_QUESTIONS[tabKey] || PRACTICE_QUESTIONS.round1 || [];
+  return [...pool].sort(() => Math.random() - 0.5);
+};
+
 export default function PracticeArena({ initialMode = 'round1' }) {
   const [activeTab, setActiveTab] = useState(initialMode);
+  const [currentQuestions, setCurrentQuestions] = useState(() => getRandomizedPracticePool(initialMode));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -33,7 +39,6 @@ export default function PracticeArena({ initialMode = 'round1' }) {
   const [hasBuzzed, setHasBuzzed] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
   const [quizFinished, setQuizFinished] = useState(false);
-  const [storedQuestionsList, setStoredQuestionsList] = useState(() => getStoredQuestions());
 
   // Practice Arena: Anti-cheat disabled on public website browsing so visitors aren't startled by buzzers
   const [antiCheatActive, setAntiCheatActive] = useState(false);
@@ -42,32 +47,21 @@ export default function PracticeArena({ initialMode = 'round1' }) {
   const [latestViolationReason, setLatestViolationReason] = useState('');
   const [isDisqualified, setIsDisqualified] = useState(false);
 
-  useEffect(() => {
-    setStoredQuestionsList(getStoredQuestions());
-  }, [activeTab]);
+  const resetQuiz = () => {
+    setCurrentQuestions(getRandomizedPracticePool(activeTab));
+    setCurrentIndex(0);
+    setSelectedOption(null);
+    setIsAnswered(false);
+    setScore(0);
+    setHasBuzzed(false);
+    setQuizFinished(false);
+    setIsDisqualified(false);
+    setShowWarningModal(false);
 
-  // Dynamically filter stored questions by round stage or fallback to defaults
-  let roundQuestions = [];
-  if (activeTab === 'round1') {
-    roundQuestions = storedQuestionsList.filter((q) => 
-      (q.round || '').toLowerCase().includes('round 1') || 
-      (q.round || '').toLowerCase().includes('mcq')
-    );
-  } else if (activeTab === 'rapidFire') {
-    roundQuestions = storedQuestionsList.filter((q) => 
-      (q.round || '').toLowerCase().includes('rapid') || 
-      (q.round || '').toLowerCase().includes('round 3')
-    );
-  } else if (activeTab === 'buzzer') {
-    roundQuestions = storedQuestionsList.filter((q) => 
-      (q.round || '').toLowerCase().includes('buzzer') || 
-      (q.round || '').toLowerCase().includes('round 4')
-    );
-  }
-
-  const currentQuestions = (roundQuestions.length > 0) 
-    ? roundQuestions 
-    : (PRACTICE_QUESTIONS[activeTab] || PRACTICE_QUESTIONS.round1);
+    if (activeTab === 'round1') setTimeLeft(30);
+    else if (activeTab === 'rapidFire') setTimeLeft(3);
+    else if (activeTab === 'buzzer') setTimeLeft(10);
+  };
 
   const currentQ = currentQuestions[currentIndex] || currentQuestions[0] || PRACTICE_QUESTIONS.round1[0];
 
@@ -176,21 +170,6 @@ export default function PracticeArena({ initialMode = 'round1' }) {
     return () => clearInterval(timer);
   }, [timeLeft, quizFinished, isDisqualified, activeTab, hasBuzzed]);
 
-  const resetQuiz = () => {
-    setCurrentIndex(0);
-    setSelectedOption(null);
-    setIsAnswered(false);
-    setScore(0);
-    setHasBuzzed(false);
-    setQuizFinished(false);
-    setIsDisqualified(false);
-    setShowWarningModal(false);
-
-    if (activeTab === 'round1') setTimeLeft(30);
-    else if (activeTab === 'rapidFire') setTimeLeft(3);
-    else if (activeTab === 'buzzer') setTimeLeft(10);
-  };
-
   const handleTimeExpired = () => {
     if (isAnswered) return;
     setIsAnswered(true);
@@ -251,13 +230,13 @@ export default function PracticeArena({ initialMode = 'round1' }) {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-heading font-semibold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 mb-4">
             <Zap className="w-3.5 h-3.5" />
-            <span>Interactive Simulator</span>
+            <span>Public Solo Practice • Mock Sample Questions Only</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-heading font-black text-white mb-2">
             Solo <span className="text-[#3b82f6]">Practice Arena</span>
           </h2>
           <p className="text-slate-300 text-xs sm:text-sm">
-            Experience the authentic pressure of each official tournament round before event day!
+            Randomized mock practice MCQs for public visitors. Official tournament question bank remains strictly confidential and only accessible within the authenticated Student Portal during live exams.
           </p>
         </div>
 
