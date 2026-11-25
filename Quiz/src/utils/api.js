@@ -551,11 +551,13 @@ export async function apiGetQuestions(params = {}) {
     if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
 
     const res = await fetch(`${API_BASE}/questions?${query}`, { headers });
-    if (!res.ok) return [];
-    return await safeJson(res);
-  } catch {
-    return [];
-  }
+    if (res && res.ok) {
+      const data = await safeJson(res);
+      if (Array.isArray(data) && data.length > 0) return data;
+      if (data && Array.isArray(data.questions) && data.questions.length > 0) return data.questions;
+    }
+  } catch {}
+  return getStoredQuestions() || [];
 }
 
 export async function apiCreateQuestion(questionData) {
@@ -687,22 +689,20 @@ export async function apiStartQuizAttempt(roundNumber = 1) {
     if (res.ok && data.success && data.attempt && Array.isArray(data.attempt.questions) && data.attempt.questions.length > 0) {
       return { success: true, attempt: data.attempt };
     }
-    if (res.status === 409 || res.status === 403 || res.status === 408) {
-      return { success: false, error: data.error || 'Cannot start quiz attempt.' };
-    }
   } catch (err) {
     // Network or server error: Fall back to local stored question bank
   }
 
   // Fallback: Retrieve all questions saved by admin in Question Bank
   const allStored = getStoredQuestions() || [];
-  const roundFiltered = allStored.filter((q) => {
-    if (q.isActive === false) return false;
+  const activeQuestions = allStored.filter((q) => q.isActive !== false);
+
+  const roundFiltered = activeQuestions.filter((q) => {
     const rNum = Number(q.roundNumber) || (typeof q.round === 'string' && q.round.includes('2') ? 2 : typeof q.round === 'string' && q.round.includes('3') ? 3 : typeof q.round === 'string' && q.round.includes('4') ? 4 : 1);
     return rNum === Number(roundNumber);
   });
 
-  const questionPool = roundFiltered.length > 0 ? roundFiltered : allStored;
+  const questionPool = roundFiltered.length > 0 ? roundFiltered : (activeQuestions.length > 0 ? activeQuestions : allStored);
 
   if (!questionPool || questionPool.length === 0) {
     return { 

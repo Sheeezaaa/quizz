@@ -74,9 +74,22 @@ import {
   apiGetMyTeam,
   apiFinalizeTeam,
   setStudentAuthToken,
-  getStudentAuthToken
+  getStudentAuthToken,
+  apiGetQuestions
 } from '../utils/api';
-import { getLoggedInStudent, setLoggedInStudent, getStoredParticipants, generateParticipantId, saveParticipant, getStoredTeams, localFinalizeTeam, localCreateTeam, localJoinTeam } from '../utils/storage';
+import { 
+  getLoggedInStudent, 
+  setLoggedInStudent, 
+  getStoredParticipants, 
+  generateParticipantId, 
+  saveParticipant, 
+  getStoredTeams, 
+  localFinalizeTeam, 
+  localCreateTeam, 
+  localJoinTeam,
+  getStoredQuestions,
+  saveStoredQuestions
+} from '../utils/storage';
 import { playCorrectChime, playAntiCheatBuzzer, playDisqualificationSiren } from '../utils/soundEffects';
 import mascotSkyImg from '../assets/mascot-sky.jpg';
 
@@ -151,6 +164,7 @@ export default function StudentPortal({
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
   const [quizResultSummary, setQuizResultSummary] = useState(null);
   const [quizError, setQuizError] = useState('');
+  const [localScore, setLocalScore] = useState(0);
 
   // Anti-Cheating & Browser Lock States
   const [violationCount, setViolationCount] = useState(0);
@@ -303,18 +317,34 @@ export default function StudentPortal({
     }
   }, [isOpen, currentUser]);
 
+  // Real-time synchronization when questions or status change in other tabs
+  const [, setSyncTick] = useState(0);
+  useEffect(() => {
+    const handleStorageUpdate = (e) => {
+      if (e.key === 'bob_questions' || e.key?.startsWith('bob_student_results_')) {
+        setSyncTick((prev) => prev + 1);
+      }
+    };
+    window.addEventListener('storage', handleStorageUpdate);
+    return () => window.removeEventListener('storage', handleStorageUpdate);
+  }, []);
+
   const loadStudentDashboardData = async () => {
     try {
-      const [statusData, annList, notifList, lbData] = await Promise.all([
+      const [statusData, annList, notifList, lbData, questionList] = await Promise.all([
         apiGetStudentQuizStatus(),
         apiGetAnnouncements(),
         apiGetNotifications(),
         apiGetLeaderboard(),
+        apiGetQuestions(),
       ]);
 
       if (statusData) setStudentStatus(statusData);
       if (annList) setAnnouncements(annList.filter((a) => a.isPublished));
       if (notifList) setNotifications(notifList);
+      if (Array.isArray(questionList) && questionList.length > 0) {
+        saveStoredQuestions(questionList);
+      }
 
       if (lbData && lbData.leaderboard && currentUser) {
         const myEntry = lbData.leaderboard.find((l) => l.studentId === currentUser.studentId);
@@ -667,20 +697,65 @@ export default function StudentPortal({
     setViolationCount(0);
     setIsDisqualified(false);
     setShowViolationModal(false);
+    setLocalScore(0);
+
+    const startLocalQuiz = () => {
+      const stored = getStoredQuestions() || [];
+      if (!stored || stored.length === 0) {
+        setQuizError('Question Bank is empty. Please ask the administrator to upload or add questions.');
+        return false;
+      }
+
+      const activeList = stored.filter((q) => q.isActive !== false);
+      const roundFiltered = activeList.filter((q) => {
+        const rNum = Number(q.roundNumber) || (typeof q.round === 'string' && q.round.includes('2') ? 2 : typeof q.round === 'string' && q.round.includes('3') ? 3 : typeof q.round === 'string' && q.round.includes('4') ? 4 : 1);
+        return rNum === Number(roundNumber);
+      });
+
+      const questionPool = roundFiltered.length > 0 ? roundFiltered : (activeList.length > 0 ? activeList : stored);
+
+      const sanitizedAllocated = questionPool.map((q, idx) => ({
+        id: q.id || `local_q_${idx}`,
+        order: idx + 1,
+        subject: q.subject || q.subjectName || 'Computer Science',
+        subjectName: q.subject || q.subjectName || 'Computer Science',
+        difficulty: q.difficulty || 'Moderate',
+        question: q.question,
+        options: (Array.isArray(q.options) && q.options.length > 0)
+          ? q.options
+          : [q.optionA || 'Option A', q.optionB || 'Option B', q.optionC || 'Option C', q.optionD || 'Option D'].filter(Boolean),
+      }));
+
+      const localAttempt = {
+        id: `ATT-LOCAL-${Date.now()}`,
+        roundNumber: Number(roundNumber) || 1,
+        questions: sanitizedAllocated,
+        submittedCount: 0,
+        timeLimitSeconds: 30,
+        isLocalFallback: true,
+      };
+
+      setActiveQuizAttempt(localAttempt);
+      setCurrentQIndex(0);
+      setSelectedOption(null);
+      setQuizTimeRemaining(30);
+      requestFullScreen();
+      return true;
+    };
 
     try {
       const res = await apiStartQuizAttempt(roundNumber);
-      if (!res.success || !res.attempt || !res.attempt.questions || res.attempt.questions.length === 0) {
-        setQuizError(res.error || 'Cannot start quiz round: No active questions found in Question Bank.');
+      if (res && res.success && res.attempt && Array.isArray(res.attempt.questions) && res.attempt.questions.length > 0) {
+        setActiveQuizAttempt(res.attempt);
+        setCurrentQIndex(0);
+        setSelectedOption(null);
+        setQuizTimeRemaining(res.attempt.timeLimitSeconds || 30);
+        requestFullScreen();
         return;
       }
-      setActiveQuizAttempt(res.attempt);
-      setCurrentQIndex(0);
-      setSelectedOption(null);
-      setQuizTimeRemaining(res.attempt.timeLimitSeconds || 30);
-      requestFullScreen();
-    } catch (err) {
-      setQuizError(err.message || 'Server error starting round.');
+      startLocalQuiz();
+    } catch {
+      startLocalQuiz();
     }
   };
 
@@ -703,7 +778,8 @@ export default function StudentPortal({
         (activeQuizAttempt.timeLimitSeconds || 30) - quizTimeRemaining
       );
 
-      if (res.isCorrect) {
+      if (res && res.isCorrect) {
+        setLocalScore((prev) => prev + (res.pointsAwarded || 10));
         try { playCorrectChime(); } catch {}
       }
 
@@ -753,7 +829,8 @@ export default function StudentPortal({
     exitFullScreen();
     try {
       const res = await apiFinishQuizAttempt(activeQuizAttempt.id);
-      const finalScore = disqualified ? 0 : (res.finalScore ?? 0);
+      const earnedScore = (res && typeof res.finalScore === 'number' && res.finalScore > 0) ? res.finalScore : localScore;
+      const finalScore = disqualified ? 0 : earnedScore;
       const summary = {
         score: finalScore,
         totalQuestions: activeQuizAttempt.questions.length,
@@ -772,7 +849,7 @@ export default function StudentPortal({
       setActiveQuizAttempt(null);
       loadStudentDashboardData();
     } catch (err) {
-      const finalScore = 4; // safe local calculation
+      const finalScore = disqualified ? 0 : localScore;
       const summary = {
         score: finalScore,
         totalQuestions: activeQuizAttempt.questions.length,
@@ -2108,7 +2185,12 @@ export default function StudentPortal({
                       </div>
                       <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
                         <strong className="block text-slate-900 font-bold">🎯 Questions:</strong>
-                        <span className="text-slate-600">All Question Bank MCQs</span>
+                        <span className="text-slate-600">
+                          {(() => {
+                            const count = (getStoredQuestions() || []).length;
+                            return count > 0 ? `All ${count} Bank Questions` : 'All Question Bank MCQs';
+                          })()}
+                        </span>
                       </div>
                       <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
                         <strong className="block text-slate-900 font-bold">🛡️ Proctoring:</strong>
