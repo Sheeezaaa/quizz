@@ -20,9 +20,10 @@ import {
   getStoredRules, 
   getStoredParticipants,
   getStoredTheme,
-  setStoredTheme
+  setStoredTheme,
+  saveStoredQuestions
 } from './utils/storage';
-import { apiGetCompetition, apiGetParticipants } from './utils/api';
+import { apiGetCompetition, apiGetParticipants, apiGetQuestions } from './utils/api';
 import { ShieldCheck } from 'lucide-react';
 
 export default function App() {
@@ -43,9 +44,10 @@ export default function App() {
     let isMounted = true;
     const fetchCentralData = async () => {
       try {
-        const [compData, candidates] = await Promise.all([
+        const [compData, candidates, serverQuestions] = await Promise.all([
           apiGetCompetition(),
-          apiGetParticipants()
+          apiGetParticipants(),
+          apiGetQuestions()
         ]);
         if (!isMounted) return;
         if (compData) {
@@ -56,6 +58,9 @@ export default function App() {
         }
         if (candidates && Array.isArray(candidates)) {
           setParticipants(candidates);
+        }
+        if (serverQuestions && Array.isArray(serverQuestions) && serverQuestions.length > 0) {
+          saveStoredQuestions(serverQuestions);
         }
       } catch {}
     };

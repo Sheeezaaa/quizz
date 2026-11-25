@@ -670,8 +670,8 @@ export default function StudentPortal({
 
     try {
       const res = await apiStartQuizAttempt(roundNumber);
-      if (!res.success) {
-        setQuizError(res.error || 'Cannot start quiz round.');
+      if (!res.success || !res.attempt || !res.attempt.questions || res.attempt.questions.length === 0) {
+        setQuizError(res.error || 'Cannot start quiz round: No active questions found in Question Bank.');
         return;
       }
       setActiveQuizAttempt(res.attempt);
@@ -1946,6 +1946,16 @@ export default function StudentPortal({
                       </div>
                     </div>
 
+                    {/* Live Countdown Progress Bar */}
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                      <div 
+                        className={`h-full transition-all duration-1000 ${
+                          quizTimeRemaining <= 10 ? 'bg-gradient-to-r from-amber-500 to-rose-600 animate-pulse' : 'bg-gradient-to-r from-sky-500 to-blue-600'
+                        }`}
+                        style={{ width: `${Math.max(0, Math.min(100, (quizTimeRemaining / (activeQuizAttempt.timeLimitSeconds || 30)) * 100))}%` }}
+                      />
+                    </div>
+
                     {/* Question Text */}
                     <div className="space-y-2">
                       <div className="text-xs font-mono font-bold text-blue-700 uppercase tracking-wider">
@@ -2046,12 +2056,26 @@ export default function StudentPortal({
                       </div>
                     </div>
 
-                    <div className="flex justify-center gap-3 pt-2">
+                    <div className="flex flex-wrap justify-center gap-3 pt-2">
                       <button
                         onClick={() => setActiveTab('overview')}
-                        className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-black text-xs shadow-md transition-all cursor-pointer"
+                        className="px-6 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-heading font-black text-xs shadow-md transition-all cursor-pointer"
                       >
                         ← Return to Dashboard Overview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuizResultSummary(null);
+                          if (currentUser?.studentId) {
+                            localStorage.removeItem(`bob_student_results_${currentUser.studentId}`);
+                          }
+                          handleStartAttempt(1);
+                        }}
+                        className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-2"
+                      >
+                        <Zap className="w-4 h-4" />
+                        <span>Retake Round (Live Timer Active)</span>
                       </button>
                     </div>
                   </div>
@@ -2084,7 +2108,7 @@ export default function StudentPortal({
                       </div>
                       <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
                         <strong className="block text-slate-900 font-bold">🎯 Questions:</strong>
-                        <span className="text-slate-600">5 Random MCQs</span>
+                        <span className="text-slate-600">All Question Bank MCQs</span>
                       </div>
                       <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
                         <strong className="block text-slate-900 font-bold">🛡️ Proctoring:</strong>

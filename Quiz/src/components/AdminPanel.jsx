@@ -772,7 +772,10 @@ export default function AdminPanel({
     const finalizedQ = {
       ...editingQuestion,
       options: optList,
-      correct: correctIdx
+      correct: correctIdx,
+      roundNumber: typeof editingQuestion.round === 'string' && editingQuestion.round.includes('2') ? 2 : typeof editingQuestion.round === 'string' && editingQuestion.round.includes('3') ? 3 : typeof editingQuestion.round === 'string' && editingQuestion.round.includes('4') ? 4 : 1,
+      subjectName: editingQuestion.subject || 'General Computer Science',
+      isActive: true
     };
 
     let updated;

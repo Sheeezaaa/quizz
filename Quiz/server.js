@@ -1561,15 +1561,20 @@ app.post('/api/questions/import', requireAdmin, (req, res) => {
   const imported = [];
 
   for (const q of questions) {
-    if (q.question && Array.isArray(q.options) && q.options.length >= 2) {
+    const opts = (Array.isArray(q.options) && q.options.length >= 2)
+      ? q.options
+      : [q.optionA, q.optionB, q.optionC, q.optionD].filter(Boolean);
+
+    if (q.question && opts.length >= 2) {
+      const rNum = Number(q.roundNumber) || (typeof q.round === 'string' && q.round.includes('2') ? 2 : typeof q.round === 'string' && q.round.includes('3') ? 3 : typeof q.round === 'string' && q.round.includes('4') ? 4 : 1);
       imported.push({
         id: q.id || `Q-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-        subjectId: q.subjectId || 'pf',
-        subjectName: q.subjectName || 'Programming Fundamentals',
-        roundNumber: Number(q.roundNumber) || 1,
+        subjectId: q.subjectId || 'cs',
+        subjectName: q.subjectName || q.subject || 'General Computer Science',
+        roundNumber: rNum,
         difficulty: q.difficulty || 'Moderate',
         question: q.question.trim(),
-        options: q.options.map(String),
+        options: opts.map(String),
         correct: Number(q.correct) || 0,
         explanation: q.explanation || '',
         version: 1,
@@ -1579,7 +1584,9 @@ app.post('/api/questions/import', requireAdmin, (req, res) => {
     }
   }
 
-  db.questions = [...imported, ...(db.questions || [])];
+  // Update existing questions and append new ones without duplicate collisions
+  const existingFiltered = (db.questions || []).filter(item => !imported.some(imp => imp.id === item.id));
+  db.questions = [...imported, ...existingFiltered];
   writeDB(db);
 
   addAuditLog(req.user.username, 'QUESTIONS_BULK_IMPORTED', 'question_bank', `${imported.length} items`);
@@ -1716,25 +1723,36 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
     }
   }
 
-  // Select Questions for Attempt (5 questions per student)
-  const allQuestions = (db.questions || []).filter((q) => q.roundNumber === roundNum && q.isActive !== false);
+  // Select Questions for Attempt (Include ALL active questions from Question Bank with Timer)
+  let allQuestions = (db.questions || []).filter((q) => {
+    if (q.isActive === false) return false;
+    const qRoundNum = Number(q.roundNumber) || (typeof q.round === 'string' && q.round.includes('2') ? 2 : typeof q.round === 'string' && q.round.includes('3') ? 3 : typeof q.round === 'string' && q.round.includes('4') ? 4 : 1);
+    return qRoundNum === roundNum;
+  });
+
+  // If no round-specific questions, include all active questions in the question bank
   if (allQuestions.length === 0) {
-    return res.status(500).json({ error: `No active questions configured for Round 0${roundNum}.` });
+    allQuestions = (db.questions || []).filter((q) => q.isActive !== false);
   }
 
-  // Shuffle and pick target count (5 questions per student per Section 8 specification)
-  const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
-  const questionsCount = (roundNum === 1 || roundNum === 2) ? 5 : 5;
-  const selected = shuffled.slice(0, Math.min(questionsCount, shuffled.length));
+  if (allQuestions.length === 0) {
+    return res.status(500).json({ error: `No active questions configured in Question Bank for Round 0${roundNum}.` });
+  }
+
+  // Include ALL questions from Question Bank as requested by user
+  const selected = allQuestions;
 
   // SANITIZE: DO NOT EXPOSE CORRECT ANSWERS TO CLIENT!
   const sanitizedAllocated = selected.map((q, idx) => ({
     id: q.id,
     order: idx + 1,
-    subjectName: q.subjectName,
-    difficulty: q.difficulty,
+    subject: q.subjectName || q.subject || 'Computer Science',
+    subjectName: q.subjectName || q.subject || 'Computer Science',
+    difficulty: q.difficulty || 'Moderate',
     question: q.question,
-    options: q.options,
+    options: (Array.isArray(q.options) && q.options.length > 0)
+      ? q.options
+      : [q.optionA || 'Option A', q.optionB || 'Option B', q.optionC || 'Option C', q.optionD || 'Option D'].filter(Boolean),
   }));
 
   const now = new Date();
