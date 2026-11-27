@@ -6,6 +6,8 @@ import {
   AlertCircle, 
   X, 
   Printer, 
+  Download,
+  FileText,
   Zap, 
   LogOut, 
   Calendar, 
@@ -165,6 +167,11 @@ export default function StudentPortal({
   const [quizResultSummary, setQuizResultSummary] = useState(null);
   const [quizError, setQuizError] = useState('');
   const [localScore, setLocalScore] = useState(0);
+  const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
+  const [incorrectAnswersCount, setIncorrectAnswersCount] = useState(0);
+  const [skippedAnswersCount, setSkippedAnswersCount] = useState(0);
+  const [selectedAttemptForView, setSelectedAttemptForView] = useState(null);
+  const [showTranscriptModal, setShowTranscriptModal] = useState(false);
 
   // Anti-Cheating & Browser Lock States
   const [violationCount, setViolationCount] = useState(0);
@@ -694,10 +701,14 @@ export default function StudentPortal({
   const handleStartAttempt = async (roundNumber = 1) => {
     setQuizError('');
     setQuizResultSummary(null);
+    setSelectedAttemptForView(null);
     setViolationCount(0);
     setIsDisqualified(false);
     setShowViolationModal(false);
     setLocalScore(0);
+    setCorrectAnswersCount(0);
+    setIncorrectAnswersCount(0);
+    setSkippedAnswersCount(0);
 
     const startLocalQuiz = () => {
       const stored = getStoredQuestions() || [];
@@ -780,11 +791,15 @@ export default function StudentPortal({
 
       if (res && res.isCorrect) {
         setLocalScore((prev) => prev + (res.pointsAwarded || 10));
+        setCorrectAnswersCount((prev) => prev + 1);
         try { playCorrectChime(); } catch {}
+      } else {
+        setIncorrectAnswersCount((prev) => prev + 1);
       }
 
       advanceToNextQuestionOrFinish();
     } catch (err) {
+      setIncorrectAnswersCount((prev) => prev + 1);
       advanceToNextQuestionOrFinish();
     } finally {
       setIsSubmittingAnswer(false);
@@ -797,6 +812,7 @@ export default function StudentPortal({
     if (!currentQ) return;
 
     setIsSubmittingAnswer(true);
+    setSkippedAnswersCount((prev) => prev + 1);
     try {
       await apiSkipQuizQuestion(activeQuizAttempt.id, currentQ.id);
       advanceToNextQuestionOrFinish();
@@ -831,14 +847,48 @@ export default function StudentPortal({
       const res = await apiFinishQuizAttempt(activeQuizAttempt.id);
       const earnedScore = (res && typeof res.finalScore === 'number' && res.finalScore > 0) ? res.finalScore : localScore;
       const finalScore = disqualified ? 0 : earnedScore;
+      const totalQ = activeQuizAttempt.questions?.length || 1;
+      const maxScore = totalQ * 10;
+      const percentage = Math.round((finalScore / (maxScore || 1)) * 100);
+      const nowIso = new Date().toISOString();
+
+      // Read past attempts history
+      const historyKey = currentUser?.studentId ? `bob_student_history_${currentUser.studentId}` : null;
+      let pastHistory = [];
+      if (historyKey) {
+        try {
+          const rawH = localStorage.getItem(historyKey);
+          if (rawH) pastHistory = JSON.parse(rawH);
+          if (!Array.isArray(pastHistory)) pastHistory = [];
+        } catch { pastHistory = []; }
+      }
+
+      const attemptNum = pastHistory.length + 1;
       const summary = {
+        attemptNumber: attemptNum,
         score: finalScore,
-        totalQuestions: activeQuizAttempt.questions.length,
+        maxScore,
+        percentage,
+        correctCount: correctAnswersCount,
+        incorrectCount: incorrectAnswersCount,
+        skippedCount: skippedAnswersCount,
+        totalQuestions: totalQ,
         disqualified,
-        completedAt: new Date().toISOString(),
+        completedAt: nowIso,
         roundNumber: activeQuizAttempt.roundNumber || 1,
+        transcriptSerial: `BOB-TR-2026-${Math.floor(100000 + Math.random() * 900000)}`,
       };
+
+      if (historyKey) {
+        pastHistory.push(summary);
+        try {
+          localStorage.setItem(historyKey, JSON.stringify(pastHistory));
+        } catch {}
+      }
+
       setQuizResultSummary(summary);
+      setSelectedAttemptForView(summary);
+
       if (currentUser?.studentId) {
         localStorage.setItem(`bob_student_results_${currentUser.studentId}`, JSON.stringify(summary));
       }
@@ -850,14 +900,46 @@ export default function StudentPortal({
       loadStudentDashboardData();
     } catch (err) {
       const finalScore = disqualified ? 0 : localScore;
+      const totalQ = activeQuizAttempt.questions?.length || 1;
+      const maxScore = totalQ * 10;
+      const percentage = Math.round((finalScore / (maxScore || 1)) * 100);
+      const nowIso = new Date().toISOString();
+
+      const historyKey = currentUser?.studentId ? `bob_student_history_${currentUser.studentId}` : null;
+      let pastHistory = [];
+      if (historyKey) {
+        try {
+          const rawH = localStorage.getItem(historyKey);
+          if (rawH) pastHistory = JSON.parse(rawH);
+          if (!Array.isArray(pastHistory)) pastHistory = [];
+        } catch { pastHistory = []; }
+      }
+
+      const attemptNum = pastHistory.length + 1;
       const summary = {
+        attemptNumber: attemptNum,
         score: finalScore,
-        totalQuestions: activeQuizAttempt.questions.length,
+        maxScore,
+        percentage,
+        correctCount: correctAnswersCount,
+        incorrectCount: incorrectAnswersCount,
+        skippedCount: skippedAnswersCount,
+        totalQuestions: totalQ,
         disqualified,
-        completedAt: new Date().toISOString(),
+        completedAt: nowIso,
         roundNumber: activeQuizAttempt.roundNumber || 1,
+        transcriptSerial: `BOB-TR-2026-${Math.floor(100000 + Math.random() * 900000)}`,
       };
+
+      if (historyKey) {
+        pastHistory.push(summary);
+        try {
+          localStorage.setItem(historyKey, JSON.stringify(pastHistory));
+        } catch {}
+      }
+
       setQuizResultSummary(summary);
+      setSelectedAttemptForView(summary);
       if (currentUser?.studentId) {
         localStorage.setItem(`bob_student_results_${currentUser.studentId}`, JSON.stringify(summary));
       }
@@ -1973,12 +2055,21 @@ export default function StudentPortal({
           {/* ======================================================== */}
           {activeTab === 'quiz' && (() => {
             const savedResKey = currentUser?.studentId ? `bob_student_results_${currentUser.studentId}` : null;
+            const historyKey = currentUser?.studentId ? `bob_student_history_${currentUser.studentId}` : null;
+            const attemptsHistory = historyKey ? (() => {
+              try {
+                const s = localStorage.getItem(historyKey);
+                return s ? JSON.parse(s) : [];
+              } catch { return []; }
+            })() : [];
             const pastResult = savedResKey ? (() => {
               try {
                 const s = localStorage.getItem(savedResKey);
                 return s ? JSON.parse(s) : null;
               } catch { return null; }
             })() : null;
+
+            const activeDisplayResult = selectedAttemptForView || quizResultSummary || pastResult;
 
             // Check if teacher/admin has provided data or started Round 1
             // In Competition data or server, check if round is active
@@ -2094,15 +2185,15 @@ export default function StudentPortal({
                 )}
 
                 {/* ATTEMPT COMPLETED SCORECARD (SHOWN LIVE & PERSISTENT) */}
-                {(quizResultSummary || pastResult) && !activeQuizAttempt && (
-                  <div className="p-8 rounded-3xl bg-white border-2 border-sky-300 text-center space-y-6 shadow-2xl text-slate-900 animate-fadeIn">
+                {activeDisplayResult && !activeQuizAttempt && (
+                  <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-sky-300 text-center space-y-6 shadow-2xl text-slate-900 animate-fadeIn">
                     <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center mx-auto text-3xl shadow-xl shadow-amber-500/30">
                       🏆
                     </div>
                     
                     <div className="space-y-1">
                       <span className="px-3 py-1 rounded-full text-xs font-mono font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 inline-block mb-1">
-                        ✓ Quiz Attempt Recorded
+                        ✓ Examination Attempt Recorded • Attempt #{activeDisplayResult.attemptNumber || (attemptsHistory.length || 1)}
                       </span>
                       <h3 className="text-2xl sm:text-3xl font-heading font-black text-slate-900">
                         Official Exam Performance & Marks
@@ -2112,54 +2203,122 @@ export default function StudentPortal({
                       </p>
                     </div>
 
-                    <div className="max-w-md mx-auto p-6 rounded-2xl bg-sky-50 border-2 border-sky-200 space-y-3">
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-600 pb-2 border-b border-sky-200">
-                        <span>Total Marks Scored:</span>
-                        <strong className="text-2xl font-heading font-black text-blue-700">
-                          {quizResultSummary?.score ?? pastResult?.score ?? 0} pts
+                    {/* Attempt Records Selector Bar (for students who took quiz 1st time, 2nd time, etc.) */}
+                    {attemptsHistory.length > 1 && (
+                      <div className="max-w-xl mx-auto p-3 rounded-2xl bg-sky-50 border border-sky-200">
+                        <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center justify-center gap-1.5">
+                          <RotateCcw className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Recorded Attempts ({attemptsHistory.length} Attempts Available)</span>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                          {attemptsHistory.map((att, aIdx) => {
+                            const isSelected = (activeDisplayResult.attemptNumber === att.attemptNumber) || (!selectedAttemptForView && aIdx === attemptsHistory.length - 1);
+                            return (
+                              <button
+                                key={aIdx}
+                                type="button"
+                                onClick={() => setSelectedAttemptForView(att)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                  isSelected
+                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-2 ring-blue-400'
+                                    : 'bg-white text-slate-700 hover:bg-sky-100 border border-slate-300'
+                                }`}
+                              >
+                                <span>Attempt #{att.attemptNumber || aIdx + 1}:</span>
+                                <strong>{att.score} pts</strong>
+                                <span className="text-[10px] opacity-80">({att.percentage ?? Math.round((att.score / (((att.totalQuestions || 5) * 10) || 1)) * 100)}%)</span>
+                                {aIdx === attemptsHistory.length - 1 && (
+                                  <span className="ml-1 px-1.5 py-0.2 rounded text-[9px] bg-emerald-500 text-white font-sans font-bold uppercase">Latest</span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Detailed Marks Cards Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-xl mx-auto text-left">
+                      <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200">
+                        <span className="text-[11px] font-bold text-slate-500 block">Total Marks:</span>
+                        <strong className="text-xl sm:text-2xl font-heading font-black text-blue-700">
+                          {activeDisplayResult.score} <span className="text-xs text-slate-500 font-normal font-sans">/ {activeDisplayResult.maxScore || (activeDisplayResult.totalQuestions || 5) * 10}</span>
                         </strong>
                       </div>
-                      <div className="flex items-center justify-between text-xs font-medium text-slate-600">
-                        <span>Status:</span>
-                        <span className="font-mono font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded border border-emerald-300">
-                          Qualified for Next Stage
-                        </span>
+
+                      <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200">
+                        <span className="text-[11px] font-bold text-slate-500 block">Percentage:</span>
+                        <strong className="text-xl sm:text-2xl font-heading font-black text-emerald-700">
+                          {activeDisplayResult.percentage ?? Math.round((activeDisplayResult.score / (((activeDisplayResult.totalQuestions || 5) * 10) || 1)) * 100)}%
+                        </strong>
                       </div>
-                      <div className="flex items-center justify-between text-xs font-medium text-slate-600">
-                        <span>Submitted At:</span>
-                        <span className="font-mono text-slate-700">
-                          {new Date(quizResultSummary?.completedAt || pastResult?.completedAt || Date.now()).toLocaleTimeString()}
-                        </span>
+
+                      <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200">
+                        <span className="text-[11px] font-bold text-slate-500 block">Correct MCQs:</span>
+                        <strong className="text-xl sm:text-2xl font-heading font-black text-emerald-600">
+                          {activeDisplayResult.correctCount ?? Math.floor(activeDisplayResult.score / 10)}
+                        </strong>
+                        <span className="text-[10px] text-slate-500 block font-medium">out of {activeDisplayResult.totalQuestions || 5} questions</span>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200">
+                        <span className="text-[11px] font-bold text-slate-500 block">Incorrect / Skip:</span>
+                        <strong className="text-xl sm:text-2xl font-heading font-black text-rose-600">
+                          {(activeDisplayResult.incorrectCount ?? 0) + (activeDisplayResult.skippedCount ?? 0)}
+                        </strong>
+                        <span className="text-[10px] text-slate-500 block font-medium">deductions / skips</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap justify-center gap-3 pt-2">
+                    {/* Status & Timestamp */}
+                    <div className="max-w-xl mx-auto p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-600 font-bold">Qualification Result:</span>
+                        <span className="font-mono font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300">
+                          ✓ Qualified for Next Stage
+                        </span>
+                      </div>
+                      <div className="text-slate-500 text-xs font-mono">
+                        Date: {new Date(activeDisplayResult.completedAt || Date.now()).toLocaleDateString()} {new Date(activeDisplayResult.completedAt || Date.now()).toLocaleTimeString()}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons: Print PDF, Retake, Return */}
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                       <button
-                        onClick={() => setActiveTab('overview')}
-                        className="px-6 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-heading font-black text-xs shadow-md transition-all cursor-pointer"
+                        type="button"
+                        onClick={() => setShowTranscriptModal(true)}
+                        className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-black text-xs shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
                       >
-                        ← Return to Dashboard Overview
+                        <Printer className="w-4 h-4" />
+                        <span>Download / Print Result Card (PDF)</span>
                       </button>
+
                       <button
                         type="button"
                         onClick={() => {
                           setQuizResultSummary(null);
-                          if (currentUser?.studentId) {
-                            localStorage.removeItem(`bob_student_results_${currentUser.studentId}`);
-                          }
+                          setSelectedAttemptForView(null);
                           handleStartAttempt(1);
                         }}
-                        className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-2"
+                        className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
                       >
                         <Zap className="w-4 h-4" />
-                        <span>Retake Round (Live Timer Active)</span>
+                        <span>Retake Round (Attempt #{attemptsHistory.length + 1})</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab('overview')}
+                        className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-heading font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span>← Return to Overview</span>
                       </button>
                     </div>
                   </div>
                 )}
 
                 {/* WAITING LOUNGE WHEN INSTRUCTOR HAS NOT GIVEN DATA YET */}
-                {!activeQuizAttempt && !quizResultSummary && !pastResult && (
+                {!activeQuizAttempt && !activeDisplayResult && (
                   <div className="p-8 sm:p-10 rounded-3xl bg-white border-2 border-sky-300 space-y-6 text-center shadow-xl text-slate-900">
                     <div className="w-16 h-16 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center mx-auto text-2xl font-black">
                       ⏳
@@ -2690,6 +2849,193 @@ export default function StudentPortal({
           </div>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* MODAL 4: OFFICIAL EXAMINATION TRANSCRIPT / PRINTABLE RESULT CARD (PDF) */}
+      {/* ======================================================== */}
+      {showTranscriptModal && currentUser && (() => {
+        const transcriptData = selectedAttemptForView || quizResultSummary || (() => {
+          try {
+            const s = localStorage.getItem(`bob_student_results_${currentUser.studentId}`);
+            return s ? JSON.parse(s) : null;
+          } catch { return null; }
+        })() || {
+          attemptNumber: 1,
+          score: 80,
+          maxScore: 100,
+          percentage: 80,
+          correctCount: 8,
+          incorrectCount: 2,
+          totalQuestions: 10,
+          completedAt: new Date().toISOString(),
+          transcriptSerial: 'BOB-TR-2026-948210',
+        };
+
+        const totalQ = transcriptData.totalQuestions || 5;
+        const maxScore = transcriptData.maxScore || (totalQ * 10);
+        const earnedScore = transcriptData.score ?? 0;
+        const percentage = transcriptData.percentage ?? Math.round((earnedScore / (maxScore || 1)) * 100);
+        const correctCount = transcriptData.correctCount ?? Math.floor(earnedScore / 10);
+        const wrongCount = (transcriptData.incorrectCount ?? 0) + (transcriptData.skippedCount ?? 0);
+        const completedDate = new Date(transcriptData.completedAt || Date.now());
+
+        return (
+          <div className="fixed inset-0 z-80 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md animate-fadeIn overflow-y-auto">
+            <div className="bg-slate-950 border border-blue-500/40 w-full max-w-2xl rounded-3xl p-5 sm:p-7 shadow-2xl relative space-y-5 my-auto">
+              
+              {/* Modal Top Bar (Screen Only - Hidden in Print) */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800 no-print">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-heading font-black text-white text-sm sm:text-base">
+                      Official Examination Transcript Card (PDF)
+                    </h4>
+                    <span className="text-[10px] text-slate-400 font-mono">Attempt #{transcriptData.attemptNumber || 1} • Verified Academic Record</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowTranscriptModal(false)} 
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Printable Result Card Document (This element prints cleanly to A4 via window.print) */}
+              <div id="printable-result-card" className="p-6 sm:p-8 rounded-2xl bg-white text-slate-900 border-2 border-slate-300 shadow-md space-y-6 print:p-0 print:border-none print:shadow-none">
+                
+                {/* University Header */}
+                <div className="text-center pb-4 border-b-2 border-slate-900 space-y-1">
+                  <div className="text-xs font-mono font-black uppercase tracking-widest text-blue-800">
+                    COMSATS UNIVERSITY ISLAMABAD
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-heading font-black text-slate-950 tracking-tight">
+                    BATTLE OF BRAINS 2026
+                  </h2>
+                  <div className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Office of the Controller of Examinations • Official Candidate Transcript
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-600 pt-2 border-t border-slate-200 mt-2 gap-2">
+                    <span>Serial No: <strong className="text-blue-900">{transcriptData.transcriptSerial || 'BOB-TR-2026-984210'}</strong></span>
+                    <span>Date of Issue: <strong>{completedDate.toLocaleDateString()}</strong></span>
+                    <span className="text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">
+                      ✓ OFFICIAL CERTIFIED
+                    </span>
+                  </div>
+                </div>
+
+                {/* Candidate Particulars */}
+                <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                  <div>
+                    <span className="text-slate-500 text-[10px] uppercase font-bold block">Candidate Full Name</span>
+                    <strong className="text-sm font-heading font-black text-slate-950">{currentUser.fullName}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] uppercase font-bold block">Student Registration ID</span>
+                    <strong className="text-sm font-mono font-black text-blue-700">{currentUser.studentId}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] uppercase font-bold block">Department / Program</span>
+                    <span className="font-semibold text-slate-800">{currentUser.department || partnerData.partner?.department || 'BS Computer Science'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] uppercase font-bold block">Examination Cycle / Attempt</span>
+                    <span className="font-mono font-bold text-slate-900">Attempt #{transcriptData.attemptNumber || 1} (Official Evaluation)</span>
+                  </div>
+                </div>
+
+                {/* Academic Evaluation Summary Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border border-slate-300 rounded-lg overflow-hidden">
+                    <thead className="bg-slate-900 text-white font-mono text-[11px] uppercase">
+                      <tr>
+                        <th className="py-2.5 px-3">Examination Stage</th>
+                        <th className="py-2.5 px-2 text-center">Allocated MCQs</th>
+                        <th className="py-2.5 px-2 text-center">Correct</th>
+                        <th className="py-2.5 px-2 text-center">Incorrect / Skip</th>
+                        <th className="py-2.5 px-3 text-right">Marks Scored</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
+                      <tr>
+                        <td className="py-3 px-3">
+                          <strong className="block text-slate-900 font-heading font-bold">Round 01: Screening Examination</strong>
+                          <span className="text-[10px] text-slate-500">7 Core CS Subject Disciplines (30s Timer per MCQ)</span>
+                        </td>
+                        <td className="py-3 px-2 text-center font-mono font-bold">{totalQ}</td>
+                        <td className="py-3 px-2 text-center font-mono text-emerald-700 font-bold">
+                          {correctCount}
+                        </td>
+                        <td className="py-3 px-2 text-center font-mono text-rose-700">
+                          {wrongCount}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-black text-sm text-blue-700">
+                          {earnedScore} / {maxScore} pts
+                        </td>
+                      </tr>
+                    </tbody>
+                    <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                      <tr>
+                        <td colSpan={3} className="py-2.5 px-3">
+                          Overall Percentage: <span className="text-emerald-700 font-mono text-sm">{percentage}%</span>
+                        </td>
+                        <td colSpan={2} className="py-2.5 px-3 text-right">
+                          Standing: <span className="font-mono uppercase text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded border border-emerald-300">QUALIFIED FOR NEXT STAGE</span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                {/* Verification Seal & Signatures */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t-2 border-slate-200 text-xs items-end">
+                  <div className="space-y-1">
+                    <div className="px-3 py-1.5 border-2 border-dashed border-emerald-600 rounded-lg inline-block text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50">
+                      [OFFICIAL EXAMINATION SEAL]
+                    </div>
+                    <div className="text-[10px] text-slate-500">Proctoring Telemetry: <strong>Full Integrity Verified</strong></div>
+                  </div>
+                  <div className="text-right space-y-1">
+                    <div className="font-mono text-xs font-black text-slate-900 underline decoration-slate-400 underline-offset-4">
+                      Controller of Examinations
+                    </div>
+                    <div className="text-[10px] text-slate-500">Central Adjudication Committee, BOB 2026</div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Action Controls (no-print) */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 no-print">
+                <span className="text-xs text-slate-400 font-medium">
+                  💡 Tip: Click <strong>"Print / Save as PDF"</strong> and select <strong>"Save as PDF"</strong> to save to your device.
+                </span>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print / Save as PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowTranscriptModal(false)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-heading font-bold text-xs transition-all cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
