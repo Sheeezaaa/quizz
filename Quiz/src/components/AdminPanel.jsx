@@ -56,7 +56,8 @@ import {
   MailCheck,
   IdCard,
   Ban,
-  Copy
+  Copy,
+  CalendarClock
 } from 'lucide-react';
 import { 
   saveStoredDetails, 
@@ -101,13 +102,13 @@ import {
   apiGetProctorAlerts,
   apiAcknowledgeProctorAlert,
   apiDismissAllProctorAlerts,
-  apiUploadEncryptedDocument
+  apiUploadEncryptedDocument,
+  apiGetScheduleStatus
 } from '../utils/api';
 import { playAntiCheatBuzzer, playDisqualificationSiren } from '../utils/soundEffects';
 import RegistrationManager from './admin/RegistrationManager';
 import TeamsManager from './admin/TeamsManager';
-import RapidFireConsole from './admin/RapidFireConsole';
-import BuzzerConsole from './admin/BuzzerConsole';
+import QuizScheduleAccessControl from './admin/QuizScheduleAccessControl';
 import ResultsManagement from './admin/ResultsManagement';
 import AnnouncementsManager from './admin/AnnouncementsManager';
 import AuditLogsViewer from './admin/AuditLogsViewer';
@@ -864,15 +865,13 @@ export default function AdminPanel({
   // Nav items configuration
   const navTabs = [
     { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null },
+    { id: 'schedule', label: 'Quiz Schedule & Access Control', icon: CalendarClock, badge: 'Live PKT' },
     { id: 'teams', label: 'Teams Roster (2-3)', icon: Users, badge: 'Official' },
     { id: 'registrations', label: 'Individual Candidates', icon: IdCard, badge: `${(participants || []).length}` },
-    { id: 'rapidfire', label: 'Round 3: Rapid Fire', icon: Zap, badge: 'Live' },
-    { id: 'buzzer', label: 'Round 4: Buzzer Final', icon: Trophy, badge: 'Live' },
     { id: 'results', label: 'Results & Standings', icon: Award, badge: null },
     { id: 'retake', label: 'Manage Retake Permissions', icon: KeyRound, badge: 'Controlled' },
     { id: 'questions', label: 'Question Bank (Excel)', icon: FileSpreadsheet, badge: `${(questions || []).length}` },
     { id: 'subjects', label: '7 CS Subjects', icon: BookOpen, badge: '7' },
-    { id: 'rounds', label: '4 Rounds Config', icon: Layers, badge: '4' },
     { id: 'announcements', label: 'Bulletins & News', icon: Sparkles, badge: null },
     { id: 'encryptedVault', label: 'Encrypted Vault (AES-GCM)', icon: Lock, badge: 'Zero-Knowledge' },
     { id: 'audit', label: 'Audit Trail Logs', icon: ShieldCheck, badge: null },
@@ -1725,28 +1724,30 @@ export default function AdminPanel({
                   </div>
                 </div>
 
-                {/* Metric 3: Competition Rounds */}
+                {/* Metric 3: Quiz Schedule & Access Control */}
                 <div 
-                  onClick={() => setActiveTab('rounds')}
+                  onClick={() => setActiveTab('schedule')}
                   className={`p-5 rounded-2xl border transition-all cursor-pointer group shadow-sm ${
                     isDark 
-                      ? 'bg-slate-900/90 border-slate-800 hover:border-amber-500/50' 
-                      : 'bg-white border-slate-200 hover:border-amber-500/50'
+                      ? 'bg-slate-900/90 border-slate-800 hover:border-blue-500/50' 
+                      : 'bg-white border-slate-200 hover:border-blue-500/50'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Tournament Stages</span>
-                    <div className="w-10 h-10 rounded-xl bg-amber-600/10 border border-amber-500/30 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
-                      <Trophy className="w-5 h-5" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Quiz Schedule</span>
+                    <div className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-500/30 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                      <CalendarClock className="w-5 h-5" />
                     </div>
                   </div>
                   <div className="mt-3">
-                    <span className={`text-3xl font-heading font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{rounds.length}</span>
-                    <span className="text-xs text-amber-600 ml-2 font-mono font-bold">Sequential Rounds</span>
+                    <span className={`text-2xl font-heading font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      Single Round
+                    </span>
+                    <span className="text-xs text-blue-500 ml-2 font-mono font-bold">7 CS Subjects</span>
                   </div>
                   <div className="mt-2 text-[11px] text-slate-500 flex items-center justify-between">
-                    <span>Screening to Grand Final</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-amber-500 group-hover:translate-x-1 transition-transform" />
+                    <span>Manage PKT Schedule</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-blue-500 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
 
@@ -1888,25 +1889,25 @@ export default function AdminPanel({
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <button
-                    onClick={() => setActiveTab('rapidfire')}
-                    className="p-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-left transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-heading font-bold text-amber-300">Round 3: Rapid Fire</span>
-                      <Zap className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-1">3-minute countdown & 3s skip rule console</p>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('buzzer')}
+                    onClick={() => setActiveTab('schedule')}
                     className="p-4 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-left transition-all cursor-pointer group"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-heading font-bold text-blue-300">Round 4: Buzzer Final</span>
-                      <Trophy className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-heading font-bold text-blue-300">Quiz Schedule & Access Control</span>
+                      <CalendarClock className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1">2-finalist atomic lockout & 10s timer deck</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Start & End dates/times (PKT), 7-subject distribution & live state</p>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('retake')}
+                    className="p-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-left transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-heading font-bold text-indigo-300">Manage Retake Permissions</span>
+                      <KeyRound className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1">Strict one-attempt lock & admin authorization</p>
                   </button>
 
                   <button
@@ -1914,21 +1915,21 @@ export default function AdminPanel({
                     className="p-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-left transition-all cursor-pointer group"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-heading font-bold text-emerald-300">Results & Qualification</span>
+                      <span className="text-xs font-heading font-bold text-emerald-300">Results & Standings</span>
                       <Award className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1">Top 80% / Top 4 / Top 2 / Champion Engine</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Official candidate scores, accuracy & PDF transcripts</p>
                   </button>
 
                   <button
-                    onClick={() => setActiveTab('audit')}
+                    onClick={() => setActiveTab('questions')}
                     className="p-4 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-left transition-all cursor-pointer group"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-heading font-bold text-purple-300">Audit Trail Ledger</span>
-                      <ShieldCheck className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-heading font-bold text-purple-300">Question Bank (7 Subjects)</span>
+                      <FileSpreadsheet className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1">Immutable log of approvals, scores & buzzes</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Manage MCQs across all 7 CS disciplines</p>
                   </button>
                 </div>
               </div>
@@ -2610,11 +2611,8 @@ export default function AdminPanel({
                     onChange={(e) => setQuestionRoundFilter(e.target.value)}
                     className={`px-3 py-2 rounded-xl border text-xs focus:outline-none ${inputTheme}`}
                   >
-                    <option value="All">All Rounds (4 Stages)</option>
-                    <option value="Round 1 (MCQs)">Round 1 (MCQs)</option>
-                    <option value="Round 2 (Core Concepts)">Round 2 (Core Concepts)</option>
-                    <option value="Round 3 (Rapid Fire)">Round 3 (Rapid Fire)</option>
-                    <option value="Round 4 (Buzzer Round)">Round 4 (Buzzer Round)</option>
+                    <option value="All">All Questions (7 Core CS Subjects)</option>
+                    <option value="Round 1 (MCQs)">Combined Championship Quiz</option>
                   </select>
 
                   {questions.length > 0 && (
@@ -2795,114 +2793,10 @@ export default function AdminPanel({
           )}
 
           {/* =========================================================================
-              TAB 3: 4 COMPETITION ROUNDS & RULES
+              TAB: QUIZ SCHEDULE & ACCESS CONTROL (PKT TIMEZONE)
               ========================================================================= */}
-          {activeTab === 'rounds' && (
-            <div className="space-y-6">
-              
-              <div className={`pb-3 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isDark ? 'border-slate-800/80' : 'border-slate-200'}`}>
-                <div>
-                  <h1 className={`text-xl sm:text-2xl font-heading font-black flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    <Trophy className="w-6 h-6 text-amber-500" />
-                    <span>4 Competition Rounds & Elimination Structure</span>
-                  </h1>
-                  <p className={`text-xs sm:text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Manage qualification criteria, time allotments, question counts, and marking schemes.
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleSaveAll}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs shadow-md transition-all cursor-pointer"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Save Rounds</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {rounds.map((r, idx) => (
-                  <div key={r.roundNumber || idx} className={`p-5 rounded-2xl border space-y-4 hover:border-amber-500/50 transition-colors ${cardTheme}`}>
-                    
-                    <div className={`flex items-center justify-between pb-2 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-                      <span className="font-mono text-xs font-bold text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30">
-                        Round 0{r.roundNumber} Stage
-                      </span>
-                      <input
-                        type="text"
-                        value={r.stageBadge}
-                        onChange={(e) => updateRound(idx, 'stageBadge', e.target.value)}
-                        className={`px-3 py-1 rounded-lg border text-xs font-mono text-right focus:outline-none ${inputTheme}`}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div className="sm:col-span-2">
-                        <label className="block text-[11px] text-slate-500 font-bold mb-1">Round Title</label>
-                        <input
-                          type="text"
-                          value={r.title}
-                          onChange={(e) => updateRound(idx, 'title', e.target.value)}
-                          className={`w-full px-3 py-2 rounded-xl border text-xs font-bold focus:outline-none ${inputTheme}`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] text-slate-500 font-bold mb-1">Time Limit</label>
-                        <input
-                          type="text"
-                          value={r.timeLimit}
-                          onChange={(e) => updateRound(idx, 'timeLimit', e.target.value)}
-                          className={`w-full px-3 py-2 rounded-xl border text-xs font-mono focus:outline-none ${inputTheme}`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] text-slate-500 font-bold mb-1">Question Quota</label>
-                        <input
-                          type="text"
-                          value={r.questionsCount}
-                          onChange={(e) => updateRound(idx, 'questionsCount', e.target.value)}
-                          className={`w-full px-3 py-2 rounded-xl border text-xs font-mono focus:outline-none ${inputTheme}`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] text-slate-500 font-bold mb-1">Qualification Clause</label>
-                        <input
-                          type="text"
-                          value={r.qualification}
-                          onChange={(e) => updateRound(idx, 'qualification', e.target.value)}
-                          className={`w-full px-3 py-2 rounded-xl border text-xs text-emerald-600 font-semibold focus:outline-none ${inputTheme}`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] text-slate-500 font-bold mb-1">Marking Scheme</label>
-                        <input
-                          type="text"
-                          value={r.markingScheme}
-                          onChange={(e) => updateRound(idx, 'markingScheme', e.target.value)}
-                          className={`w-full px-3 py-2 rounded-xl border text-xs font-mono text-blue-600 font-bold focus:outline-none ${inputTheme}`}
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <label className="block text-[11px] text-slate-500 font-bold mb-1">Negative Marking / Deduction Policy</label>
-                        <input
-                          type="text"
-                          value={r.negativeMarking}
-                          onChange={(e) => updateRound(idx, 'negativeMarking', e.target.value)}
-                          className={`w-full px-3 py-2 rounded-xl border text-xs text-rose-500 font-mono font-medium focus:outline-none ${inputTheme}`}
-                        />
-                      </div>
-                    </div>
-
-                  </div>
-                ))}
-              </div>
-
-            </div>
+          {activeTab === 'schedule' && (
+            <QuizScheduleAccessControl isDark={isDark} />
           )}
 
           {/* =========================================================================
@@ -3355,14 +3249,6 @@ export default function AdminPanel({
             <RegistrationManager isDark={isDark} />
           )}
 
-          {activeTab === 'rapidfire' && (
-            <RapidFireConsole isDark={isDark} />
-          )}
-
-          {activeTab === 'buzzer' && (
-            <BuzzerConsole isDark={isDark} />
-          )}
-
           {activeTab === 'results' && (
             <ResultsManagement isDark={isDark} />
           )}
@@ -3549,10 +3435,7 @@ export default function AdminPanel({
                     className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none ${inputTheme}`}
                     required
                   >
-                    <option value="Round 1 (MCQs)">Round 1 (MCQs)</option>
-                    <option value="Round 2 (Core Concepts)">Round 2 (Core Concepts)</option>
-                    <option value="Round 3 (Rapid Fire)">Round 3 (Rapid Fire)</option>
-                    <option value="Round 4 (Buzzer Round)">Round 4 (Buzzer Round)</option>
+                    <option value="Round 1 (MCQs)">Combined Championship Quiz (All 7 CS Subjects)</option>
                   </select>
                 </div>
 

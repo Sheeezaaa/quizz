@@ -28,7 +28,14 @@ import {
   localAdminCreateTeam,
   localDeleteTeam,
   getAdminEmail,
-  setAdminEmail
+  setAdminEmail,
+  getStoredSchedule,
+  saveStoredSchedule,
+  getStoredPublishedQuestions,
+  saveStoredPublishedQuestions,
+  getCompetitionAccessStatusLocal,
+  calculateSubjectDistributionLocal,
+  parsePKTDateTime
 } from './storage';
 
 // Centralized API Client for Battle of Brains 2026
@@ -703,6 +710,31 @@ export async function apiStartQuizAttempt(roundNumber = 1) {
     // Network or server error: Fall back to local stored question bank with strict permission check
   }
 
+  // Competition Access Control Check (PKT Schedule)
+  const access = getCompetitionAccessStatusLocal();
+  if (access.state === 'NOT_STARTED') {
+    return {
+      success: false,
+      isNotStarted: true,
+      error: 'COMPETITION NOT STARTED. The quiz will unlock automatically at the scheduled start time.',
+      startMs: access.startMs,
+    };
+  }
+  if (access.state === 'TIME_OVER') {
+    return {
+      success: false,
+      isTimeOver: true,
+      error: 'COMPETITION TIME OVER. The scheduled competition has ended. New quiz attempts are no longer allowed.',
+    };
+  }
+  if (access.state === 'STOPPED') {
+    return {
+      success: false,
+      isStopped: true,
+      error: 'Competition has been halted by the administrator.',
+    };
+  }
+
   // Strict Fallback Check: Check if logged-in student has already completed this round
   const loggedStudent = getLoggedInStudent();
   const studentId = loggedStudent?.studentId;
@@ -749,30 +781,29 @@ export async function apiStartQuizAttempt(roundNumber = 1) {
     }
   }
 
-  // Fallback: Retrieve all questions saved by admin in Question Bank
-  const allStored = getStoredQuestions() || [];
-  const activeQuestions = allStored.filter((q) => q.isActive !== false);
-
-  const roundFiltered = activeQuestions.filter((q) => {
-    const rNum = Number(q.roundNumber) || (typeof q.round === 'string' && q.round.includes('2') ? 2 : typeof q.round === 'string' && q.round.includes('3') ? 3 : typeof q.round === 'string' && q.round.includes('4') ? 4 : 1);
-    return rNum === Number(roundNumber);
-  });
-
-  const questionPool = roundFiltered.length > 0 ? roundFiltered : (activeQuestions.length > 0 ? activeQuestions : allStored);
+  // Retrieve published questions across all 7 subjects (or calculate even distribution)
+  const published = getStoredPublishedQuestions();
+  let questionPool = (Array.isArray(published) && published.length >= 7) ? published : null;
+  if (!questionPool) {
+    const allStored = getStoredQuestions() || [];
+    const activeQuestions = allStored.filter((q) => q.isActive !== false);
+    const dist = calculateSubjectDistributionLocal(14, activeQuestions);
+    questionPool = (dist.isValid && dist.selectedQuestions) ? dist.selectedQuestions : activeQuestions;
+  }
 
   if (!questionPool || questionPool.length === 0) {
     return { 
       success: false, 
-      error: 'Question Bank is currently empty. Please ask the administrator to upload or add questions.' 
+      error: 'Question Bank is currently empty. Please ask the administrator to upload or publish questions.' 
     };
   }
 
-  // Map ALL questions from the Question Bank
+  // Map ALL questions from the Question Bank across 7 subjects
   const sanitizedAllocated = questionPool.map((q, idx) => ({
     id: q.id || `local_q_${idx}`,
     order: idx + 1,
-    subject: q.subject || q.subjectName || 'Computer Science',
-    subjectName: q.subject || q.subjectName || 'Computer Science',
+    subject: q.subjectName || q.subject || 'Computer Science',
+    subjectName: q.subjectName || q.subject || 'Computer Science',
     difficulty: q.difficulty || 'Moderate',
     question: q.question,
     options: (Array.isArray(q.options) && q.options.length > 0)
@@ -782,7 +813,7 @@ export async function apiStartQuizAttempt(roundNumber = 1) {
 
   const localAttempt = {
     id: `ATT-LOCAL-${Date.now()}`,
-    roundNumber: Number(roundNumber) || 1,
+    roundNumber: 1, // Single combined round
     questions: sanitizedAllocated,
     submittedCount: 0,
     timeLimitSeconds: 30, // 30-second countdown timer per question
@@ -2410,5 +2441,228 @@ export async function apiCheckRetakePermission(studentId, roundNumber = 1) {
     success: true,
     hasPermission: !!perm,
     permission: perm || null
+  };
+}
+
+// ==========================================
+// QUIZ SCHEDULE & ACCESS CONTROL CLIENT API
+// ==========================================
+
+export async function apiGetScheduleStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/schedule/status`);
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      if (data.schedule) saveStoredSchedule(data.schedule);
+      return data;
+    }
+  } catch (err) {}
+
+  // Fallback to local access status
+  return {
+    success: true,
+    ...getCompetitionAccessStatusLocal(),
+    subjects: getStoredSubjects() || [],
+  };
+}
+
+export async function apiSaveCompetitionSchedule({ startDate, startTime, endDate, endTime }) {
+  try {
+    const res = await fetch(`${API_BASE}/schedule`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+      body: JSON.stringify({ startDate, startTime, endDate, endTime }),
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      if (data.schedule) saveStoredSchedule(data.schedule);
+      window.dispatchEvent(new Event('storage'));
+      return data;
+    }
+    if (data?.error) return { success: false, error: data.error };
+  } catch (err) {}
+
+  // Local validation & save
+  const startParsed = parsePKTDateTime(startDate, startTime);
+  const endParsed = parsePKTDateTime(endDate, endTime);
+
+  if (!startParsed || !startParsed.isValid) {
+    return { success: false, error: 'Invalid Start Date or Time format. Please use DD/MM/YYYY and HH:MM AM/PM.' };
+  }
+  if (!endParsed || !endParsed.isValid) {
+    return { success: false, error: 'Invalid End Date or Time format. Please use DD/MM/YYYY and HH:MM AM/PM.' };
+  }
+  if (endParsed.timestamp <= startParsed.timestamp) {
+    return { success: false, error: 'Validation failed: Competition End Date & Time must be later than Start Date & Time.' };
+  }
+
+  const prev = getStoredSchedule() || {};
+  const updatedSchedule = {
+    ...prev,
+    startDate: startDate.trim(),
+    startTime: startTime.trim(),
+    endDate: endDate.trim(),
+    endTime: endTime.trim(),
+    startIso: startParsed.iso,
+    endIso: endParsed.iso,
+    startMs: startParsed.timestamp,
+    endMs: endParsed.timestamp,
+    timezone: "Asia/Karachi",
+    status: "scheduled",
+    lastUpdated: new Date().toISOString(),
+  };
+
+  saveStoredSchedule(updatedSchedule);
+  window.dispatchEvent(new Event('storage'));
+
+  return {
+    success: true,
+    message: 'Schedule saved successfully in Pakistan Standard Time (PKT).',
+    schedule: updatedSchedule,
+    access: getCompetitionAccessStatusLocal(updatedSchedule),
+  };
+}
+
+export async function apiActivateCompetition() {
+  try {
+    const res = await fetch(`${API_BASE}/schedule/activate`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      const schedule = getStoredSchedule();
+      schedule.status = 'live';
+      saveStoredSchedule(schedule);
+      window.dispatchEvent(new Event('storage'));
+      return data;
+    }
+  } catch (err) {}
+
+  const schedule = getStoredSchedule();
+  schedule.status = 'live';
+  saveStoredSchedule(schedule);
+  window.dispatchEvent(new Event('storage'));
+
+  return {
+    success: true,
+    message: 'Competition is now officially LIVE!',
+    access: getCompetitionAccessStatusLocal(schedule),
+  };
+}
+
+export async function apiStopCompetition() {
+  try {
+    const res = await fetch(`${API_BASE}/schedule/stop`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      const schedule = getStoredSchedule();
+      schedule.status = 'stopped';
+      saveStoredSchedule(schedule);
+      window.dispatchEvent(new Event('storage'));
+      return data;
+    }
+  } catch (err) {}
+
+  const schedule = getStoredSchedule();
+  schedule.status = 'stopped';
+  saveStoredSchedule(schedule);
+  window.dispatchEvent(new Event('storage'));
+
+  return {
+    success: true,
+    message: 'Competition has been STOPPED by the administrator.',
+    access: getCompetitionAccessStatusLocal(schedule),
+  };
+}
+
+export async function apiPublishQuiz(totalQuestionsCount) {
+  const count = Number(totalQuestionsCount);
+  if (!count || count < 7) {
+    return {
+      success: false,
+      error: 'Every subject must have at least one question. Minimum 7 questions required.'
+    };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/quiz/publish-bank`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+      body: JSON.stringify({ totalQuestionsCount: count }),
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      const schedule = getStoredSchedule();
+      schedule.isPublished = true;
+      schedule.publishedQuestionCount = count;
+      schedule.subjectDistribution = data.distribution;
+      saveStoredSchedule(schedule);
+      window.dispatchEvent(new Event('storage'));
+      return data;
+    }
+    if (data?.error) return { success: false, error: data.error };
+  } catch (err) {}
+
+  // Local fallback distribution calculation
+  const allStored = getStoredQuestions() || [];
+  const dist = calculateSubjectDistributionLocal(count, allStored);
+
+  if (!dist.isValid) {
+    return {
+      success: false,
+      error: dist.error,
+      subjectBreakdown: dist.subjectBreakdown
+    };
+  }
+
+  saveStoredPublishedQuestions(dist.selectedQuestions);
+  const schedule = getStoredSchedule();
+  schedule.isPublished = true;
+  schedule.publishedQuestionCount = count;
+  schedule.subjectDistribution = dist.targetDistribution;
+  saveStoredSchedule(schedule);
+  window.dispatchEvent(new Event('storage'));
+
+  return {
+    success: true,
+    message: `Successfully published ${count} questions distributed across all 7 subjects.`,
+    distribution: dist.targetDistribution,
+    subjectBreakdown: dist.subjectBreakdown,
+    publishedCount: count,
+  };
+}
+
+export async function apiPreviewDistribution(totalQuestionsCount) {
+  const count = Number(totalQuestionsCount) || 14;
+  try {
+    const res = await fetch(`${API_BASE}/quiz/preview-distribution?count=${count}`, {
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      return data;
+    }
+  } catch (err) {}
+
+  const allStored = getStoredQuestions() || [];
+  return {
+    success: true,
+    ...calculateSubjectDistributionLocal(count, allStored),
   };
 }

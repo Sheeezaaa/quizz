@@ -16,9 +16,9 @@ export const COMPETITION_DETAILS = {
 
 export const HIGHLIGHT_STATS = [
   { value: "07", label: "Core CS Subjects", detail: "Foundational to advanced computing domains" },
-  { value: "04", label: "Intense Rounds", detail: "Screening to the 1-on-1 buzzer finale" },
+  { value: "01", label: "Combined Grand Round", detail: "All 7 subjects in one comprehensive battle" },
   { value: "Solo", label: "Individual Competitor", detail: "Test your personal intellectual prowess" },
-  { value: "100%", label: "Fair Play & Live Buzzer", detail: "Automated timers & millisecond buzzer telemetry" },
+  { value: "100%", label: "Fair Play & Live Telemetry", detail: "Automated timers & Pakistan Standard Time (PKT) scheduling" },
 ];
 
 export const COMPETITION_SUBJECTS = [
@@ -101,79 +101,39 @@ export const COMPETITION_SUBJECTS = [
   },
 ];
 
+export const DEFAULT_SCHEDULE = {
+  startDate: "10/12/2026",
+  startTime: "10:00 AM",
+  endDate: "10/12/2026",
+  endTime: "11:00 AM",
+  timezone: "Asia/Karachi",
+  status: "scheduled", // "scheduled" | "live" | "stopped" | "ended"
+  isPublished: true,
+  publishedQuestionCount: 14,
+};
+
 export const COMPETITION_ROUNDS = [
   {
     roundNumber: 1,
-    title: "MCQ SCREENING ROUND",
-    stageBadge: "Stage 01 • Preliminary Screening",
+    title: "BATTLE OF BRAINS — COMBINED GRAND QUIZ",
+    stageBadge: "Official Single Round • All 7 CS Subjects",
     timeLimit: "30 seconds per question",
-    questionsCount: "5 MCQs per participant",
+    timeLimitSeconds: 30,
+    questionsCount: "Admin-defined (Equally distributed across all 7 subjects)",
     markingScheme: "+1 point for correct answer",
     negativeMarking: "No negative marking (0 pts)",
-    strictRule: "Answers will NOT be accepted after the 30-second timer expires.",
-    qualification: "Top 80% of all participants qualify for Round 2.",
-    status: "Qualifying Stage",
-    icon: "CheckCircle2",
-    highlights: [
-      "5 questions per candidate covering all 7 subjects",
-      "Strict 30-second countdown timer per question",
-      "Top 80% participants advance forward",
-    ],
-  },
-  {
-    roundNumber: 2,
-    title: "MCQ SCREENING ROUND (ADVANCED)",
-    stageBadge: "Stage 02 • Knockout Screening",
-    timeLimit: "45 seconds per question",
-    questionsCount: "5 MCQs per participant",
-    markingScheme: "+1 point for correct answer",
-    negativeMarking: "No negative marking (0 pts)",
-    strictRule: "Answers will NOT be accepted after the 45-second timer expires.",
-    qualification: "Top 4 participants qualify for Round 3 (Semi-Finals).",
-    status: "Quarter-Final Stage",
-    icon: "Layers",
-    highlights: [
-      "5 advanced analytical problem-solving MCQs",
-      "Extended 45-second analytical time window",
-      "Only the TOP 4 participants advance to Round 3",
-    ],
-  },
-  {
-    roundNumber: 3,
-    title: "RAPID FIRE ROUND",
-    stageBadge: "Stage 03 • Semi-Final Showdown",
-    timeLimit: "3 minutes per participant (3s per question)",
-    questionsCount: "Continuous rapid-stream questions",
-    markingScheme: "+1 point for correct answer",
-    negativeMarking: "No negative marking (0 pts)",
-    strictRule: "Each question must be answered within 3 seconds. After 3 seconds, the question is skipped automatically. Skipped or unanswered questions will NOT be repeated.",
-    qualification: "Top 2 participants proceed to the Grand Final.",
-    status: "Semi-Final Stage",
-    icon: "Zap",
-    highlights: [
-      "Total 3-minute participant clock",
-      "Lightning 3-second answer window per question",
-      "No repeats for skipped questions",
-      "Top 2 high-scoring candidates advance to Grand Finale",
-    ],
-  },
-  {
-    roundNumber: 4,
-    title: "BUZZER ROUND (GRAND FINAL)",
-    stageBadge: "Stage 04 • The Ultimate Championship",
-    timeLimit: "10 seconds to answer once buzzed",
-    questionsCount: "Grand final 1-on-1 decider series",
-    markingScheme: "+1 point for correct answer",
-    negativeMarking: "-0.5 points deduction for wrong answer",
-    strictRule: "Participants must press the buzzer after the question starts. The first buzzer gets the chance to answer. If a participant buzzes but cannot answer within 10 seconds, the turn passes. Premature or unnecessary buzzer pressing results in a warning or point deduction.",
-    qualification: "The participant with the highest score is crowned CHAMPION!",
-    status: "Grand Finale",
+    strictRule: "Strict 30 seconds per question. Answers will NOT be accepted after timer expires.",
+    qualification: "Highest cumulative score crowns the Grand Champion of Battle of Brains 2026.",
+    status: "Grand Championship Stage",
     icon: "Trophy",
+    isActive: true,
+    isCompleted: false,
     highlights: [
-      "1-on-1 First-to-buzz priority lock",
-      "+1 point for correct, -0.5 points penalty for incorrect",
-      "10-second answer limit after buzz",
-      "Warning / point deduction for premature or spam buzzing",
+      "All 7 Core CS Subjects: PF, OOP, DSA, DBMS, Networks, Software Eng & OS",
+      "Strict 30-second countdown timer per question",
+      "+1 point for correct answer, 0 for wrong, NO negative marking",
+      "Admin-controlled competition window in Pakistan Standard Time (PKT)",
+      "Strict one attempt per student/team with admin retake authorization",
     ],
   },
 ];
@@ -213,19 +173,14 @@ export const RULES_AND_REGULATIONS = {
   ],
   tieBreakerRules: [
     {
-      title: "Standard Tie-Breaker (2 Extra Questions)",
-      description: "If two or more participants finish with equal scores in any qualifying round, 2 additional tie-breaker questions will be asked from each tied candidate.",
-      step: "Phase 1",
+      title: "Time-Efficiency Ranking",
+      description: "If two or more participants finish with equal scores, the candidate who completed the quiz with lower total elapsed time is awarded the higher standing.",
+      step: "Rule 1",
     },
     {
-      title: "Decisive Sudden-Death Buzzer",
-      description: "If participants remain tied after 2 additional questions, one decisive sudden-death buzzer question will be posed. The first candidate to buzz and answer correctly wins immediately.",
-      step: "Phase 2",
-    },
-    {
-      title: "Buzzer Penalty in Sudden-Death",
-      description: "If the first participant buzzes and answers incorrectly during sudden-death, the opposing tied candidate is automatically awarded the qualification slot.",
-      step: "Critical Clause",
+      title: "Tie-Breaker Rapid Questions",
+      description: "If participants have identical scores and exact matching submission times, 2 additional tie-breaker questions covering core CS concepts will be administered.",
+      step: "Rule 2",
     },
   ],
   disqualificationRules: [

@@ -4,7 +4,8 @@ import {
   COMPETITION_DETAILS as DEFAULT_DETAILS, 
   COMPETITION_SUBJECTS as DEFAULT_SUBJECTS, 
   COMPETITION_ROUNDS as DEFAULT_ROUNDS, 
-  RULES_AND_REGULATIONS as DEFAULT_RULES 
+  RULES_AND_REGULATIONS as DEFAULT_RULES,
+  DEFAULT_SCHEDULE
 } from '../data/competitionData';
 
 const STORAGE_KEYS = {
@@ -19,6 +20,8 @@ const STORAGE_KEYS = {
   THEME: 'bob_website_theme_v1',
   STUDENT_SESSION: 'bob_student_session_v1',
   QUESTIONS: 'bob_questions_bank_v1',
+  SCHEDULE: 'bob_quiz_schedule_v2',
+  PUBLISHED_QUESTIONS: 'bob_published_questions_v2',
 };
 
 // Theme Management
@@ -273,6 +276,213 @@ export const saveStoredRules = (rules) => {
   } catch (err) {
     return false;
   }
+};
+
+// ==========================================
+// QUIZ SCHEDULE & ACCESS CONTROL (PKT - ASIA/KARACHI)
+// ==========================================
+
+export const parsePKTDateTime = (dateStr, timeStr) => {
+  if (!dateStr || !timeStr) return null;
+  let day = 10, month = 12, year = 2026;
+  const cleanDate = String(dateStr).trim();
+
+  if (cleanDate.includes('/')) {
+    const parts = cleanDate.split('/');
+    day = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10);
+    year = parseInt(parts[2], 10);
+  } else if (cleanDate.includes('-')) {
+    const parts = cleanDate.split('-');
+    if (parts[0].length === 4) {
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+      day = parseInt(parts[2], 10);
+    } else {
+      day = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+      year = parseInt(parts[2], 10);
+    }
+  }
+
+  let hours = 10, minutes = 0;
+  const timeMatch = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (timeMatch) {
+    hours = parseInt(timeMatch[1], 10);
+    minutes = parseInt(timeMatch[2], 10);
+    const meridiem = (timeMatch[3] || '').toUpperCase();
+    if (meridiem === 'PM' && hours < 12) hours += 12;
+    if (meridiem === 'AM' && hours === 12) hours = 0;
+  }
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const isoStr = `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00+05:00`;
+  const d = new Date(isoStr);
+  return {
+    iso: isoStr,
+    timestamp: d.getTime(),
+    isValid: !isNaN(d.getTime()),
+    day, month, year, hours, minutes
+  };
+};
+
+export const getStoredSchedule = () => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.SCHEDULE);
+    return data ? JSON.parse(data) : DEFAULT_SCHEDULE;
+  } catch (err) {
+    return DEFAULT_SCHEDULE;
+  }
+};
+
+export const saveStoredSchedule = (schedule) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(schedule));
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
+
+export const getStoredPublishedQuestions = () => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.PUBLISHED_QUESTIONS);
+    return data ? JSON.parse(data) : null;
+  } catch (err) {
+    return null;
+  }
+};
+
+export const saveStoredPublishedQuestions = (questions) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.PUBLISHED_QUESTIONS, JSON.stringify(questions));
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
+
+export const getCompetitionAccessStatusLocal = (customSchedule) => {
+  const schedule = customSchedule || getStoredSchedule() || DEFAULT_SCHEDULE;
+  const now = Date.now();
+
+  const startParsed = parsePKTDateTime(schedule.startDate, schedule.startTime);
+  const endParsed = parsePKTDateTime(schedule.endDate, schedule.endTime);
+
+  const startMs = startParsed?.timestamp || 0;
+  const endMs = endParsed?.timestamp || 0;
+
+  let state = "NOT_STARTED";
+  let message = "Competition not started. Please wait for the scheduled start time.";
+
+  if (schedule.status === "stopped") {
+    state = "STOPPED";
+    message = "Competition has been halted by the administrator.";
+  } else if (schedule.status === "live" && (!endMs || now < endMs)) {
+    state = "LIVE";
+    message = "Competition is currently LIVE!";
+  } else if (endMs && now >= endMs) {
+    state = "TIME_OVER";
+    message = "The scheduled competition has ended. New quiz attempts are no longer allowed.";
+  } else if (startMs && now >= startMs && (!endMs || now < endMs)) {
+    state = "LIVE";
+    message = "Competition is currently LIVE!";
+  } else {
+    state = "NOT_STARTED";
+    message = "Competition not started. Please wait for the scheduled start time.";
+  }
+
+  return {
+    state,
+    isLive: state === "LIVE",
+    isOver: state === "TIME_OVER" || state === "STOPPED",
+    message,
+    currentTimeMs: now,
+    startMs,
+    endMs,
+    timeRemainingToStartMs: startMs ? Math.max(0, startMs - now) : 0,
+    timeRemainingToEndMs: endMs ? Math.max(0, endMs - now) : 0,
+    schedule: {
+      ...schedule,
+      startMs,
+      endMs,
+      startIso: startParsed?.iso,
+      endIso: endParsed?.iso,
+    }
+  };
+};
+
+export const calculateSubjectDistributionLocal = (totalCount, availableQuestions) => {
+  const count = Number(totalCount);
+  if (!count || count < 7) {
+    return {
+      isValid: false,
+      error: "Every subject must have at least one question. Minimum 7 questions required."
+    };
+  }
+
+  const subjectIds = ['pf', 'oop', 'dsa', 'dbms', 'cn', 'se', 'os'];
+  const subjectNames = {
+    pf: "Programming Fundamentals",
+    oop: "Object Oriented Programming",
+    dsa: "Data Structures & Algorithms",
+    dbms: "Database Systems",
+    cn: "Computer Networks",
+    se: "Software Engineering",
+    os: "Operating Systems"
+  };
+
+  const baseCount = Math.floor(count / 7);
+  const remainder = count % 7;
+
+  const targetDistribution = {};
+  const actualSelection = [];
+  const subjectBreakdown = {};
+
+  for (let i = 0; i < subjectIds.length; i++) {
+    const sId = subjectIds[i];
+    const needed = baseCount + (i < remainder ? 1 : 0);
+    targetDistribution[sId] = needed;
+
+    const subjectQuestions = (availableQuestions || []).filter(q => {
+      const qSid = (q.subjectId || '').toLowerCase();
+      const qSName = (q.subjectName || q.subject || '').toLowerCase();
+      return qSid === sId || 
+        (sId === 'pf' && (qSName.includes('programming') || qSName.includes('fundamental') || qSid === 'pf')) ||
+        (sId === 'oop' && (qSName.includes('object') || qSid === 'oop')) ||
+        (sId === 'dsa' && (qSName.includes('data structure') || qSName.includes('algorithm') || qSid === 'dsa')) ||
+        (sId === 'dbms' && (qSName.includes('database') || qSid === 'dbms' || qSid === 'db')) ||
+        (sId === 'cn' && (qSName.includes('network') || qSid === 'cn')) ||
+        (sId === 'se' && (qSName.includes('software') || qSid === 'se')) ||
+        (sId === 'os' && (qSName.includes('operating') || qSid === 'os'));
+    });
+
+    subjectBreakdown[sId] = {
+      name: subjectNames[sId],
+      required: needed,
+      available: subjectQuestions.length,
+      hasEnough: subjectQuestions.length >= needed
+    };
+
+    if (subjectQuestions.length < needed) {
+      return {
+        isValid: false,
+        error: `Subject "${subjectNames[sId]}" has only ${subjectQuestions.length} questions in the bank, but ${needed} are required for an even distribution of ${count} questions.`,
+        subjectBreakdown,
+        targetDistribution
+      };
+    }
+
+    actualSelection.push(...subjectQuestions.slice(0, needed));
+  }
+
+  return {
+    isValid: true,
+    targetDistribution,
+    subjectBreakdown,
+    selectedQuestions: actualSelection,
+    totalSelected: actualSelection.length
+  };
 };
 
 // Reset to Defaults

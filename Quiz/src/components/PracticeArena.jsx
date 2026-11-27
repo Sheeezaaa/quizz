@@ -244,35 +244,10 @@ export default function PracticeArena({ initialMode = 'round1' }) {
         <div className="flex flex-wrap items-center justify-center gap-2 mb-6 bg-black/40 p-1.5 rounded-xl border border-white/10 max-w-xl mx-auto">
           <button
             onClick={() => setActiveTab('round1')}
-            className={`px-4 py-2 rounded-lg text-xs font-heading font-semibold transition-all ${
-              activeTab === 'round1'
-                ? 'bg-[#2563eb] text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
+            className="px-6 py-2.5 rounded-lg text-xs font-heading font-bold bg-[#2563eb] text-white shadow-md flex items-center gap-2"
           >
-            Round 1: 30s MCQ
-          </button>
-
-          <button
-            onClick={() => setActiveTab('rapidFire')}
-            className={`px-4 py-2 rounded-lg text-xs font-heading font-semibold transition-all ${
-              activeTab === 'rapidFire'
-                ? 'bg-amber-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Round 3: 3s Rapid Fire
-          </button>
-
-          <button
-            onClick={() => setActiveTab('buzzer')}
-            className={`px-4 py-2 rounded-lg text-xs font-heading font-semibold transition-all ${
-              activeTab === 'buzzer'
-                ? 'bg-rose-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Round 4: Buzzer Final (-0.5 pt)
+            <Zap className="w-3.5 h-3.5" />
+            <span>Single Round Championship: 30s MCQs (All 7 CS Disciplines)</span>
           </button>
         </div>
 

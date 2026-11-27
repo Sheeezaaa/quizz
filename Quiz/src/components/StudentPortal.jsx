@@ -80,7 +80,8 @@ import {
   setStudentAuthToken,
   getStudentAuthToken,
   apiGetQuestions,
-  apiCheckRetakePermission
+  apiCheckRetakePermission,
+  apiGetScheduleStatus
 } from '../utils/api';
 import { 
   getLoggedInStudent, 
@@ -93,7 +94,9 @@ import {
   localCreateTeam, 
   localJoinTeam,
   getStoredQuestions,
-  saveStoredQuestions
+  saveStoredQuestions,
+  getStoredSchedule,
+  getCompetitionAccessStatusLocal
 } from '../utils/storage';
 import { playCorrectChime, playAntiCheatBuzzer, playDisqualificationSiren } from '../utils/soundEffects';
 import mascotSkyImg from '../assets/mascot-sky.jpg';
@@ -176,6 +179,41 @@ export default function StudentPortal({
   const [selectedAttemptForView, setSelectedAttemptForView] = useState(null);
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [retakePermissionInfo, setRetakePermissionInfo] = useState({ hasPermission: false, permission: null });
+
+  // Competition Schedule & Access Control (PKT Timezone)
+  const [competitionSchedule, setCompetitionSchedule] = useState(() => getStoredSchedule());
+  const [scheduleStatus, setScheduleStatus] = useState(() => getCompetitionAccessStatusLocal());
+  const [scheduleCountdown, setScheduleCountdown] = useState('');
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const access = getCompetitionAccessStatusLocal(competitionSchedule);
+      setScheduleStatus(access);
+
+      const now = Date.now();
+      if (access.state === 'NOT_STARTED' && access.startMs) {
+        const diff = Math.max(0, access.startMs - now);
+        const hours = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        setScheduleCountdown(`Starts in: ${hours}h ${mins}m ${secs}s`);
+      } else if (access.state === 'LIVE' && access.endMs) {
+        const diff = Math.max(0, access.endMs - now);
+        const hours = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        setScheduleCountdown(`Closes in: ${hours}h ${mins}m ${secs}s`);
+      } else if (access.state === 'TIME_OVER') {
+        setScheduleCountdown('Competition Concluded (Time Over)');
+      } else if (access.state === 'STOPPED') {
+        setScheduleCountdown('Competition Halted by Admin');
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [competitionSchedule]);
 
   const checkRetakeStatus = async (roundNum = 1) => {
     if (!currentUser?.studentId) return;
@@ -353,12 +391,13 @@ export default function StudentPortal({
 
   const loadStudentDashboardData = async () => {
     try {
-      const [statusData, annList, notifList, lbData, questionList] = await Promise.all([
+      const [statusData, annList, notifList, lbData, questionList, scheduleRes] = await Promise.all([
         apiGetStudentQuizStatus(),
         apiGetAnnouncements(),
         apiGetNotifications(),
         apiGetLeaderboard(),
         apiGetQuestions(),
+        apiGetScheduleStatus().catch(() => null),
       ]);
 
       if (statusData) setStudentStatus(statusData);
@@ -366,6 +405,10 @@ export default function StudentPortal({
       if (notifList) setNotifications(notifList);
       if (Array.isArray(questionList) && questionList.length > 0) {
         saveStoredQuestions(questionList);
+      }
+      if (scheduleRes && scheduleRes.schedule) {
+        setCompetitionSchedule(scheduleRes.schedule);
+        setScheduleStatus(scheduleRes);
       }
 
       if (lbData && lbData.leaderboard && currentUser) {
@@ -1522,68 +1565,48 @@ export default function StudentPortal({
                   </div>
                 </div>
 
-                {/* Round-wise Marks Breakdown */}
+                {/* Single Combined Championship: 7 Core Computer Science Subjects */}
                 <div>
                   <div className="text-xs font-heading font-bold text-sky-200 uppercase tracking-wider mb-3 flex items-center justify-between">
-                    <span>Round-by-Round Marks Breakdown</span>
-                    <span className="text-[11px] font-mono text-slate-500 font-bold">4 Proctored Competition Stages</span>
+                    <span>Championship Curriculum: 7 Core Computer Science Subjects</span>
+                    <span className="text-[11px] font-mono text-slate-500 font-bold">Single Combined Grand Round</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {/* Stage 1 */}
-                    <div className="p-4 rounded-2xl bg-sky-50/80 border-2 border-sky-200 shadow-sm">
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-heading font-bold text-slate-900">Stage 01: Screening</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                          Completed
-                        </span>
+                    {[
+                      { id: 'pf', name: 'Programming Fundamentals', desc: 'Variables, loops & functions' },
+                      { id: 'oop', name: 'Object Oriented Programming', desc: 'Inheritance, polymorphism, classes' },
+                      { id: 'dsa', name: 'Data Structures & Algorithms', desc: 'Arrays, trees, graphs, Big-O' },
+                      { id: 'dbms', name: 'Database Systems', desc: 'SQL, ER models & transactions' },
+                      { id: 'cn', name: 'Computer Networks', desc: 'OSI layers, protocols, IP routing' },
+                      { id: 'se', name: 'Software Engineering', desc: 'SDLC, Agile, quality & testing' },
+                      { id: 'os', name: 'Operating Systems', desc: 'Concurrency, memory & scheduling' }
+                    ].map((subj, idx) => (
+                      <div key={subj.id} className="p-3.5 rounded-2xl bg-sky-50/80 border-2 border-sky-200 shadow-sm">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-heading font-bold text-slate-900 truncate">{subj.name}</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-700 border border-blue-500/20 font-bold">
+                            #{idx + 1}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 font-medium mt-1">{subj.desc}</p>
                       </div>
-                      <div className="text-xl font-heading font-black text-blue-700 mt-2">
-                        {studentStatus?.roundScores?.[0]?.score ?? (studentStatus?.totalScore ? studentStatus.totalScore : 0)} <span className="text-xs text-slate-500 font-normal">/ 20 pts</span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 font-medium mt-1">Foundational Computing & Logic MCQs</p>
-                    </div>
+                    ))}
 
-                    {/* Stage 2 */}
-                    <div className="p-4 rounded-2xl bg-sky-50/80 border-2 border-sky-200 shadow-sm">
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-heading font-bold text-slate-900">Stage 02: Core CS</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">
-                          {studentStatus?.roundScores?.[1] ? 'Completed' : 'Upcoming'}
-                        </span>
+                    {/* Combined Score Card */}
+                    <div className="p-3.5 rounded-2xl bg-emerald-50/80 border-2 border-emerald-200 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-heading font-bold text-emerald-900">Grand Score</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-600 text-white font-bold">
+                            +1 Pt Each
+                          </span>
+                        </div>
+                        <div className="text-xl font-heading font-black text-emerald-700 mt-1">
+                          {studentStatus?.totalScore ?? 0} pts
+                        </div>
                       </div>
-                      <div className="text-xl font-heading font-black text-blue-700 mt-2">
-                        {studentStatus?.roundScores?.[1]?.score ?? 0} <span className="text-xs text-slate-500 font-normal">/ 30 pts</span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 font-medium mt-1">Data Structures, Algorithms & OOP</p>
-                    </div>
-
-                    {/* Stage 3 */}
-                    <div className="p-4 rounded-2xl bg-sky-50/80 border-2 border-sky-200 shadow-sm">
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-heading font-bold text-slate-900">Stage 03: Speed Coding</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">
-                          {studentStatus?.roundScores?.[2] ? 'Completed' : 'Upcoming'}
-                        </span>
-                      </div>
-                      <div className="text-xl font-heading font-black text-blue-700 mt-2">
-                        {studentStatus?.roundScores?.[2]?.score ?? 0} <span className="text-xs text-slate-500 font-normal">/ 50 pts</span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 font-medium mt-1">Real-time Algorithmic Challenges</p>
-                    </div>
-
-                    {/* Stage 4 */}
-                    <div className="p-4 rounded-2xl bg-sky-50/80 border-2 border-sky-200 shadow-sm">
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-heading font-bold text-slate-900">Stage 04: Grand Finale</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
-                          Auditorium
-                        </span>
-                      </div>
-                      <div className="text-xl font-heading font-black text-blue-700 mt-2">
-                        {studentStatus?.roundScores?.[3]?.score ?? 0} <span className="text-xs text-slate-500 font-normal">/ 100 pts</span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 font-medium mt-1">Live Buzzer Arena & Championship</p>
+                      <p className="text-[11px] text-emerald-800 font-medium mt-1">Single Round Official Score</p>
                     </div>
                   </div>
                 </div>
@@ -2400,78 +2423,234 @@ export default function StudentPortal({
                   </div>
                 )}
 
-                {/* WAITING LOUNGE WHEN INSTRUCTOR HAS NOT GIVEN DATA YET */}
-                {!activeQuizAttempt && !activeDisplayResult && (
-                  <div className="p-8 sm:p-10 rounded-3xl bg-white border-2 border-sky-300 space-y-6 text-center shadow-xl text-slate-900">
-                    <div className="w-16 h-16 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center mx-auto text-2xl font-black">
-                      ⏳
-                    </div>
+                {/* WAITING LOUNGE: BATTLE OF BRAINS SINGLE ROUND QUIZ COMPETITION */}
+                {!activeQuizAttempt && !activeDisplayResult && (() => {
+                  const hasCompletedAttempt = (attemptsHistory || []).some(
+                    (a) => Number(a.roundNumber || 1) === 1 && (a.status === 'completed' || a.status === 'timed_out')
+                  ) || !!pastResult || !!studentStatus?.hasCompletedRound1;
 
-                    <div className="max-w-lg mx-auto space-y-2">
-                      <span className="px-3 py-1 rounded-full text-xs font-mono font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
-                        Live Exam Waiting Lounge
-                      </span>
-                      <h3 className="text-2xl font-heading font-black text-slate-900">
-                        Championship Quiz Arena
-                      </h3>
-                      <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
-                        The live quiz questions will appear here as soon as the instructor / examiner publishes the test questions and signals the round to start.
-                      </p>
-                    </div>
+                  const currentAccessState = scheduleStatus?.state || 'NOT_STARTED';
+                  const isLive = currentAccessState === 'LIVE';
+                  const isNotStarted = currentAccessState === 'NOT_STARTED';
+                  const isTimeOver = currentAccessState === 'TIME_OVER';
+                  const isStopped = currentAccessState === 'STOPPED';
 
-                    {/* Exam Overview Details Card */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto text-left text-xs">
-                      <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
-                        <strong className="block text-slate-900 font-bold">⏱️ Time Limit:</strong>
-                        <span className="text-slate-600">30 seconds per question</span>
+                  const canStartQuiz = isLive && (!hasCompletedAttempt || retakePermissionInfo?.hasPermission);
+
+                  return (
+                    <div className="p-8 sm:p-10 rounded-3xl bg-white border-2 border-sky-300 space-y-6 text-center shadow-xl text-slate-900 animate-fadeIn">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center mx-auto text-3xl font-black shadow-lg shadow-blue-500/30">
+                        🏆
                       </div>
-                      <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
-                        <strong className="block text-slate-900 font-bold">🎯 Questions:</strong>
-                        <span className="text-slate-600">
-                          {(() => {
-                            const count = (getStoredQuestions() || []).length;
-                            return count > 0 ? `All ${count} Bank Questions` : 'All Question Bank MCQs';
-                          })()}
+
+                      <div className="max-w-2xl mx-auto space-y-3">
+                        {/* Live Status Badge */}
+                        <div className="flex items-center justify-center gap-2">
+                          <span className={`px-4 py-1.5 rounded-full text-xs font-mono font-black uppercase tracking-wider border shadow-sm flex items-center gap-2 ${
+                            isLive
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse'
+                              : isNotStarted
+                              ? 'bg-amber-100 text-amber-800 border-amber-300'
+                              : isTimeOver
+                              ? 'bg-rose-100 text-rose-800 border-rose-300'
+                              : 'bg-slate-100 text-slate-800 border-slate-300'
+                          }`}>
+                            <span className={`w-2 h-2 rounded-full ${
+                              isLive ? 'bg-emerald-500' : isNotStarted ? 'bg-amber-500' : 'bg-rose-500'
+                            }`} />
+                            {isLive
+                              ? 'COMPETITION LIVE'
+                              : isNotStarted
+                              ? 'COMPETITION NOT STARTED'
+                              : isTimeOver
+                              ? 'COMPETITION TIME OVER'
+                              : 'COMPETITION STOPPED'}
+                          </span>
+                        </div>
+
+                        <h3 className="text-2xl sm:text-3xl font-heading font-black text-slate-900 tracking-tight">
+                          Battle of Brains – Single Round Quiz
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
+                          Grand Championship Quiz comprising questions evenly distributed across all seven core Computer Science domains.
+                        </p>
+
+                        {/* Live Countdown Ribbon */}
+                        {scheduleCountdown && (
+                          <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-xl font-mono text-xs font-bold border ${
+                            isLive
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : isNotStarted
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : 'bg-rose-50 text-rose-800 border-rose-200'
+                          }`}>
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{scheduleCountdown}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 7 CS Subjects Badges */}
+                      <div className="max-w-2xl mx-auto p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-2">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                          Official Curriculum: All 7 Computer Science Subjects
                         </span>
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
+                          {[
+                            'Programming Fundamentals',
+                            'Object Oriented Programming',
+                            'Data Structures & Algorithms',
+                            'Database Systems',
+                            'Computer Networks',
+                            'Software Engineering',
+                            'Operating Systems'
+                          ].map((subj, idx) => (
+                            <span
+                              key={subj}
+                              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-white border border-sky-200 text-slate-700 shadow-sm"
+                            >
+                              <strong className="text-blue-600 mr-1">#{idx + 1}</strong>
+                              {subj}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
-                        <strong className="block text-slate-900 font-bold">🛡️ Proctoring:</strong>
-                        <span className="text-slate-600">Full Lockdown Active</span>
-                      </div>
-                    </div>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-                      {retakePermissionInfo?.hasPermission ? (
-                        <button
-                          type="button"
-                          onClick={() => handleStartAttempt(1)}
-                          className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-sm shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
-                        >
-                          <Unlock className="w-4 h-4" />
-                          <span>RETAKE ACCESS GRANTED – START RETAKE</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleStartAttempt(1)}
-                          className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-sm shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
-                        >
-                          <Zap className="w-4 h-4" />
-                          <span>START ROUND 1</span>
-                        </button>
+                      {/* Scheduled Time & Rules Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-2xl mx-auto text-left text-xs">
+                        <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
+                          <strong className="block text-slate-900 font-bold">📅 Competition Start:</strong>
+                          <span className="text-slate-600 font-mono">
+                            {competitionSchedule?.startDate || '10/12/2026'} at {competitionSchedule?.startTime || '10:00 AM'}
+                          </span>
+                          <span className="block text-[10px] text-blue-600 font-bold mt-0.5">PKT (Asia/Karachi)</span>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
+                          <strong className="block text-slate-900 font-bold">⌛ Competition End:</strong>
+                          <span className="text-slate-600 font-mono">
+                            {competitionSchedule?.endDate || '10/12/2026'} at {competitionSchedule?.endTime || '11:00 AM'}
+                          </span>
+                          <span className="block text-[10px] text-blue-600 font-bold mt-0.5">PKT (Asia/Karachi)</span>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
+                          <strong className="block text-slate-900 font-bold">🎯 Total MCQs:</strong>
+                          <span className="text-slate-600">
+                            {competitionSchedule?.publishedQuestionCount || 14} Selected Questions
+                          </span>
+                          <span className="block text-[10px] text-emerald-600 font-bold mt-0.5">Balanced Across 7 CS</span>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
+                          <strong className="block text-slate-900 font-bold">⏱️ Timer & Rules:</strong>
+                          <span className="text-slate-600">30 seconds / question</span>
+                          <span className="block text-[10px] text-indigo-600 font-bold mt-0.5">+1 Pt Correct • No Neg</span>
+                        </div>
+                      </div>
+
+                      {/* Attempt Status Notifications */}
+                      {hasCompletedAttempt && !retakePermissionInfo?.hasPermission && (
+                        <div className="max-w-xl mx-auto p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-center space-y-1.5 animate-fadeIn">
+                          <div className="flex items-center justify-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
+                            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>ATTEMPT COMPLETED – LOCKED</span>
+                          </div>
+                          <p className="text-xs text-amber-800 font-medium">
+                            You have already completed this round. Retake permission is required from the administrator.
+                          </p>
+                        </div>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => loadStudentDashboardData()}
-                        className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-sky-50 hover:bg-sky-100 border-2 border-sky-200 text-slate-700 font-heading font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Refresh Live Status</span>
-                      </button>
+                      {retakePermissionInfo?.hasPermission && (
+                        <div className="max-w-xl mx-auto p-3.5 rounded-2xl bg-emerald-50 border-2 border-emerald-300 text-center space-y-1 animate-fadeIn">
+                          <div className="flex items-center justify-center gap-2 text-emerald-900 font-bold text-xs sm:text-sm">
+                            <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>RETAKE ACCESS GRANTED BY ADMINISTRATOR</span>
+                          </div>
+                          <p className="text-xs text-emerald-800 font-medium">
+                            You have been authorized for 1 additional attempt. Once submitted, the round will automatically lock again.
+                          </p>
+                        </div>
+                      )}
+
+                      {isTimeOver && (
+                        <div className="max-w-xl mx-auto p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-center space-y-1.5 animate-fadeIn">
+                          <div className="flex items-center justify-center gap-2 text-rose-900 font-bold text-xs sm:text-sm">
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                            <span>COMPETITION TIME OVER</span>
+                          </div>
+                          <p className="text-xs text-rose-800 font-medium">
+                            The scheduled competition has ended. New quiz attempts are no longer allowed.
+                          </p>
+                        </div>
+                      )}
+
+                      {isNotStarted && (
+                        <div className="max-w-xl mx-auto p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-center space-y-1 animate-fadeIn">
+                          <div className="flex items-center justify-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
+                            <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>COMPETITION NOT STARTED</span>
+                          </div>
+                          <p className="text-xs text-amber-800 font-medium">
+                            The quiz competition is scheduled to start on {competitionSchedule?.startDate || '10/12/2026'} at {competitionSchedule?.startTime || '10:00 AM'} (PKT).
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Main Action Buttons */}
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+                        {canStartQuiz ? (
+                          retakePermissionInfo?.hasPermission ? (
+                            <button
+                              type="button"
+                              onClick={() => handleStartAttempt(1)}
+                              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-sm shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
+                            >
+                              <Unlock className="w-4 h-4" />
+                              <span>RETAKE ACCESS GRANTED – START RETAKE</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleStartAttempt(1)}
+                              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-sm shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
+                            >
+                              <Zap className="w-4 h-4" />
+                              <span>START QUIZ</span>
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            type="button"
+                            disabled
+                            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-slate-200 text-slate-500 font-heading font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed opacity-80"
+                          >
+                            <Lock className="w-4 h-4 text-slate-400" />
+                            <span>
+                              {hasCompletedAttempt && !retakePermissionInfo?.hasPermission
+                                ? 'ATTEMPT COMPLETED – LOCKED'
+                                : isNotStarted
+                                ? 'START QUIZ (LOCKED UNTIL START TIME)'
+                                : isTimeOver
+                                ? 'COMPETITION TIME OVER'
+                                : 'START QUIZ (HALTED)'}
+                            </span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => loadStudentDashboardData()}
+                          className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-sky-50 hover:bg-sky-100 border-2 border-sky-200 text-slate-700 font-heading font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Refresh Live Status</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
               </div>
             );

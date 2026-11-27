@@ -2,7 +2,7 @@
   "adminPasswordHash": "$2b$08$wT8.U9Fe7qTvG8MqmKTxOeVa1pJYjKmwMxFBOIHev/to4Mo6Ggniq",
   "details": {
     "title": "BATTLE OF BRAINS",
-    "campusBadge": "NOVEMBER 20, 2026 • COMSATS UNIVERSITY ISLAMABAD",
+    "campusBadge": "NOVEMBER 20, 2026 \u2022 COMSATS UNIVERSITY ISLAMABAD",
     "tagline": "Challenge Your Knowledge, Test Your Intelligence, and Compete to Become the Ultimate Champion!",
     "organizer": "Department of Computer Science & Information Technology",
     "university": "COMSATS University Islamabad",
@@ -111,50 +111,15 @@
   "rounds": [
     {
       "roundNumber": 1,
-      "title": "Screening Round (MCQs)",
-      "stageBadge": "Stage 01 • University Auditorium",
-      "timeLimit": "30 seconds per question",
-      "questionsCount": "30 MCQs across all 7 CS Subjects",
-      "qualification": "Top 80% of all participants qualify for Round 2.",
-      "markingScheme": "+1 point for correct answer",
-      "negativeMarking": "No negative marking (0 pts)",
-      "strictRule": "Answers will NOT be accepted after the 30-second timer expires.",
-      "isActive": true
-    },
-    {
-      "roundNumber": 2,
-      "title": "Core CS Concepts Round",
-      "stageBadge": "Stage 02 • CS Computing Labs",
-      "timeLimit": "45 seconds per question",
-      "questionsCount": "20 Code Comprehension Questions",
-      "qualification": "Top 4 participants qualify for Round 3 (Semi-Finals).",
-      "markingScheme": "+1 point for correct answer",
-      "negativeMarking": "No negative marking (0 pts)",
-      "strictRule": "Answers will NOT be accepted after the 45-second timer expires.",
-      "isActive": true
-    },
-    {
-      "roundNumber": 3,
-      "title": "Rapid Fire Round",
-      "stageBadge": "Stage 03 • Semi-Final Showdown",
-      "timeLimit": "3 minutes per participant (3s per question)",
-      "questionsCount": "Continuous rapid-stream questions",
-      "qualification": "Top 2 finalists qualify for the 1-on-1 Buzzer Grand Final.",
-      "markingScheme": "+1 point for correct answer",
-      "negativeMarking": "No negative marking (0 pts)",
-      "strictRule": "Each question must be answered within 3 seconds. After 3 seconds, the question is skipped automatically. Skipped or unanswered questions will NOT be repeated."
-    },
-    {
-      "roundNumber": 4,
-      "title": "Buzzer Round (Grand Final)",
-      "stageBadge": "Stage 04 • The Ultimate Championship",
-      "timeLimit": "10 seconds to answer once buzzed",
-      "questionsCount": "15 High-Difficulty Decider Questions",
-      "qualification": "Highest total score crowns the Champion of Battle of Brains 2026.",
-      "markingScheme": "+1 point for correct answer",
-      "negativeMarking": "-0.5 points deduction for wrong answer",
-      "strictRule": "Participants must press the buzzer after the question starts. The first buzzer gets the chance to answer. If a participant buzzes but cannot answer within 10 seconds, the turn passes. Premature or unnecessary buzzer pressing results in a warning or point deduction.",
-      "isActive": true
+      "title": "Battle of Brains \u2014 Combined Grand Quiz",
+      "stageBadge": "Official Single Round \u2022 All 7 CS Subjects",
+      "timeLimitSeconds": 30,
+      "questionsCount": 14,
+      "markingCorrect": 1.0,
+      "markingNegative": 0.0,
+      "strictRule": "Strict 30 seconds per question. Answers will NOT be accepted after timer expires.",
+      "isActive": true,
+      "isCompleted": false
     }
   ],
   "rules": {
@@ -1033,692 +998,134 @@
   ],
   "questions": [
     {
-      "id": "Q-1793973082139-135",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793973081506-234",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793972356814-633",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793972356045-21",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793898012581-318",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793898010712-649",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793897373826-83",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793897372959-436",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793896894852-788",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793896894076-976",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793895886694-233",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793895886164-197",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793894453486-850",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793894453013-392",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793894244335-436",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793894243630-444",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793894129046-886",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793894128414-767",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793893196334-240",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793893195728-373",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793892175770-629",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793892174877-462",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793891128975-97",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793891128070-272",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793891092277-617",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793891091729-583",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793890418320-506",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793890417847-668",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793888426328-236",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793888425813-978",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793888371403-142",
-      "subjectId": "os",
-      "subjectName": "Operating Systems",
-      "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "Which page replacement algorithm suffers from Belady anomaly?",
-      "options": [
-        "LRU",
-        "FIFO",
-        "Optimal",
-        "LFU"
-      ],
-      "correct": 1,
-      "explanation": "FIFO page replacement can exhibit Belady anomaly.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793888370968-520",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793888317522-593",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793888116747-345",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-1793887727586-504",
-      "subjectId": "dsa",
-      "subjectName": "Data Structures & Algorithms",
-      "roundNumber": 1,
-      "difficulty": "Moderate",
-      "question": "Which sorting algorithm has best-case time complexity O(n)?",
-      "options": [
-        "QuickSort",
-        "MergeSort",
-        "Insertion Sort",
-        "Selection Sort"
-      ],
-      "correct": 2,
-      "explanation": "Insertion sort runs in O(n) when array is already sorted.",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-101",
+      "id": "PF-01",
       "subjectId": "pf",
-      "subjectName": "Data Structures & Algorithms",
+      "subjectName": "Programming Fundamentals",
       "roundNumber": 1,
-      "difficulty": "Hard",
-      "question": "What is the worst-case time complexity of searching in a balanced Binary Search Tree (AVL Tree) with n nodes?",
+      "difficulty": "Easy",
+      "question": "Which operator in C/C++ is used to obtain the memory address of a variable?",
       "options": [
-        "O(1)",
-        "O(log n)",
-        "O(n)",
-        "O(n log n)"
+        "*",
+        "&",
+        "->",
+        "%"
       ],
       "correct": 1,
-      "explanation": "A balanced BST maintains maximum height of O(log n), ensuring searches take at most O(log n) comparisons.",
-      "isTieBreaker": false,
+      "explanation": "The ampersand (&) operator returns the memory address of its operand.",
       "version": 1,
       "isActive": true
     },
     {
-      "id": "Q-102",
+      "id": "PF-02",
       "subjectId": "pf",
+      "subjectName": "Programming Fundamentals",
+      "roundNumber": 1,
+      "difficulty": "Easy",
+      "question": "What is the primary purpose of a base case in a recursive function?",
+      "options": [
+        "To increase recursion speed",
+        "To terminate recursive calls and prevent stack overflow",
+        "To allocate dynamic heap memory",
+        "To execute return statements in reverse order"
+      ],
+      "correct": 1,
+      "explanation": "A base case specifies the terminating condition to stop further self-calls, preventing infinite recursion.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "PF-03",
+      "subjectId": "pf",
+      "subjectName": "Programming Fundamentals",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "What does the 'continue' keyword do inside a loop construct in C++?",
+      "options": [
+        "Terminates the entire loop immediately",
+        "Skips the rest of the current iteration and jumps to the next iteration",
+        "Exits the current function",
+        "Restarts the loop from the initial counter value"
+      ],
+      "correct": 1,
+      "explanation": "continue bypasses remaining statements in the current iteration and passes control to the loop update/condition.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "PF-04",
+      "subjectId": "pf",
+      "subjectName": "Programming Fundamentals",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "If 'int *ptr = &x;', which expression retrieves the value stored inside the memory location pointed to by ptr?",
+      "options": [
+        "&ptr",
+        "*ptr",
+        "ptr->val",
+        "x&"
+      ],
+      "correct": 1,
+      "explanation": "*ptr dereferences the pointer to access the actual value stored at the referenced memory address.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "PF-05",
+      "subjectId": "pf",
+      "subjectName": "Programming Fundamentals",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "In standard C, which function allocates uninitialized contiguous memory on the heap?",
+      "options": [
+        "calloc()",
+        "malloc()",
+        "realloc()",
+        "free()"
+      ],
+      "correct": 1,
+      "explanation": "malloc(size_t size) allocates the requested bytes of raw, uninitialized memory on the heap.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "PF-06",
+      "subjectId": "pf",
+      "subjectName": "Programming Fundamentals",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "What happens when a local variable in a function is declared with the 'static' storage class specifier?",
+      "options": [
+        "It is destroyed as soon as the function returns",
+        "Its lifetime extends across the entire program execution, preserving its value between function calls",
+        "It cannot be modified inside the function",
+        "It is placed in the CPU cache registers"
+      ],
+      "correct": 1,
+      "explanation": "A static local variable retains its value between multiple function invocations throughout program lifetime.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "PF-07",
+      "subjectId": "pf",
+      "subjectName": "Programming Fundamentals",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "Which of the following array declarations dynamically allocates an array of 10 integers in modern C++?",
+      "options": [
+        "int arr = new int[10];",
+        "int *arr = new int[10];",
+        "int arr[10] = malloc(10);",
+        "pointer int arr[10];"
+      ],
+      "correct": 1,
+      "explanation": "int *arr = new int[10]; allocates 10 integers on the heap and assigns the base address to ptr arr.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OOP-01",
+      "subjectId": "oop",
       "subjectName": "Object-Oriented Programming",
       "roundNumber": 1,
       "difficulty": "Moderate",
@@ -1730,14 +1137,247 @@
         "Multiple Inheritance"
       ],
       "correct": 1,
-      "explanation": "Method Overriding occurs when a subclass defines a method with the exact same signature as a method in its parent class.",
-      "isTieBreaker": false,
+      "explanation": "Method Overriding occurs when a child class provides a new implementation of an inherited virtual method with identical signature.",
       "version": 1,
       "isActive": true
     },
     {
-      "id": "Q-103",
-      "subjectId": "pf",
+      "id": "OOP-02",
+      "subjectId": "oop",
+      "subjectName": "Object-Oriented Programming",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "Why should a base class destructor always be declared 'virtual' when polymorphism is used?",
+      "options": [
+        "To prevent creating base class objects",
+        "To ensure the derived class destructor is invoked when deleting derived objects via base pointers",
+        "To make destruction instantaneous",
+        "To automatically deallocate private member variables"
+      ],
+      "correct": 1,
+      "explanation": "Without a virtual base destructor, deleting a derived object via a base pointer leads to undefined behavior / resource leaks as the derived destructor won't be called.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OOP-03",
+      "subjectId": "oop",
+      "subjectName": "Object-Oriented Programming",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "Which mechanism solves the 'Diamond Problem' in C++ multiple inheritance?",
+      "options": [
+        "Friend Classes",
+        "Virtual Base Classes (Virtual Inheritance)",
+        "Namespace Scoping",
+        "Operator Overloading"
+      ],
+      "correct": 1,
+      "explanation": "Virtual base classes ensure that only one instance of the grandparent base class is shared across multiple derived inheritance paths.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OOP-04",
+      "subjectId": "oop",
+      "subjectName": "Object-Oriented Programming",
+      "roundNumber": 1,
+      "difficulty": "Easy",
+      "question": "Which OOP principle involves bundling data and the methods that operate on that data into a single unit while restricting direct outside access?",
+      "options": [
+        "Polymorphism",
+        "Encapsulation",
+        "Inheritance",
+        "Association"
+      ],
+      "correct": 1,
+      "explanation": "Encapsulation hides the internal state of an object and exposes functionality through public interfaces.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OOP-05",
+      "subjectId": "oop",
+      "subjectName": "Object-Oriented Programming",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "In C++, what makes a class an 'Abstract Class'?",
+      "options": [
+        "Having all private data members",
+        "Declaring at least one pure virtual function (e.g. virtual void func() = 0;)",
+        "Inheriting from multiple parents",
+        "Having only static methods"
+      ],
+      "correct": 1,
+      "explanation": "A pure virtual function (= 0) renders a class abstract, preventing direct instantiation.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OOP-06",
+      "subjectId": "oop",
+      "subjectName": "Object-Oriented Programming",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "What is the primary role of a 'friend function' in C++?",
+      "options": [
+        "It can access private and protected members of the class declaring it",
+        "It is automatically inherited by all child classes",
+        "It can only access public variables",
+        "It runs before the constructor"
+      ],
+      "correct": 0,
+      "explanation": "A friend function is granted special access to private and protected members of the class granting friendship.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OOP-07",
+      "subjectId": "oop",
+      "subjectName": "Object-Oriented Programming",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "Which SOLID design principle states that 'Software entities should be open for extension, but closed for modification'?",
+      "options": [
+        "Single Responsibility Principle",
+        "Open/Closed Principle (OCP)",
+        "Liskov Substitution Principle",
+        "Dependency Inversion Principle"
+      ],
+      "correct": 1,
+      "explanation": "The Open/Closed Principle dictates that code should allow new behavior to be added without modifying existing tested code.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DSA-01",
+      "subjectId": "dsa",
+      "subjectName": "Data Structures & Algorithms",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "What is the worst-case time complexity of searching for an element in a balanced Binary Search Tree (AVL Tree) with n nodes?",
+      "options": [
+        "O(1)",
+        "O(log n)",
+        "O(n)",
+        "O(n log n)"
+      ],
+      "correct": 1,
+      "explanation": "A balanced BST like an AVL tree maintains a maximum height of O(log n), ensuring searches take at most O(log n) comparisons in the worst case.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DSA-02",
+      "subjectId": "dsa",
+      "subjectName": "Data Structures & Algorithms",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "What is the optimal average-case time complexity of QuickSort algorithm with random pivot selection?",
+      "options": [
+        "O(n)",
+        "O(n log n)",
+        "O(n^2)",
+        "O(log n)"
+      ],
+      "correct": 1,
+      "explanation": "QuickSort partitions the array around a pivot in O(n) and recurses in O(log n) tree depth on average, yielding O(n log n).",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DSA-03",
+      "subjectId": "dsa",
+      "subjectName": "Data Structures & Algorithms",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "Which data structure is fundamentally utilized to implement Breadth-First Search (BFS) graph traversal?",
+      "options": [
+        "Stack",
+        "Queue (FIFO)",
+        "Priority Heap",
+        "Disjoint Set"
+      ],
+      "correct": 1,
+      "explanation": "BFS explores graph vertices level by level, necessitating a FIFO Queue structure.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DSA-04",
+      "subjectId": "dsa",
+      "subjectName": "Data Structures & Algorithms",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "In a hash table, what is the open addressing technique where collision resolution checks consecutive slots (i+1, i+2, ...) called?",
+      "options": [
+        "Separate Chaining",
+        "Linear Probing",
+        "Quadratic Probing",
+        "Double Hashing"
+      ],
+      "correct": 1,
+      "explanation": "Linear probing increments the probe index by 1 on each collision until an open bucket is found.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DSA-05",
+      "subjectId": "dsa",
+      "subjectName": "Data Structures & Algorithms",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "Which greedy algorithm finds the Minimum Spanning Tree (MST) of a weighted graph by sorting all edges and avoiding cycles using Union-Find?",
+      "options": [
+        "Dijkstra's Algorithm",
+        "Kruskal's Algorithm",
+        "Floyd-Warshall Algorithm",
+        "Bellman-Ford Algorithm"
+      ],
+      "correct": 1,
+      "explanation": "Kruskal's algorithm sorts edges by weight and iteratively adds non-cycle-forming edges using Disjoint-Set Union.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DSA-06",
+      "subjectId": "dsa",
+      "subjectName": "Data Structures & Algorithms",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "What is the time complexity to extract the minimum element from a binary Min-Heap with n elements?",
+      "options": [
+        "O(1)",
+        "O(log n)",
+        "O(n)",
+        "O(n log n)"
+      ],
+      "correct": 1,
+      "explanation": "Removing root and percolating down (heapify) to restore min-heap invariant requires O(log n) time.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DSA-07",
+      "subjectId": "dsa",
+      "subjectName": "Data Structures & Algorithms",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "Which data structure is ideally suited for evaluating arithmetic expressions written in Postfix (Reverse Polish) notation?",
+      "options": [
+        "Queue",
+        "Stack",
+        "Binary Tree",
+        "Circular Linked List"
+      ],
+      "correct": 1,
+      "explanation": "Operands are pushed onto a LIFO Stack; when an operator is encountered, operands are popped and evaluated.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DBMS-01",
+      "subjectId": "dbms",
       "subjectName": "Database Systems",
       "roundNumber": 1,
       "difficulty": "Moderate",
@@ -1749,33 +1389,373 @@
         "Boyce-Codd Normal Form (BCNF)"
       ],
       "correct": 2,
-      "explanation": "3NF requires that the relation is in 2NF and no non-prime attribute is transitively dependent on any candidate key.",
-      "isTieBreaker": false,
+      "explanation": "3NF is satisfied if the relation is in 2NF and every non-prime attribute is non-transitively dependent on candidate keys.",
       "version": 1,
       "isActive": true
     },
     {
-      "id": "Q-104",
-      "subjectId": "pf",
+      "id": "DBMS-02",
+      "subjectId": "dbms",
+      "subjectName": "Database Systems",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "In the ACID model of database transactions, which property ensures that concurrent execution of transactions results in a state equivalent to serial execution?",
+      "options": [
+        "Atomicity",
+        "Consistency",
+        "Isolation",
+        "Durability"
+      ],
+      "correct": 2,
+      "explanation": "Isolation prevents concurrent transactions from seeing uncommitted or intermediate states of one another.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DBMS-03",
+      "subjectId": "dbms",
+      "subjectName": "Database Systems",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "Why do relational database storage engines prefer B+ Trees over standard B Trees for table indices?",
+      "options": [
+        "B+ Trees store duplicate keys on all internal nodes",
+        "All records and pointers are stored in leaf nodes, which are linked sequentially for rapid range scans",
+        "B+ Trees require zero disk I/O",
+        "B+ Trees have fixed height of 2"
+      ],
+      "correct": 1,
+      "explanation": "In B+ Trees, internal nodes only store index keys, and leaf nodes contain data pointers linked in a doubly-linked list for fast range queries.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DBMS-04",
+      "subjectId": "dbms",
+      "subjectName": "Database Systems",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "What is the critical semantic difference between the SQL 'WHERE' clause and the 'HAVING' clause?",
+      "options": [
+        "WHERE filters rows before grouping; HAVING filters aggregate groups after GROUP BY",
+        "HAVING cannot be used with SELECT statements",
+        "WHERE only works on string datatypes",
+        "HAVING is faster than WHERE in all scenarios"
+      ],
+      "correct": 0,
+      "explanation": "WHERE filters individual rows prior to grouping; HAVING applies conditional filtering to aggregated group results.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DBMS-05",
+      "subjectId": "dbms",
+      "subjectName": "Database Systems",
+      "roundNumber": 1,
+      "difficulty": "Easy",
+      "question": "Which database integrity rule ensures that a foreign key value must either match a valid primary key in the referenced parent table or be null?",
+      "options": [
+        "Entity Integrity",
+        "Referential Integrity",
+        "Domain Integrity",
+        "User-Defined Integrity"
+      ],
+      "correct": 1,
+      "explanation": "Referential integrity guarantees that foreign key relationships between tables remain consistent without orphaned rows.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DBMS-06",
+      "subjectId": "dbms",
+      "subjectName": "Database Systems",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "What concurrency protocol guarantees conflict serializability by dividing locking into an expanding phase and a shrinking phase?",
+      "options": [
+        "Two-Phase Locking (2PL)",
+        "Timestamp Ordering",
+        "Validation-Based Protocol",
+        "Multiversion Concurrency (MVCC)"
+      ],
+      "correct": 0,
+      "explanation": "Strict Two-Phase Locking ensures transactions acquire all locks before releasing any locks, preventing cascading aborts.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DBMS-07",
+      "subjectId": "dbms",
+      "subjectName": "Database Systems",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "Which SQL JOIN returns all rows from the left table, and the matched rows from the right table (with NULLs where no match exists)?",
+      "options": [
+        "INNER JOIN",
+        "LEFT OUTER JOIN",
+        "CROSS JOIN",
+        "FULL OUTER JOIN"
+      ],
+      "correct": 1,
+      "explanation": "A LEFT JOIN preserves every row from the left relation, filling unmatched right attributes with NULL values.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "CN-01",
+      "subjectId": "cn",
       "subjectName": "Computer Networks",
       "roundNumber": 1,
       "difficulty": "Moderate",
-      "question": "At which layer of the OSI model does the Address Resolution Protocol (ARP) primarily operate to map IP to MAC addresses?",
+      "question": "At which layer of the OSI model does the Address Resolution Protocol (ARP) primarily operate to map IP addresses to MAC addresses?",
       "options": [
         "Transport Layer",
-        "Data Link / Network Layer",
+        "Data Link / Network Interface",
         "Application Layer",
         "Session Layer"
       ],
       "correct": 1,
-      "explanation": "ARP operates between Layer 2 (Data Link) and Layer 3 (Network) to resolve 32-bit IPv4 addresses into 48-bit physical MAC addresses.",
-      "isTieBreaker": false,
+      "explanation": "ARP operates between Network Layer (Layer 3) and Data Link Layer (Layer 2) to resolve 32-bit IPv4 addresses into 48-bit physical MAC addresses.",
       "version": 1,
       "isActive": true
     },
     {
-      "id": "Q-105",
-      "subjectId": "pf",
+      "id": "CN-02",
+      "subjectId": "cn",
+      "subjectName": "Computer Networks",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "What is the standard packet sequence exchanged between client and server during a TCP Three-Way Handshake?",
+      "options": [
+        "ACK -> SYN -> SYN-ACK",
+        "SYN -> SYN-ACK -> ACK",
+        "FIN -> ACK -> FIN-ACK",
+        "RST -> SYN -> ACK"
+      ],
+      "correct": 1,
+      "explanation": "Client sends SYN, server responds with SYN-ACK, and client completes connection with ACK.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "CN-03",
+      "subjectId": "cn",
+      "subjectName": "Computer Networks",
+      "roundNumber": 1,
+      "difficulty": "Easy",
+      "question": "What is the default TCP port used for secure encrypted web communications (HTTPS)?",
+      "options": [
+        "80",
+        "443",
+        "8080",
+        "22"
+      ],
+      "correct": 1,
+      "explanation": "Port 443 is universally standardized for HTTPS over TLS/SSL.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "CN-04",
+      "subjectId": "cn",
+      "subjectName": "Computer Networks",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "How many assignable host IP addresses are available in a subnet with CIDR prefix /26?",
+      "options": [
+        "64",
+        "62",
+        "30",
+        "126"
+      ],
+      "correct": 1,
+      "explanation": "A /26 subnet leaves 6 host bits (2^6 = 64). Subtracting 2 for network address and broadcast address yields 62 usable host addresses.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "CN-05",
+      "subjectId": "cn",
+      "subjectName": "Computer Networks",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "Which transport protocol and default port are used by standard Domain Name System (DNS) queries?",
+      "options": [
+        "TCP Port 80",
+        "UDP Port 53",
+        "UDP Port 67",
+        "TCP Port 25"
+      ],
+      "correct": 1,
+      "explanation": "DNS name resolution uses UDP port 53 for fast, lightweight question-and-answer exchanges.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "CN-06",
+      "subjectId": "cn",
+      "subjectName": "Computer Networks",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "What mechanism does TCP employ to provide dynamic flow control, preventing a fast sender from overwhelming a slow receiver's buffer?",
+      "options": [
+        "Sliding Window Protocol (Advertised Window)",
+        "Three-Way Handshake",
+        "Checksum Calculation",
+        "Exponential Backoff only"
+      ],
+      "correct": 0,
+      "explanation": "The TCP sliding window allows the receiver to advertise its available buffer space (rwnd) in every acknowledgment header.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "CN-07",
+      "subjectId": "cn",
+      "subjectName": "Computer Networks",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "Which Interior Gateway routing protocol uses the Shortest Path First (Dijkstra) algorithm over link-state advertisements?",
+      "options": [
+        "RIP (Routing Information Protocol)",
+        "OSPF (Open Shortest Path First)",
+        "BGP (Border Gateway Protocol)",
+        "EGP"
+      ],
+      "correct": 1,
+      "explanation": "OSPF is a link-state routing protocol that constructs complete network topology graphs and runs Dijkstra's algorithm to compute routing tables.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "SE-01",
+      "subjectId": "se",
+      "subjectName": "Software Engineering",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "Which architectural design pattern separates internal representations of information from the ways that information is presented to and accepted from the user?",
+      "options": [
+        "Singleton",
+        "Model-View-Controller (MVC)",
+        "Adapter",
+        "Abstract Factory"
+      ],
+      "correct": 1,
+      "explanation": "MVC isolates application business logic (Model) from UI presentation (View) and user input routing (Controller).",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "SE-02",
+      "subjectId": "se",
+      "subjectName": "Software Engineering",
+      "roundNumber": 1,
+      "difficulty": "Easy",
+      "question": "What is the primary objective of a 'Sprint Retrospective' ceremony in Agile Scrum?",
+      "options": [
+        "To demonstrate working software to stakeholders",
+        "To inspect how the last sprint went and plan team process improvements",
+        "To estimate user story story-points",
+        "To assign daily programming tasks to individual coders"
+      ],
+      "correct": 1,
+      "explanation": "Sprint Retrospective allows the Scrum team to inspect people, relationships, processes, and tools, creating an improvement plan for the next sprint.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "SE-03",
+      "subjectId": "se",
+      "subjectName": "Software Engineering",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "Which software testing technique partitions input data into valid and invalid partitions from which test cases are derived without viewing source code?",
+      "options": [
+        "Equivalence Partitioning (Black-Box)",
+        "Path Coverage (White-Box)",
+        "Mutation Testing",
+        "Static Code Analysis"
+      ],
+      "correct": 0,
+      "explanation": "Equivalence Partitioning divides input domains into classes where all elements are assumed to produce equivalent behavior, forming a core black-box technique.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "SE-04",
+      "subjectId": "se",
+      "subjectName": "Software Engineering",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "In modular software architecture, what is the golden rule regarding Cohesion and Coupling?",
+      "options": [
+        "High Coupling and Low Cohesion",
+        "High Cohesion and Low (Loose) Coupling",
+        "Low Cohesion and Zero Coupling",
+        "High Coupling and High Cohesion"
+      ],
+      "correct": 1,
+      "explanation": "High cohesion ensures a module focuses tightly on one job, while loose coupling minimizes inter-module dependencies.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "SE-05",
+      "subjectId": "se",
+      "subjectName": "Software Engineering",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "McCabe's Cyclomatic Complexity metric evaluates the complexity of a program's control flow graph. What does it mathematically indicate?",
+      "options": [
+        "Total lines of source code",
+        "The number of linearly independent execution paths through the program",
+        "The percentage of memory consumed",
+        "Total number of database queries"
+      ],
+      "correct": 1,
+      "explanation": "Cyclomatic complexity M = E - N + 2P computes the number of independent basis paths required to thoroughly test a program.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "SE-06",
+      "subjectId": "se",
+      "subjectName": "Software Engineering",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "Which DevOps practice requires developers to integrate code into a shared repository frequently, where each commit is verified by automated builds and tests?",
+      "options": [
+        "Continuous Integration (CI)",
+        "Waterfall Delivery",
+        "Manual Deployment",
+        "Static Scoping"
+      ],
+      "correct": 0,
+      "explanation": "Continuous Integration automates code merging, building, and automated test execution to detect bugs early.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "SE-07",
+      "subjectId": "se",
+      "subjectName": "Software Engineering",
+      "roundNumber": 1,
+      "difficulty": "Easy",
+      "question": "What is 'Regression Testing'?",
+      "options": [
+        "Testing software for the very first time",
+        "Re-running functional and non-functional tests to ensure that previously developed and tested software still performs after a change",
+        "Testing only user interface aesthetics",
+        "Stress testing beyond hardware limits"
+      ],
+      "correct": 1,
+      "explanation": "Regression testing ensures that new bug fixes or code changes have not introduced unintended defects into existing functionality.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OS-01",
+      "subjectId": "os",
       "subjectName": "Operating Systems",
       "roundNumber": 1,
       "difficulty": "Hard",
@@ -1787,65 +1767,115 @@
         "Circular Wait"
       ],
       "correct": 2,
-      "explanation": "For a deadlock to occur, resources must be non-preemptive (No Preemption). If preemption is allowed, deadlocks cannot form.",
-      "isTieBreaker": false,
+      "explanation": "For deadlock to occur, resources must be non-preemptive. If preemption is allowed, deadlock cannot form.",
       "version": 1,
       "isActive": true
     },
     {
-      "id": "Q-106",
-      "subjectId": "pf",
-      "subjectName": "Software Engineering",
-      "roundNumber": 2,
-      "difficulty": "Moderate",
-      "question": "In Agile Scrum framework, what is the recommended standard duration of a single Sprint cycle?",
-      "options": [
-        "1 to 4 Weeks",
-        "6 Months",
-        "1 Day",
-        "1 Year"
-      ],
-      "correct": 0,
-      "explanation": "Scrum guidelines dictate that a Sprint is a fixed-length event of one month or less (typically 2 weeks).",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-107",
-      "subjectId": "pf",
-      "subjectName": "Artificial Intelligence",
-      "roundNumber": 3,
-      "difficulty": "Hard",
-      "question": "Which informed search algorithm uses both path cost g(n) and heuristic estimate h(n) to find optimal path: f(n) = g(n) + h(n)?",
-      "options": [
-        "Breadth-First Search",
-        "Depth-First Search",
-        "A* Search Algorithm",
-        "Greedy Best-First Search"
-      ],
-      "correct": 2,
-      "explanation": "A* Search evaluates nodes by combining g(n) (cost so far) and h(n) (estimated cost to goal).",
-      "isTieBreaker": false,
-      "version": 1,
-      "isActive": true
-    },
-    {
-      "id": "Q-108",
-      "subjectId": "pf",
+      "id": "OS-02",
+      "subjectId": "os",
       "subjectName": "Operating Systems",
-      "roundNumber": 4,
+      "roundNumber": 1,
       "difficulty": "Hard",
-      "question": "Who formulated the famous Dining Philosophers problem to illustrate concurrency synchronization in 1965?",
+      "question": "In virtual memory management, what phenomenon occurs when a system spends more time servicing page faults and paging than executing actual instructions?",
       "options": [
-        "Edsger W. Dijkstra",
-        "Alan Turing",
-        "Donald Knuth",
-        "John von Neumann"
+        "Thrashing",
+        "Internal Fragmentation",
+        "Deadlock",
+        "Starvation"
       ],
       "correct": 0,
-      "explanation": "Edsger W. Dijkstra originally formulated the dining philosophers problem as an exam question about synchronizing competing processes.",
-      "isTieBreaker": false,
+      "explanation": "Thrashing occurs when the active working sets of processes exceed physical memory capacity, driving page fault rates to near 100%.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OS-03",
+      "subjectId": "os",
+      "subjectName": "Operating Systems",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "In the Round Robin (RR) CPU scheduling algorithm, what happens if the time quantum is chosen to be extremely large?",
+      "options": [
+        "It behaves identically to Shortest Job First (SJF)",
+        "It degenerates into First-Come, First-Served (FCFS) scheduling",
+        "Context switches increase exponentially",
+        "Throughput drops to zero"
+      ],
+      "correct": 1,
+      "explanation": "When time quantum is longer than the burst times of processes, each process runs to completion, matching FCFS behavior.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OS-04",
+      "subjectId": "os",
+      "subjectName": "Operating Systems",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "What is the key distinction between a Mutex and a Counting Semaphore in process synchronization?",
+      "options": [
+        "A Mutex has an ownership concept (only locker can unlock); a Semaphore is a signaling counter",
+        "A Semaphore can only hold values 0 or 1",
+        "Mutex cannot protect critical sections",
+        "A Semaphore only works on single-core processors"
+      ],
+      "correct": 0,
+      "explanation": "A Mutex enforces strict lock ownership where the thread that locks must unlock it. A counting semaphore manages access to finite instances of a resource.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OS-05",
+      "subjectId": "os",
+      "subjectName": "Operating Systems",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "Which algorithm is used in Operating Systems for Deadlock Avoidance by checking if granting a resource request leaves the system in a 'Safe State'?",
+      "options": [
+        "Banker's Algorithm",
+        "Kruskal's Algorithm",
+        "Elevator (SCAN) Algorithm",
+        "Belady's Algorithm"
+      ],
+      "correct": 0,
+      "explanation": "Dijkstra's Banker's Algorithm simulates resource allocation to check for safe sequences before granting resource requests.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OS-06",
+      "subjectId": "os",
+      "subjectName": "Operating Systems",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "What is 'Context Switching' in a multitasking operating system?",
+      "options": [
+        "Switching network protocols",
+        "Saving the state of the currently executing process and loading the saved state of another process to resume execution",
+        "Deleting temporary cache files",
+        "Recompiling source files in memory"
+      ],
+      "correct": 1,
+      "explanation": "Context switching saves program counters, CPU registers, and process control blocks (PCBs) to swap CPU execution between tasks.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OS-07",
+      "subjectId": "os",
+      "subjectName": "Operating Systems",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "What is the primary role of the Translation Lookaside Buffer (TLB) in CPU memory management units (MMUs)?",
+      "options": [
+        "Hardware cache that speeds up virtual-to-physical address translation",
+        "Stores disk sectors for rapid read access",
+        "Manages printer spooling queues",
+        "Encrypts kernel system calls"
+      ],
+      "correct": 0,
+      "explanation": "The TLB is a high-speed associative hardware cache that caches recent virtual-to-physical page table translations, avoiding multiple memory lookups.",
       "version": 1,
       "isActive": true
     }
@@ -17869,66 +17899,14 @@
     }
   ],
   "questionVersions": [],
-  "buzzerState": {
-    "round": 4,
-    "activeQuestionIndex": 33,
-    "lockedStudentId": "E2E-1953",
-    "lockedStudentName": "E2E Champion Candidate",
-    "buzzTimestamp": "2026-11-06T13:51:23.165Z",
-    "deadlineTimestamp": "2026-11-06T13:51:33.165Z",
-    "status": "adjudicated",
-    "lastOutcome": "correct",
-    "lastDelta": 1
-  },
-  "rapidFireState": {
-    "activeStudentId": "E2E-1953",
-    "activeStudentName": "E2E Champion Candidate",
-    "startedAt": "2026-11-06T13:51:23.012Z",
-    "expiresAt": "2026-11-06T13:54:23.012Z",
-    "currentQuestionIndex": 1,
-    "questions": [
-      {
-        "id": "Q-107",
-        "subjectId": "pf",
-        "subjectName": "Artificial Intelligence",
-        "roundNumber": 3,
-        "difficulty": "Hard",
-        "question": "Which informed search algorithm uses both path cost g(n) and heuristic estimate h(n) to find optimal path: f(n) = g(n) + h(n)?",
-        "options": [
-          "Breadth-First Search",
-          "Depth-First Search",
-          "A* Search Algorithm",
-          "Greedy Best-First Search"
-        ],
-        "correct": 2,
-        "explanation": "A* Search evaluates nodes by combining g(n) (cost so far) and h(n) (estimated cost to goal).",
-        "isTieBreaker": false,
-        "version": 1,
-        "isActive": true
-      }
-    ],
-    "correctCount": 1,
-    "incorrectCount": 0,
-    "skippedCount": 0,
-    "score": 1,
-    "actionsLog": [
-      {
-        "questionId": "Q-0",
-        "action": "correct",
-        "delta": 1,
-        "timestamp": "2026-11-06T13:51:23.045Z"
-      }
-    ],
-    "status": "finished"
-  },
   "emailOutbox": [
     {
       "id": "MAIL-1793973083344-169",
       "recipient": "pair-b-3248@student.comsats.edu.pk",
       "studentId": "PAIR-B-3248",
       "studentName": "Student Beta",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Student Beta,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-399\n• Student ID: PAIR-B-3248\n• Program: BS Software Engineering (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Student Beta,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-399\n\u2022 Student ID: PAIR-B-3248\n\u2022 Program: BS Software Engineering (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:51:23.344Z"
     },
@@ -17937,8 +17915,8 @@
       "recipient": "pair-a-3248@student.comsats.edu.pk",
       "studentId": "PAIR-A-3248",
       "studentName": "Student Alpha",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Student Alpha,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-531\n• Student ID: PAIR-A-3248\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Student Alpha,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-531\n\u2022 Student ID: PAIR-A-3248\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:51:23.273Z"
     },
@@ -17947,8 +17925,8 @@
       "recipient": "e2e-1953@student.comsats.edu.pk",
       "studentId": "E2E-1953",
       "studentName": "E2E Champion Candidate",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-446\n• Student ID: E2E-1953\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-446\n\u2022 Student ID: E2E-1953\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:51:22.016Z"
     },
@@ -17957,8 +17935,8 @@
       "recipient": "test-1287@student.comsats.edu.pk",
       "studentId": "TEST-1287",
       "studentName": "Ahmad Raza Test",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-539\n• Student ID: TEST-1287\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-539\n\u2022 Student ID: TEST-1287\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:51:21.445Z"
     },
@@ -17967,8 +17945,8 @@
       "recipient": "concur-4-8125@student.comsats.edu.pk",
       "studentId": "CONCUR-4-8125",
       "studentName": "Concurrent Student 4",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Concurrent Student 4,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-661\n• Student ID: CONCUR-4-8125\n• Program: BS CS (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Concurrent Student 4,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-661\n\u2022 Student ID: CONCUR-4-8125\n\u2022 Program: BS CS (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:50:48.170Z"
     },
@@ -17977,8 +17955,8 @@
       "recipient": "concur-3-8062@student.comsats.edu.pk",
       "studentId": "CONCUR-3-8062",
       "studentName": "Concurrent Student 3",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Concurrent Student 3,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-149\n• Student ID: CONCUR-3-8062\n• Program: BS CS (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Concurrent Student 3,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-149\n\u2022 Student ID: CONCUR-3-8062\n\u2022 Program: BS CS (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:50:48.086Z"
     },
@@ -17987,8 +17965,8 @@
       "recipient": "concur-2-7998@student.comsats.edu.pk",
       "studentId": "CONCUR-2-7998",
       "studentName": "Concurrent Student 2",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Concurrent Student 2,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-564\n• Student ID: CONCUR-2-7998\n• Program: BS CS (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Concurrent Student 2,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-564\n\u2022 Student ID: CONCUR-2-7998\n\u2022 Program: BS CS (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:50:48.022Z"
     },
@@ -17997,8 +17975,8 @@
       "recipient": "concur-1-7933@student.comsats.edu.pk",
       "studentId": "CONCUR-1-7933",
       "studentName": "Concurrent Student 1",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Concurrent Student 1,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-503\n• Student ID: CONCUR-1-7933\n• Program: BS CS (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Concurrent Student 1,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-503\n\u2022 Student ID: CONCUR-1-7933\n\u2022 Program: BS CS (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:50:47.960Z"
     },
@@ -18007,8 +17985,8 @@
       "recipient": "r4-test-7511@student.comsats.edu.pk",
       "studentId": "R4-TEST-7511",
       "studentName": "Round4 Test Student",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Round4 Test Student,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-523\n• Student ID: R4-TEST-7511\n• Program: BS CS (6th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Round4 Test Student,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-523\n\u2022 Student ID: R4-TEST-7511\n\u2022 Program: BS CS (6th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:50:47.534Z"
     },
@@ -18017,8 +17995,8 @@
       "recipient": "r4-test-1434@student.comsats.edu.pk",
       "studentId": "R4-TEST-1434",
       "studentName": "Round4 Test Student",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Round4 Test Student,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-172\n• Student ID: R4-TEST-1434\n• Program: BS CS (6th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Round4 Test Student,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-172\n\u2022 Student ID: R4-TEST-1434\n\u2022 Program: BS CS (6th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:49:51.458Z"
     },
@@ -18027,8 +18005,8 @@
       "recipient": "pair-b-8131@student.comsats.edu.pk",
       "studentId": "PAIR-B-8131",
       "studentName": "Student Beta",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Student Beta,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-728\n• Student ID: PAIR-B-8131\n• Program: BS Software Engineering (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Student Beta,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-728\n\u2022 Student ID: PAIR-B-8131\n\u2022 Program: BS Software Engineering (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:39:18.361Z"
     },
@@ -18037,8 +18015,8 @@
       "recipient": "pair-a-8131@student.comsats.edu.pk",
       "studentId": "PAIR-A-8131",
       "studentName": "Student Alpha",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Student Alpha,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-948\n• Student ID: PAIR-A-8131\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Student Alpha,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-948\n\u2022 Student ID: PAIR-A-8131\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:39:18.265Z"
     },
@@ -18047,8 +18025,8 @@
       "recipient": "e2e-6623@student.comsats.edu.pk",
       "studentId": "E2E-6623",
       "studentName": "E2E Champion Candidate",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-796\n• Student ID: E2E-6623\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-796\n\u2022 Student ID: E2E-6623\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:39:16.667Z"
     },
@@ -18057,8 +18035,8 @@
       "recipient": "test-5796@student.comsats.edu.pk",
       "studentId": "TEST-5796",
       "studentName": "Ahmad Raza Test",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-581\n• Student ID: TEST-5796\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-581\n\u2022 Student ID: TEST-5796\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:39:15.956Z"
     },
@@ -18067,8 +18045,8 @@
       "recipient": "tst-b-2593@student.comsats.edu.pk",
       "studentId": "TST-B-2593",
       "studentName": "Usman Ghani",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Usman Ghani,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-115\n• Student ID: TST-B-2593\n• Program: BS Software Engineering (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Usman Ghani,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-115\n\u2022 Student ID: TST-B-2593\n\u2022 Program: BS Software Engineering (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:39:03.011Z"
     },
@@ -18077,8 +18055,8 @@
       "recipient": "tst-a-2593@student.comsats.edu.pk",
       "studentId": "TST-A-2593",
       "studentName": "Muhammad Ali",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Muhammad Ali,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-273\n• Student ID: TST-A-2593\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Muhammad Ali,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-273\n\u2022 Student ID: TST-A-2593\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-06T13:39:02.878Z"
     },
@@ -18087,8 +18065,8 @@
       "recipient": "e2e-2129@student.comsats.edu.pk",
       "studentId": "E2E-2129",
       "studentName": "E2E Champion Candidate",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-918\n• Student ID: E2E-2129\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-918\n\u2022 Student ID: E2E-2129\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-05T17:00:12.308Z"
     },
@@ -18097,8 +18075,8 @@
       "recipient": "test-0173@student.comsats.edu.pk",
       "studentId": "TEST-0173",
       "studentName": "Ahmad Raza Test",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-593\n• Student ID: TEST-0173\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-593\n\u2022 Student ID: TEST-0173\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-05T17:00:10.520Z"
     },
@@ -18107,8 +18085,8 @@
       "recipient": "e2e-3582@student.comsats.edu.pk",
       "studentId": "E2E-3582",
       "studentName": "E2E Champion Candidate",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-164\n• Student ID: E2E-3582\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-164\n\u2022 Student ID: E2E-3582\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-05T16:49:33.636Z"
     },
@@ -18117,8 +18095,8 @@
       "recipient": "test-2536@student.comsats.edu.pk",
       "studentId": "TEST-2536",
       "studentName": "Ahmad Raza Test",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-512\n• Student ID: TEST-2536\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-512\n\u2022 Student ID: TEST-2536\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-05T16:49:32.829Z"
     },
@@ -18127,8 +18105,8 @@
       "recipient": "e2e-4633@student.comsats.edu.pk",
       "studentId": "E2E-4633",
       "studentName": "E2E Champion Candidate",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-371\n• Student ID: E2E-4633\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-371\n\u2022 Student ID: E2E-4633\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-05T16:41:34.685Z"
     },
@@ -18137,8 +18115,8 @@
       "recipient": "test-3661@student.comsats.edu.pk",
       "studentId": "TEST-3661",
       "studentName": "Ahmad Raza Test",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-695\n• Student ID: TEST-3661\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-695\n\u2022 Student ID: TEST-3661\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-05T16:41:33.942Z"
     },
@@ -18147,8 +18125,8 @@
       "recipient": "e2e-6536@student.comsats.edu.pk",
       "studentId": "E2E-6536",
       "studentName": "E2E Champion Candidate",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-509\n• Student ID: E2E-6536\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear E2E Champion Candidate,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-509\n\u2022 Student ID: E2E-6536\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-05T16:24:46.582Z"
     },
@@ -18157,8 +18135,8 @@
       "recipient": "test-5894@student.comsats.edu.pk",
       "studentId": "TEST-5894",
       "studentName": "Ahmad Raza Test",
-      "subject": "Battle of Brains 2026 — Official Examination Schedule & Admit Card",
-      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n• Date: 2026-11-20T09:00:00.000Z\n• Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n• Reporting Time: 08:50 AM (Sharp)\n• Pass Reference ID: BOB-2026-760\n• Student ID: TEST-5894\n• Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
+      "subject": "Battle of Brains 2026 \u2014 Official Examination Schedule & Admit Card",
+      "body": "Dear Ahmad Raza Test,\n\nCongratulations! Your registration for Battle of Brains 2026 has been successfully verified and confirmed.\n\nOFFICIAL EXAMINATION SCHEDULE:\n\u2022 Date: 2026-11-20T09:00:00.000Z\n\u2022 Venue: Main Auditorium, Faculty of Computing, COMSATS University Islamabad\n\u2022 Reporting Time: 08:50 AM (Sharp)\n\u2022 Pass Reference ID: BOB-2026-760\n\u2022 Student ID: TEST-5894\n\u2022 Program: BS Computer Science (4th Semester)\n\nRULES & INSTRUCTIONS:\n1. Bring your original University Student ID Card for biometric/badge entry.\n2. Mobile phones, smartwatches, and external devices are strictly prohibited.\n3. The quiz application is proctored with active anti-cheating & tab-switch alarms.\n\nBest of luck!\nBattle of Brains Secretariat Desk,\nDepartment of Computer Science, COMSATS University Islamabad",
       "status": "Delivered",
       "sentAt": "2026-11-05T16:24:46.079Z"
     }
@@ -18271,6 +18249,300 @@
       ],
       "createdAt": "2026-11-11T18:03:40.659Z",
       "confirmedAt": null
+    }
+  ],
+  "schedule": {
+    "startDate": "10/12/2026",
+    "startTime": "10:00 AM",
+    "endDate": "10/12/2026",
+    "endTime": "11:00 AM",
+    "startIso": "2026-12-10T10:00:00+05:00",
+    "endIso": "2026-12-10T11:00:00+05:00",
+    "startMs": 1796878800000,
+    "endMs": 1796882400000,
+    "timezone": "Asia/Karachi",
+    "status": "scheduled",
+    "isPublished": true,
+    "publishedQuestionCount": 14,
+    "publishedQuestionIds": [
+      "PF-01",
+      "PF-02",
+      "OOP-01",
+      "OOP-02",
+      "DSA-01",
+      "DSA-02",
+      "DBMS-01",
+      "DBMS-02",
+      "CN-01",
+      "CN-02",
+      "SE-01",
+      "SE-02",
+      "OS-01",
+      "OS-02"
+    ],
+    "subjectDistribution": {
+      "pf": 2,
+      "oop": 2,
+      "dsa": 2,
+      "dbms": 2,
+      "cn": 2,
+      "se": 2,
+      "os": 2
+    },
+    "lastUpdated": "2026-11-27T08:00:00.000Z"
+  },
+  "publishedQuestions": [
+    {
+      "id": "PF-01",
+      "subjectId": "pf",
+      "subjectName": "Programming Fundamentals",
+      "roundNumber": 1,
+      "difficulty": "Easy",
+      "question": "Which operator in C/C++ is used to obtain the memory address of a variable?",
+      "options": [
+        "*",
+        "&",
+        "->",
+        "%"
+      ],
+      "correct": 1,
+      "explanation": "The ampersand (&) operator returns the memory address of its operand.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "PF-02",
+      "subjectId": "pf",
+      "subjectName": "Programming Fundamentals",
+      "roundNumber": 1,
+      "difficulty": "Easy",
+      "question": "What is the primary purpose of a base case in a recursive function?",
+      "options": [
+        "To increase recursion speed",
+        "To terminate recursive calls and prevent stack overflow",
+        "To allocate dynamic heap memory",
+        "To execute return statements in reverse order"
+      ],
+      "correct": 1,
+      "explanation": "A base case specifies the terminating condition to stop further self-calls, preventing infinite recursion.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OOP-01",
+      "subjectId": "oop",
+      "subjectName": "Object-Oriented Programming",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "In C++ or Java, which concept allows a subclass to provide a specific implementation of a method that is already provided by its superclass?",
+      "options": [
+        "Method Overloading",
+        "Method Overriding",
+        "Data Encapsulation",
+        "Multiple Inheritance"
+      ],
+      "correct": 1,
+      "explanation": "Method Overriding occurs when a child class provides a new implementation of an inherited virtual method with identical signature.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OOP-02",
+      "subjectId": "oop",
+      "subjectName": "Object-Oriented Programming",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "Why should a base class destructor always be declared 'virtual' when polymorphism is used?",
+      "options": [
+        "To prevent creating base class objects",
+        "To ensure the derived class destructor is invoked when deleting derived objects via base pointers",
+        "To make destruction instantaneous",
+        "To automatically deallocate private member variables"
+      ],
+      "correct": 1,
+      "explanation": "Without a virtual base destructor, deleting a derived object via a base pointer leads to undefined behavior / resource leaks as the derived destructor won't be called.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DSA-01",
+      "subjectId": "dsa",
+      "subjectName": "Data Structures & Algorithms",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "What is the worst-case time complexity of searching for an element in a balanced Binary Search Tree (AVL Tree) with n nodes?",
+      "options": [
+        "O(1)",
+        "O(log n)",
+        "O(n)",
+        "O(n log n)"
+      ],
+      "correct": 1,
+      "explanation": "A balanced BST like an AVL tree maintains a maximum height of O(log n), ensuring searches take at most O(log n) comparisons in the worst case.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DSA-02",
+      "subjectId": "dsa",
+      "subjectName": "Data Structures & Algorithms",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "What is the optimal average-case time complexity of QuickSort algorithm with random pivot selection?",
+      "options": [
+        "O(n)",
+        "O(n log n)",
+        "O(n^2)",
+        "O(log n)"
+      ],
+      "correct": 1,
+      "explanation": "QuickSort partitions the array around a pivot in O(n) and recurses in O(log n) tree depth on average, yielding O(n log n).",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DBMS-01",
+      "subjectId": "dbms",
+      "subjectName": "Database Systems",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "Which normal form requires removing transitive dependencies of non-prime attributes on candidate keys?",
+      "options": [
+        "First Normal Form (1NF)",
+        "Second Normal Form (2NF)",
+        "Third Normal Form (3NF)",
+        "Boyce-Codd Normal Form (BCNF)"
+      ],
+      "correct": 2,
+      "explanation": "3NF is satisfied if the relation is in 2NF and every non-prime attribute is non-transitively dependent on candidate keys.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "DBMS-02",
+      "subjectId": "dbms",
+      "subjectName": "Database Systems",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "In the ACID model of database transactions, which property ensures that concurrent execution of transactions results in a state equivalent to serial execution?",
+      "options": [
+        "Atomicity",
+        "Consistency",
+        "Isolation",
+        "Durability"
+      ],
+      "correct": 2,
+      "explanation": "Isolation prevents concurrent transactions from seeing uncommitted or intermediate states of one another.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "CN-01",
+      "subjectId": "cn",
+      "subjectName": "Computer Networks",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "At which layer of the OSI model does the Address Resolution Protocol (ARP) primarily operate to map IP addresses to MAC addresses?",
+      "options": [
+        "Transport Layer",
+        "Data Link / Network Interface",
+        "Application Layer",
+        "Session Layer"
+      ],
+      "correct": 1,
+      "explanation": "ARP operates between Network Layer (Layer 3) and Data Link Layer (Layer 2) to resolve 32-bit IPv4 addresses into 48-bit physical MAC addresses.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "CN-02",
+      "subjectId": "cn",
+      "subjectName": "Computer Networks",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "What is the standard packet sequence exchanged between client and server during a TCP Three-Way Handshake?",
+      "options": [
+        "ACK -> SYN -> SYN-ACK",
+        "SYN -> SYN-ACK -> ACK",
+        "FIN -> ACK -> FIN-ACK",
+        "RST -> SYN -> ACK"
+      ],
+      "correct": 1,
+      "explanation": "Client sends SYN, server responds with SYN-ACK, and client completes connection with ACK.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "SE-01",
+      "subjectId": "se",
+      "subjectName": "Software Engineering",
+      "roundNumber": 1,
+      "difficulty": "Moderate",
+      "question": "Which architectural design pattern separates internal representations of information from the ways that information is presented to and accepted from the user?",
+      "options": [
+        "Singleton",
+        "Model-View-Controller (MVC)",
+        "Adapter",
+        "Abstract Factory"
+      ],
+      "correct": 1,
+      "explanation": "MVC isolates application business logic (Model) from UI presentation (View) and user input routing (Controller).",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "SE-02",
+      "subjectId": "se",
+      "subjectName": "Software Engineering",
+      "roundNumber": 1,
+      "difficulty": "Easy",
+      "question": "What is the primary objective of a 'Sprint Retrospective' ceremony in Agile Scrum?",
+      "options": [
+        "To demonstrate working software to stakeholders",
+        "To inspect how the last sprint went and plan team process improvements",
+        "To estimate user story story-points",
+        "To assign daily programming tasks to individual coders"
+      ],
+      "correct": 1,
+      "explanation": "Sprint Retrospective allows the Scrum team to inspect people, relationships, processes, and tools, creating an improvement plan for the next sprint.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OS-01",
+      "subjectId": "os",
+      "subjectName": "Operating Systems",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "Which condition is NOT one of Coffman's four necessary conditions for a system deadlock to occur?",
+      "options": [
+        "Mutual Exclusion",
+        "Hold and Wait",
+        "Preemption Allowed",
+        "Circular Wait"
+      ],
+      "correct": 2,
+      "explanation": "For deadlock to occur, resources must be non-preemptive. If preemption is allowed, deadlock cannot form.",
+      "version": 1,
+      "isActive": true
+    },
+    {
+      "id": "OS-02",
+      "subjectId": "os",
+      "subjectName": "Operating Systems",
+      "roundNumber": 1,
+      "difficulty": "Hard",
+      "question": "In virtual memory management, what phenomenon occurs when a system spends more time servicing page faults and paging than executing actual instructions?",
+      "options": [
+        "Thrashing",
+        "Internal Fragmentation",
+        "Deadlock",
+        "Starvation"
+      ],
+      "correct": 0,
+      "explanation": "Thrashing occurs when the active working sets of processes exceed physical memory capacity, driving page fault rates to near 100%.",
+      "version": 1,
+      "isActive": true
     }
   ]
 }

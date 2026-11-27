@@ -46,12 +46,210 @@ const DEFAULT_SUBJECTS = [
   { id: 'os', code: 'CS-401', name: 'Operating Systems', icon: 'Cpu', difficulty: 'Hard', description: 'Process synchronization, CPU scheduling algorithms, memory virtualization, paging, deadlock prevention, and distributed file systems.', topics: ['Processes, Threads & Concurrency', 'CPU Scheduling & Deadlocks', 'Virtual Memory & Paging', 'File Systems & I/O Subsystems'], isActive: true },
 ];
 
+const DEFAULT_SCHEDULE = {
+  startDate: "10/12/2026",
+  startTime: "10:00 AM",
+  endDate: "10/12/2026",
+  endTime: "11:00 AM",
+  timezone: "Asia/Karachi",
+  status: "scheduled", // "scheduled" | "live" | "stopped" | "ended"
+  isPublished: true,
+  publishedQuestionCount: 14,
+  publishedQuestionIds: [],
+  subjectDistribution: {
+    pf: 2,
+    oop: 2,
+    dsa: 2,
+    dbms: 2,
+    cn: 2,
+    se: 2,
+    os: 2
+  },
+  lastUpdated: new Date().toISOString()
+};
+
 const DEFAULT_ROUNDS = [
-  { roundNumber: 1, title: 'Screening Round (MCQs)', stageBadge: 'Stage 01 • University Auditorium', timeLimitSeconds: 30, questionsCount: 5, markingCorrect: 1.0, markingNegative: 0.0, qualificationRule: 'Top 80% of participating students qualify for Round 2.', strictRule: 'Strict 30 seconds per question. Answers will NOT be accepted after timer expires.', isActive: true, isCompleted: false },
-  { roundNumber: 2, title: 'Core CS Concepts Round', stageBadge: 'Stage 02 • CS Computing Labs', timeLimitSeconds: 45, questionsCount: 5, markingCorrect: 1.0, markingNegative: 0.0, qualificationRule: 'Top 4 participants qualify for Round 3 (Semi-Finals).', strictRule: 'Strict 45 seconds per question. Answers will NOT be accepted after timer expires.', isActive: false, isCompleted: false },
-  { roundNumber: 3, title: 'Rapid Fire Round', stageBadge: 'Stage 03 • Semi-Final Showdown', timeLimitSeconds: 180, questionsCount: 20, markingCorrect: 1.0, markingNegative: 0.0, qualificationRule: 'Top 2 finalists qualify for the 1-on-1 Buzzer Grand Final.', strictRule: '3 minutes total per participant. 3 seconds response/skip rule. Skipped questions cannot be repeated.', isActive: false, isCompleted: false },
-  { roundNumber: 4, title: 'Buzzer Round (Grand Final)', stageBadge: 'Stage 04 • The Ultimate Championship', timeLimitSeconds: 10, questionsCount: 15, markingCorrect: 1.0, markingNegative: -0.5, qualificationRule: 'Highest total score crowns the Champion of Battle of Brains 2026.', strictRule: 'First to buzz answers within 10 seconds. Wrong answer incurs -0.5 penalty.', isActive: false, isCompleted: false },
+  { 
+    roundNumber: 1, 
+    title: 'Single Combined Grand Quiz (All 7 CS Subjects)', 
+    stageBadge: 'Official Championship Round • 7 CS Subjects', 
+    timeLimitSeconds: 30, 
+    questionsCount: 14, 
+    markingCorrect: 1.0, 
+    markingNegative: 0.0, 
+    qualificationRule: 'Highest overall score determines the Champion of Battle of Brains.', 
+    strictRule: 'Strict 30 seconds per question. Answers will NOT be accepted after timer expires.', 
+    isActive: true, 
+    isCompleted: false 
+  }
 ];
+
+function parsePKTDateTime(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return null;
+  let day = 10, month = 12, year = 2026;
+  const cleanDate = String(dateStr).trim();
+
+  if (cleanDate.includes('/')) {
+    const parts = cleanDate.split('/');
+    day = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10);
+    year = parseInt(parts[2], 10);
+  } else if (cleanDate.includes('-')) {
+    const parts = cleanDate.split('-');
+    if (parts[0].length === 4) {
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+      day = parseInt(parts[2], 10);
+    } else {
+      day = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+      year = parseInt(parts[2], 10);
+    }
+  }
+
+  let hours = 10, minutes = 0;
+  const timeMatch = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (timeMatch) {
+    hours = parseInt(timeMatch[1], 10);
+    minutes = parseInt(timeMatch[2], 10);
+    const meridiem = (timeMatch[3] || '').toUpperCase();
+    if (meridiem === 'PM' && hours < 12) hours += 12;
+    if (meridiem === 'AM' && hours === 12) hours = 0;
+  }
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const isoStr = `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00+05:00`;
+  const d = new Date(isoStr);
+  return {
+    iso: isoStr,
+    timestamp: d.getTime(),
+    isValid: !isNaN(d.getTime()),
+    day, month, year, hours, minutes
+  };
+}
+
+function getCompetitionAccessStatus(db) {
+  const schedule = db.schedule || DEFAULT_SCHEDULE;
+  const now = Date.now();
+
+  const startParsed = parsePKTDateTime(schedule.startDate, schedule.startTime);
+  const endParsed = parsePKTDateTime(schedule.endDate, schedule.endTime);
+
+  const startMs = startParsed?.timestamp || schedule.startMs || 0;
+  const endMs = endParsed?.timestamp || schedule.endMs || 0;
+
+  let state = "NOT_STARTED";
+  let message = "Competition not started. Please wait for the scheduled start time.";
+
+  if (schedule.status === "stopped") {
+    state = "STOPPED";
+    message = "Competition has been halted by the administrator.";
+  } else if (schedule.status === "live" && (!endMs || now < endMs)) {
+    state = "LIVE";
+    message = "Competition is currently LIVE!";
+  } else if (endMs && now >= endMs) {
+    state = "TIME_OVER";
+    message = "The scheduled competition has ended. New quiz attempts are no longer allowed.";
+  } else if (startMs && now >= startMs && (!endMs || now < endMs)) {
+    state = "LIVE";
+    message = "Competition is currently LIVE!";
+  } else {
+    state = "NOT_STARTED";
+    message = "Competition not started. Please wait for the scheduled start time.";
+  }
+
+  return {
+    state,
+    isLive: state === "LIVE",
+    isOver: state === "TIME_OVER" || state === "STOPPED",
+    message,
+    currentTimeMs: now,
+    startMs,
+    endMs,
+    timeRemainingToStartMs: startMs ? Math.max(0, startMs - now) : 0,
+    timeRemainingToEndMs: endMs ? Math.max(0, endMs - now) : 0,
+    schedule: {
+      ...schedule,
+      startMs,
+      endMs,
+      startIso: startParsed?.iso,
+      endIso: endParsed?.iso,
+    }
+  };
+}
+
+function calculateSubjectDistribution(totalCount, subjects, availableQuestions) {
+  const count = Number(totalCount);
+  if (!count || count < 7) {
+    return {
+      isValid: false,
+      error: "Every subject must have at least one question. Minimum 7 questions required."
+    };
+  }
+
+  const subjectIds = ['pf', 'oop', 'dsa', 'dbms', 'cn', 'se', 'os'];
+  const subjectNames = {
+    pf: "Programming Fundamentals",
+    oop: "Object Oriented Programming",
+    dsa: "Data Structures & Algorithms",
+    dbms: "Database Systems",
+    cn: "Computer Networks",
+    se: "Software Engineering",
+    os: "Operating Systems"
+  };
+
+  const baseCount = Math.floor(count / 7);
+  const remainder = count % 7;
+
+  const targetDistribution = {};
+  const actualSelection = [];
+  const subjectBreakdown = {};
+
+  for (let i = 0; i < subjectIds.length; i++) {
+    const sId = subjectIds[i];
+    const needed = baseCount + (i < remainder ? 1 : 0);
+    targetDistribution[sId] = needed;
+
+    const subjectQuestions = (availableQuestions || []).filter(q => {
+      const qSid = (q.subjectId || '').toLowerCase();
+      const qSName = (q.subjectName || q.subject || '').toLowerCase();
+      return qSid === sId || 
+        (sId === 'pf' && (qSName.includes('programming') || qSName.includes('fundamental') || qSid === 'pf')) ||
+        (sId === 'oop' && (qSName.includes('object') || qSid === 'oop')) ||
+        (sId === 'dsa' && (qSName.includes('data structure') || qSName.includes('algorithm') || qSid === 'dsa')) ||
+        (sId === 'dbms' && (qSName.includes('database') || qSid === 'dbms' || qSid === 'db')) ||
+        (sId === 'cn' && (qSName.includes('network') || qSid === 'cn')) ||
+        (sId === 'se' && (qSName.includes('software') || qSid === 'se')) ||
+        (sId === 'os' && (qSName.includes('operating') || qSid === 'os'));
+    });
+
+    subjectBreakdown[sId] = {
+      name: subjectNames[sId],
+      required: needed,
+      available: subjectQuestions.length,
+      hasEnough: subjectQuestions.length >= needed
+    };
+
+    if (subjectQuestions.length < needed) {
+      return {
+        isValid: false,
+        error: `Subject "${subjectNames[sId]}" has only ${subjectQuestions.length} questions in the bank, but ${needed} are required for an even distribution of ${count} questions. Please upload or add more questions to this subject.`,
+        subjectBreakdown,
+        targetDistribution
+      };
+    }
+
+    actualSelection.push(...subjectQuestions.slice(0, needed));
+  }
+
+  return {
+    isValid: true,
+    targetDistribution,
+    subjectBreakdown,
+    selectedQuestions: actualSelection,
+    totalSelected: actualSelection.length
+  };
+}
 
 const DEFAULT_RULES = {
   generalRules: [
@@ -618,6 +816,11 @@ function loadDBFromDisk() {
     if (!parsed.encryptedDocuments) parsed.encryptedDocuments = [];
     if (!parsed.documentSecurityLogs) parsed.documentSecurityLogs = [];
     if (!parsed.retakePermissions) parsed.retakePermissions = [];
+    if (!parsed.schedule) parsed.schedule = DEFAULT_SCHEDULE;
+    parsed.rounds = DEFAULT_ROUNDS;
+    if (!parsed.publishedQuestions || parsed.publishedQuestions.length === 0) {
+      parsed.publishedQuestions = parsed.questions.slice(0, 14);
+    }
 
     return parsed;
   } catch (err) {
@@ -628,8 +831,10 @@ function loadDBFromDisk() {
       subjects: DEFAULT_SUBJECTS,
       rounds: DEFAULT_ROUNDS,
       rules: DEFAULT_RULES,
+      schedule: DEFAULT_SCHEDULE,
       participants: INITIAL_PARTICIPANTS,
       questions: SEED_QUESTIONS,
+      publishedQuestions: SEED_QUESTIONS.slice(0, 14),
       attempts: [],
       scoringEvents: [],
       buzzerEvents: [],
@@ -638,8 +843,6 @@ function loadDBFromDisk() {
       results: [],
       auditLogs: [],
       questionVersions: [],
-      buzzerState: { status: "idle" },
-      rapidFireState: { status: "idle" },
       retakePermissions: []
     };
   }
@@ -1599,105 +1802,233 @@ app.post('/api/questions/import', requireAdmin, (req, res) => {
 // ROUND MANAGEMENT (ADMIN)
 // ====================================================================
 
+// ====================================================================
+// QUIZ SCHEDULE & ACCESS CONTROL (ADMIN & PUBLIC API)
+// ====================================================================
+
+// 1. Get Live Schedule & Access Control Status
+app.get('/api/schedule/status', (req, res) => {
+  const db = readDB();
+  const access = getCompetitionAccessStatus(db);
+  res.json({
+    success: true,
+    ...access,
+    subjects: db.subjects || DEFAULT_SUBJECTS,
+  });
+});
+
+// 2. Save / Update Competition Schedule (Admin Protected)
+app.put('/api/schedule', requireAdmin, (req, res) => {
+  const { startDate, startTime, endDate, endTime } = req.body;
+  if (!startDate || !startTime || !endDate || !endTime) {
+    return res.status(400).json({ error: 'Start Date, Start Time, End Date, and End Time are all required.' });
+  }
+
+  const startParsed = parsePKTDateTime(startDate, startTime);
+  const endParsed = parsePKTDateTime(endDate, endTime);
+
+  if (!startParsed || !startParsed.isValid) {
+    return res.status(400).json({ error: 'Invalid Start Date or Time format. Please use DD/MM/YYYY and HH:MM AM/PM.' });
+  }
+
+  if (!endParsed || !endParsed.isValid) {
+    return res.status(400).json({ error: 'Invalid End Date or Time format. Please use DD/MM/YYYY and HH:MM AM/PM.' });
+  }
+
+  if (endParsed.timestamp <= startParsed.timestamp) {
+    return res.status(400).json({ error: 'Validation failed: Competition End Date & Time must be strictly later than Start Date & Time.' });
+  }
+
+  const db = readDB();
+  if (!db.schedule) db.schedule = {};
+
+  db.schedule.startDate = startDate.trim();
+  db.schedule.startTime = startTime.trim();
+  db.schedule.endDate = endDate.trim();
+  db.schedule.endTime = endTime.trim();
+  db.schedule.startIso = startParsed.iso;
+  db.schedule.endIso = endParsed.iso;
+  db.schedule.startMs = startParsed.timestamp;
+  db.schedule.endMs = endParsed.timestamp;
+  db.schedule.timezone = "Asia/Karachi";
+  db.schedule.status = "scheduled"; // re-schedule
+  db.schedule.lastUpdated = new Date().toISOString();
+
+  writeDB(db);
+
+  addAuditLog(req.user?.username || 'ADMIN', 'SCHEDULE_UPDATED', 'competition_schedule', null, {
+    startDate, startTime, endDate, endTime, startIso: startParsed.iso, endIso: endParsed.iso
+  });
+
+  const access = getCompetitionAccessStatus(db);
+  res.json({
+    success: true,
+    message: 'Competition schedule saved successfully in Pakistan Standard Time (PKT).',
+    schedule: db.schedule,
+    access,
+  });
+});
+
+// 3. Activate Competition Immediately (Admin Protected)
+app.post('/api/schedule/activate', requireAdmin, (req, res) => {
+  const db = readDB();
+  if (!db.schedule) db.schedule = {};
+  db.schedule.status = "live";
+  db.schedule.activatedAt = new Date().toISOString();
+  db.schedule.lastUpdated = new Date().toISOString();
+
+  writeDB(db);
+  addAuditLog(req.user?.username || 'ADMIN', 'COMPETITION_ACTIVATED', 'access_control', null);
+
+  const access = getCompetitionAccessStatus(db);
+  res.json({
+    success: true,
+    message: 'Competition is now officially LIVE! Eligible students can now begin their quiz.',
+    access,
+  });
+});
+
+// 4. Stop Competition Immediately (Admin Protected)
+app.post('/api/schedule/stop', requireAdmin, (req, res) => {
+  const db = readDB();
+  if (!db.schedule) db.schedule = {};
+  db.schedule.status = "stopped";
+  db.schedule.stoppedAt = new Date().toISOString();
+  db.schedule.lastUpdated = new Date().toISOString();
+
+  writeDB(db);
+  addAuditLog(req.user?.username || 'ADMIN', 'COMPETITION_STOPPED', 'access_control', null);
+
+  const access = getCompetitionAccessStatus(db);
+  res.json({
+    success: true,
+    message: 'Competition has been STOPPED. All new attempts and answers are now blocked.',
+    access,
+  });
+});
+
+// 5. Publish Quiz: Select and evenly distribute questions across all 7 subjects (Admin Protected)
+app.post('/api/quiz/publish-bank', requireAdmin, (req, res) => {
+  const { totalQuestionsCount } = req.body;
+  const count = Number(totalQuestionsCount);
+
+  if (!count || count < 7) {
+    return res.status(400).json({
+      error: 'Every subject must have at least one question. Minimum 7 questions required.',
+      validationError: true
+    });
+  }
+
+  const db = readDB();
+  const availableQuestions = (db.questions || []).filter(q => q.isActive !== false);
+
+  const distResult = calculateSubjectDistribution(count, db.subjects || DEFAULT_SUBJECTS, availableQuestions);
+
+  if (!distResult.isValid) {
+    return res.status(400).json({
+      error: distResult.error,
+      subjectBreakdown: distResult.subjectBreakdown,
+      targetDistribution: distResult.targetDistribution,
+    });
+  }
+
+  if (!db.schedule) db.schedule = {};
+  db.schedule.isPublished = true;
+  db.schedule.publishedQuestionCount = count;
+  db.schedule.publishedQuestionIds = distResult.selectedQuestions.map(q => q.id);
+  db.schedule.subjectDistribution = distResult.targetDistribution;
+  db.schedule.publishedAt = new Date().toISOString();
+
+  db.publishedQuestions = distResult.selectedQuestions;
+
+  if (Array.isArray(db.rounds) && db.rounds.length > 0) {
+    db.rounds[0].questionsCount = count;
+  }
+
+  writeDB(db);
+
+  addAuditLog(req.user?.username || 'ADMIN', 'QUIZ_PUBLISHED', 'quiz_engine', null, {
+    totalQuestions: count,
+    distribution: distResult.targetDistribution,
+  });
+
+  res.json({
+    success: true,
+    message: `Successfully published ${count} questions distributed evenly across all 7 subjects.`,
+    distribution: distResult.targetDistribution,
+    subjectBreakdown: distResult.subjectBreakdown,
+    publishedCount: count,
+  });
+});
+
+// 6. Preview Subject Distribution (Admin Protected)
+app.get('/api/quiz/preview-distribution', requireAdmin, (req, res) => {
+  const count = Number(req.query.count) || 14;
+  const db = readDB();
+  const availableQuestions = (db.questions || []).filter(q => q.isActive !== false);
+  const distResult = calculateSubjectDistribution(count, db.subjects || DEFAULT_SUBJECTS, availableQuestions);
+
+  res.json({
+    success: true,
+    ...distResult,
+  });
+});
+
+// 7. Get Rounds (Single Combined Round)
 app.get('/api/rounds', (req, res) => {
   const db = readDB();
   res.json(db.rounds || DEFAULT_ROUNDS);
 });
 
-app.put('/api/rounds/:roundNumber', requireAdmin, (req, res) => {
-  const roundNum = Number(req.params.roundNumber);
-  const changes = req.body;
-  const db = readDB();
-  const rounds = db.rounds || DEFAULT_ROUNDS;
-
-  const index = rounds.findIndex((r) => r.roundNumber === roundNum);
-  if (index === -1) {
-    return res.status(404).json({ error: 'Round not found.' });
-  }
-
-  rounds[index] = { ...rounds[index], ...changes };
-  db.rounds = rounds;
-  writeDB(db);
-
-  addAuditLog(req.user.username, 'ROUND_CONFIG_UPDATED', 'round', roundNum, changes);
-  res.json({ success: true, round: rounds[index] });
-});
-
-// Activate / Deactivate Round
-app.post('/api/rounds/activate/:roundNumber', requireAdmin, (req, res) => {
-  const roundNum = Number(req.params.roundNumber);
-  const { isActive } = req.body;
-  const db = readDB();
-  const rounds = db.rounds || DEFAULT_ROUNDS;
-
-  for (const r of rounds) {
-    if (r.roundNumber === roundNum) {
-      r.isActive = Boolean(isActive);
-    }
-  }
-
-  db.rounds = rounds;
-  writeDB(db);
-
-  if (isActive) {
-    // Notify all participants about active round
-    const participants = db.participants || [];
-    participants.forEach((p) => {
-      addNotification(p.studentId, `Round 0${roundNum} Is Live!`, `Round 0${roundNum} is officially open. Enter your student portal now.`, 'warning');
-    });
-  }
-
-  addAuditLog(req.user.username, isActive ? 'ROUND_ACTIVATED' : 'ROUND_DEACTIVATED', 'round', roundNum);
-  res.json({ success: true, message: `Round 0${roundNum} activation status set to: ${isActive}` });
-});
-
 // ====================================================================
-// SERVER-AUTHORITATIVE QUIZ ENGINE (ROUNDS 1 & 2)
+// SERVER-AUTHORITATIVE SINGLE ROUND QUIZ ENGINE
 // ====================================================================
 
 // Start Quiz Attempt (Server Authoritative)
 app.post('/api/quiz/start', requireParticipant, (req, res) => {
-  const { roundNumber } = req.body;
-  const roundNum = Number(roundNumber) || 1;
   const studentId = req.user.studentId;
-
   const db = readDB();
-  const rounds = db.rounds || DEFAULT_ROUNDS;
-  const currentRound = rounds.find((r) => r.roundNumber === roundNum);
 
-  if (!currentRound) {
-    return res.status(404).json({ error: 'Invalid competition round requested.' });
+  // 1. Automatic Competition Access Control Verification (PKT Schedule)
+  const access = getCompetitionAccessStatus(db);
+  if (access.state === 'NOT_STARTED') {
+    return res.status(403).json({
+      error: 'COMPETITION NOT STARTED. The scheduled competition has not started yet. Please wait for the scheduled start time.',
+      state: 'NOT_STARTED',
+      startMs: access.startMs,
+      isLocked: true,
+    });
+  }
+  if (access.state === 'TIME_OVER') {
+    return res.status(403).json({
+      error: 'COMPETITION TIME OVER. The scheduled competition has ended. New quiz attempts are no longer allowed.',
+      state: 'TIME_OVER',
+      isLocked: true,
+    });
+  }
+  if (access.state === 'STOPPED') {
+    return res.status(403).json({
+      error: 'Competition has been halted by the administrator.',
+      state: 'STOPPED',
+      isLocked: true,
+    });
   }
 
-  if (!currentRound.isActive) {
-    return res.status(403).json({ error: `Round 0${roundNum} is not currently active for competition.` });
-  }
-
-  // Check Registration Status
+  // 2. Check Registration Status
   const participants = db.participants || [];
   const student = participants.find((p) => p.studentId === studentId);
   if (!student || student.registrationStatus === 'Rejected') {
     return res.status(403).json({ error: 'Your student registration is not approved for tournament rounds.' });
   }
 
-  // Check Eligibility for Round 2 (Must have qualified in Round 1)
-  if (roundNum === 2) {
-    const results = db.results || [];
-    const r1Result = results.find((r) => r.studentId === studentId && r.roundNumber === 1);
-    if (!r1Result || !r1Result.isQualified) {
-      return res.status(403).json({ error: 'Eligibility check failed: You did not qualify from Round 1 into Round 2.' });
-    }
-  }
-
-  // Check Previous Attempts (Strict One-Attempt-Per-Student System with Admin-Controlled Retake Permission)
+  // 3. Strict One-Attempt System with Admin-Controlled Retake Permission
   const attempts = db.attempts || [];
-  const studentRoundAttempts = attempts.filter((a) => a.studentId === studentId && Number(a.roundNumber) === roundNum);
-  const completedAttempt = studentRoundAttempts.find((a) => a.status === 'completed' || a.status === 'timed_out');
+  const studentAttempts = attempts.filter((a) => a.studentId === studentId && Number(a.roundNumber || 1) === 1);
+  const completedAttempt = studentAttempts.find((a) => a.status === 'completed' || a.status === 'timed_out');
 
   if (completedAttempt) {
-    // Check if administrator has explicitly granted a retake permission for this specific student and round
     const retakePermIndex = (db.retakePermissions || []).findIndex(
-      (p) => p.studentId === studentId && Number(p.roundNumber) === roundNum && p.status === 'GRANTED'
+      (p) => p.studentId === studentId && Number(p.roundNumber || 1) === 1 && p.status === 'GRANTED'
     );
 
     if (retakePermIndex === -1) {
@@ -1705,42 +2036,39 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
         error: 'You have already completed this round. Retake permission is required from the administrator.',
         isLocked: true,
         completed: true,
-        roundNumber: roundNum,
         score: completedAttempt.score,
         completedAt: completedAttempt.finishedAt,
       });
     }
 
-    // Administrator has granted permission: Consume the single-use retake permission
+    // Retake permission granted: Consume single-use token
     db.retakePermissions[retakePermIndex].status = 'USED';
     db.retakePermissions[retakePermIndex].usedAt = new Date().toISOString();
     writeDB(db);
 
     addAuditLog(studentId, 'RETAKE_PERMISSION_CONSUMED', 'quiz_engine', db.retakePermissions[retakePermIndex].id, {
-      roundNumber: roundNum,
-      attemptNumber: studentRoundAttempts.length + 1,
+      attemptNumber: studentAttempts.length + 1,
     });
   }
 
-  // Return ongoing active attempt if deadline hasn't elapsed
-  const ongoing = studentRoundAttempts.find((a) => a.status === 'in_progress');
+  // 4. Return ongoing active attempt if timer hasn't elapsed
+  const ongoing = studentAttempts.find((a) => a.status === 'in_progress');
   if (ongoing) {
     const now = Date.now();
     const expires = new Date(ongoing.expiresAt).getTime();
-    if (now < expires) {
+    if (now < expires && (!access.endMs || now < access.endMs)) {
       return res.json({
         success: true,
         attempt: {
           id: ongoing.id,
-          roundNumber: ongoing.roundNumber,
+          roundNumber: 1,
           expiresAt: ongoing.expiresAt,
           questions: ongoing.allocatedQuestions,
           submittedCount: (ongoing.answers || []).length,
-          timeLimitSeconds: currentRound.timeLimitSeconds,
+          timeLimitSeconds: 30,
         },
       });
     } else {
-      // Mark expired
       ongoing.status = 'timed_out';
       ongoing.finishedAt = new Date().toISOString();
       writeDB(db);
@@ -1753,24 +2081,19 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
     }
   }
 
-  // Select Questions for Attempt (Include ALL active questions from Question Bank with Timer)
-  let allQuestions = (db.questions || []).filter((q) => {
-    if (q.isActive === false) return false;
-    const qRoundNum = Number(q.roundNumber) || (typeof q.round === 'string' && q.round.includes('2') ? 2 : typeof q.round === 'string' && q.round.includes('3') ? 3 : typeof q.round === 'string' && q.round.includes('4') ? 4 : 1);
-    return qRoundNum === roundNum;
-  });
-
-  // If no round-specific questions, include all active questions in the question bank
-  if (allQuestions.length === 0) {
-    allQuestions = (db.questions || []).filter((q) => q.isActive !== false);
+  // 5. Allocate published questions (across all 7 subjects)
+  let selected = [];
+  if (Array.isArray(db.publishedQuestions) && db.publishedQuestions.length >= 7) {
+    selected = db.publishedQuestions;
+  } else {
+    const availableQuestions = (db.questions || []).filter((q) => q.isActive !== false);
+    const distResult = calculateSubjectDistribution(14, db.subjects || DEFAULT_SUBJECTS, availableQuestions);
+    selected = distResult.isValid ? distResult.selectedQuestions : availableQuestions.slice(0, 14);
   }
 
-  if (allQuestions.length === 0) {
-    return res.status(500).json({ error: `No active questions configured in Question Bank for Round 0${roundNum}.` });
+  if (!selected || selected.length === 0) {
+    return res.status(500).json({ error: 'No active questions configured in Question Bank for the competition.' });
   }
-
-  // Include ALL questions from Question Bank as requested by user
-  const selected = allQuestions;
 
   // SANITIZE: DO NOT EXPOSE CORRECT ANSWERS TO CLIENT!
   const sanitizedAllocated = selected.map((q, idx) => ({
@@ -1786,16 +2109,21 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
   }));
 
   const now = new Date();
-  const perQuestionSeconds = roundNum === 1 ? 30 : roundNum === 2 ? 45 : 30;
+  const perQuestionSeconds = 30; // 30 seconds per question strict rule
   const totalSeconds = perQuestionSeconds * selected.length;
-  const expiresAt = new Date(now.getTime() + totalSeconds * 1000 + 10000); // 10s latency grace buffer
+
+  let expiresAtMs = now.getTime() + totalSeconds * 1000 + 10000;
+  if (access.endMs && access.endMs < expiresAtMs) {
+    expiresAtMs = access.endMs; // Hard cutoff at competition end time
+  }
+  const expiresAt = new Date(expiresAtMs);
 
   const newAttempt = {
-    id: `ATT-${roundNum}-${studentId}-${Date.now()}`,
-    attemptNumber: studentRoundAttempts.length + 1,
+    id: `ATT-1-${studentId}-${Date.now()}`,
+    attemptNumber: studentAttempts.length + 1,
     studentId,
     studentName: student.fullName,
-    roundNumber: roundNum,
+    roundNumber: 1,
     startedAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
     finishedAt: null,
@@ -1809,16 +2137,19 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
   db.attempts = [newAttempt, ...attempts];
   writeDB(db);
 
-  addAuditLog(studentId, 'QUIZ_ATTEMPT_STARTED', 'quiz_engine', newAttempt.id, { roundNumber: roundNum, count: selected.length });
+  addAuditLog(studentId, 'QUIZ_ATTEMPT_STARTED', 'quiz_engine', newAttempt.id, {
+    count: selected.length,
+    attemptNumber: newAttempt.attemptNumber
+  });
 
   res.json({
     success: true,
     attempt: {
       id: newAttempt.id,
-      roundNumber: newAttempt.roundNumber,
+      roundNumber: 1,
       expiresAt: newAttempt.expiresAt,
       questions: sanitizedAllocated,
-      timeLimitSeconds: currentRound.timeLimitSeconds,
+      timeLimitSeconds: 30,
       totalSeconds,
     },
   });
@@ -1835,6 +2166,16 @@ app.post('/api/quiz/submit-answer', requireParticipant, (req, res) => {
     }
 
     const db = readDB();
+
+    // Check Competition Access Cutoff
+    const access = getCompetitionAccessStatus(db);
+    if (access.isOver || access.state === 'TIME_OVER' || access.state === 'STOPPED') {
+      return res.status(403).json({
+        error: 'COMPETITION TIME OVER. The scheduled competition has ended. No answers can be accepted after deadline.',
+        isLocked: true,
+      });
+    }
+
     const attempts = db.attempts || [];
     const attempt = attempts.find((a) => a.id === attemptId && a.studentId === studentId);
 
@@ -1876,12 +2217,8 @@ app.post('/api/quiz/submit-answer', requireParticipant, (req, res) => {
 
     const isCorrect = Number(selectedOptionIndex) === Number(targetQ.correct);
 
-    // Negative Marking: Round 4 (Buzzer/Final) incurs -0.5 for wrong answers
-    const rounds = db.rounds || DEFAULT_ROUNDS;
-    const currentRound = rounds.find((r) => r.roundNumber === attempt.roundNumber);
-    const roundNeg = currentRound && currentRound.markingNegative !== undefined ? Number(currentRound.markingNegative) : 0.0;
-    const isRound4 = attempt.roundNumber === 4 || targetQ.roundNumber === 4;
-    const points = isCorrect ? 1.0 : (isRound4 ? -0.5 : roundNeg);
+    // Single Round Marking: Correct: +1 point, Wrong: 0 points, No negative marking
+    const points = isCorrect ? 1.0 : 0.0;
 
     const answerRecord = {
       questionId,
@@ -2032,12 +2369,21 @@ app.get('/api/quiz/my-status', requireParticipant, (req, res) => {
 
   const totalScore = results.reduce((acc, r) => acc + (Number(r.score) || 0), 0);
 
-  // Determine active round
+  // Determine active round (Single Combined Round)
   const activeRound = rounds.find((r) => r.isActive) || rounds[0];
 
   const activePermissions = (db.retakePermissions || []).filter(
     (p) => p.studentId === studentId && p.status === 'GRANTED'
   );
+
+  const competitionAccess = getCompetitionAccessStatus(db);
+
+  // Check if round 1 attempt is completed and whether retake permission exists
+  const completedAttempt = attempts.find(
+    (a) => Number(a.roundNumber || 1) === 1 && (a.status === 'completed' || a.status === 'timed_out')
+  );
+  const hasRetakePermission = activePermissions.some((p) => Number(p.roundNumber || 1) === 1);
+  const isLocked = Boolean(completedAttempt && !hasRetakePermission);
 
   res.json({
     studentId,
@@ -2045,6 +2391,11 @@ app.get('/api/quiz/my-status', requireParticipant, (req, res) => {
     totalScore: Number(totalScore.toFixed(2)),
     activeRound,
     retakePermissions: activePermissions,
+    competitionAccess,
+    schedule: db.schedule || DEFAULT_SCHEDULE,
+    isLocked,
+    hasCompletedRound1: !!completedAttempt,
+    hasRetakePermission,
     attempts: attempts.map((a) => ({
       id: a.id,
       roundNumber: a.roundNumber,

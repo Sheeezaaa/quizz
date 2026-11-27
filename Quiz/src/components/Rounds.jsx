@@ -28,13 +28,13 @@ export default function Rounds({ onTryPractice, rounds: propRounds }) {
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-heading font-semibold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 mb-4">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Tournament Progression</span>
+            <span>Tournament Format</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-black text-white mb-4">
-            Four Individual <span className="text-[#3b82f6]">Competition Rounds</span>
+            Single Round <span className="text-[#3b82f6]">Championship Quiz</span>
           </h2>
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            From screening MCQs to rapid-fire questions and the sudden-death 1-on-1 buzzer finale, each participant competes solo.
+            One comprehensive grand competition round evenly distributed across all seven core Computer Science domains. 30 seconds per question, +1 point for correct answers, and zero negative marking.
           </p>
         </div>
 
