@@ -617,6 +617,7 @@ function loadDBFromDisk() {
     if (!parsed.rapidFireState) parsed.rapidFireState = { status: "idle" };
     if (!parsed.encryptedDocuments) parsed.encryptedDocuments = [];
     if (!parsed.documentSecurityLogs) parsed.documentSecurityLogs = [];
+    if (!parsed.retakePermissions) parsed.retakePermissions = [];
 
     return parsed;
   } catch (err) {
@@ -638,7 +639,8 @@ function loadDBFromDisk() {
       auditLogs: [],
       questionVersions: [],
       buzzerState: { status: "idle" },
-      rapidFireState: { status: "idle" }
+      rapidFireState: { status: "idle" },
+      retakePermissions: []
     };
   }
 }
@@ -1687,39 +1689,67 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
     }
   }
 
-  // Check Previous Attempts (Prevent Multiple Submissions)
+  // Check Previous Attempts (Strict One-Attempt-Per-Student System with Admin-Controlled Retake Permission)
   const attempts = db.attempts || [];
-  const existing = attempts.find((a) => a.studentId === studentId && a.roundNumber === roundNum);
-  if (existing) {
-    if (existing.status === 'completed' || existing.status === 'timed_out') {
-      return res.status(409).json({
-        error: `You have already completed your attempt for Round 0${roundNum}. Your verified score is: ${existing.score} pts.`,
-        score: existing.score,
-        completedAt: existing.finishedAt,
+  const studentRoundAttempts = attempts.filter((a) => a.studentId === studentId && Number(a.roundNumber) === roundNum);
+  const completedAttempt = studentRoundAttempts.find((a) => a.status === 'completed' || a.status === 'timed_out');
+
+  if (completedAttempt) {
+    // Check if administrator has explicitly granted a retake permission for this specific student and round
+    const retakePermIndex = (db.retakePermissions || []).findIndex(
+      (p) => p.studentId === studentId && Number(p.roundNumber) === roundNum && p.status === 'GRANTED'
+    );
+
+    if (retakePermIndex === -1) {
+      return res.status(403).json({
+        error: 'You have already completed this round. Retake permission is required from the administrator.',
+        isLocked: true,
+        completed: true,
+        roundNumber: roundNum,
+        score: completedAttempt.score,
+        completedAt: completedAttempt.finishedAt,
       });
     }
 
-    // Return ongoing active attempt if deadline hasn't elapsed
+    // Administrator has granted permission: Consume the single-use retake permission
+    db.retakePermissions[retakePermIndex].status = 'USED';
+    db.retakePermissions[retakePermIndex].usedAt = new Date().toISOString();
+    writeDB(db);
+
+    addAuditLog(studentId, 'RETAKE_PERMISSION_CONSUMED', 'quiz_engine', db.retakePermissions[retakePermIndex].id, {
+      roundNumber: roundNum,
+      attemptNumber: studentRoundAttempts.length + 1,
+    });
+  }
+
+  // Return ongoing active attempt if deadline hasn't elapsed
+  const ongoing = studentRoundAttempts.find((a) => a.status === 'in_progress');
+  if (ongoing) {
     const now = Date.now();
-    const expires = new Date(existing.expiresAt).getTime();
+    const expires = new Date(ongoing.expiresAt).getTime();
     if (now < expires) {
       return res.json({
         success: true,
         attempt: {
-          id: existing.id,
-          roundNumber: existing.roundNumber,
-          expiresAt: existing.expiresAt,
-          questions: existing.allocatedQuestions,
-          submittedCount: (existing.answers || []).length,
+          id: ongoing.id,
+          roundNumber: ongoing.roundNumber,
+          expiresAt: ongoing.expiresAt,
+          questions: ongoing.allocatedQuestions,
+          submittedCount: (ongoing.answers || []).length,
           timeLimitSeconds: currentRound.timeLimitSeconds,
         },
       });
     } else {
       // Mark expired
-      existing.status = 'timed_out';
-      existing.finishedAt = new Date().toISOString();
+      ongoing.status = 'timed_out';
+      ongoing.finishedAt = new Date().toISOString();
       writeDB(db);
-      return res.status(408).json({ error: 'Your quiz attempt timer has expired.', score: existing.score });
+      return res.status(408).json({
+        error: 'Your quiz attempt timer has expired.',
+        score: ongoing.score,
+        isLocked: true,
+        completed: true,
+      });
     }
   }
 
@@ -1762,6 +1792,7 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
 
   const newAttempt = {
     id: `ATT-${roundNum}-${studentId}-${Date.now()}`,
+    attemptNumber: studentRoundAttempts.length + 1,
     studentId,
     studentName: student.fullName,
     roundNumber: roundNum,
@@ -2004,11 +2035,16 @@ app.get('/api/quiz/my-status', requireParticipant, (req, res) => {
   // Determine active round
   const activeRound = rounds.find((r) => r.isActive) || rounds[0];
 
+  const activePermissions = (db.retakePermissions || []).filter(
+    (p) => p.studentId === studentId && p.status === 'GRANTED'
+  );
+
   res.json({
     studentId,
     roundScores: results,
     totalScore: Number(totalScore.toFixed(2)),
     activeRound,
+    retakePermissions: activePermissions,
     attempts: attempts.map((a) => ({
       id: a.id,
       roundNumber: a.roundNumber,
@@ -2017,6 +2053,189 @@ app.get('/api/quiz/my-status', requireParticipant, (req, res) => {
       startedAt: a.startedAt,
       finishedAt: a.finishedAt,
     })),
+  });
+});
+
+// ====================================================================
+// ADMIN-CONTROLLED RETAKE PERMISSION ENGINE (STRICT ONE-ATTEMPT SYSTEM)
+// ====================================================================
+
+// 1. Get all candidates, rounds status, and retake permissions (Admin Protected)
+app.get('/api/retake/permissions', requireAdmin, (req, res) => {
+  const db = readDB();
+  const permissions = db.retakePermissions || [];
+  const participants = db.participants || [];
+  const attempts = db.attempts || [];
+  const results = db.results || [];
+
+  // Map each registered candidate with their Round 1-4 completion and retake status
+  const students = participants.map((p) => {
+    const pAttempts = attempts.filter((a) => a.studentId === p.studentId);
+    const pResults = results.filter((r) => r.studentId === p.studentId);
+    const pPerms = permissions.filter((perm) => perm.studentId === p.studentId);
+
+    const roundStatus = {};
+    for (let r = 1; r <= 4; r++) {
+      const rAttempts = pAttempts.filter((a) => Number(a.roundNumber) === r);
+      const rResult = pResults.find((res) => Number(res.roundNumber) === r);
+      const rPerm = pPerms.find((perm) => Number(perm.roundNumber) === r && perm.status === 'GRANTED');
+      const latestAttempt = rAttempts[0];
+
+      roundStatus[r] = {
+        roundNumber: r,
+        isCompleted: rAttempts.some((a) => a.status === 'completed' || a.status === 'timed_out'),
+        attemptCount: rAttempts.length,
+        score: rResult ? rResult.score : (latestAttempt ? latestAttempt.score : null),
+        completedAt: latestAttempt ? (latestAttempt.finishedAt || latestAttempt.startedAt) : null,
+        hasRetakePermission: !!rPerm,
+        retakePermission: rPerm || null,
+      };
+    }
+
+    return {
+      studentId: p.studentId,
+      fullName: p.fullName,
+      email: p.email,
+      department: p.degreeProgram || p.department || 'Computer Science',
+      campus: p.campus || 'Main Campus',
+      registrationStatus: p.registrationStatus,
+      rounds: roundStatus,
+      totalAttempts: pAttempts.length,
+    };
+  });
+
+  const stats = {
+    totalStudents: participants.length,
+    totalPermissions: permissions.length,
+    activeGrantedCount: permissions.filter((p) => p.status === 'GRANTED').length,
+    usedCount: permissions.filter((p) => p.status === 'USED').length,
+    revokedCount: permissions.filter((p) => p.status === 'REVOKED').length,
+  };
+
+  res.json({
+    success: true,
+    students,
+    permissions,
+    stats,
+  });
+});
+
+// 2. Grant Retake Permission for a specific student and round (Admin Protected)
+app.post('/api/retake/grant', requireAdmin, (req, res) => {
+  const { studentId, roundNumber, reason } = req.body;
+  if (!studentId || !roundNumber) {
+    return res.status(400).json({ error: 'Student ID and Round Number are required.' });
+  }
+
+  const roundNum = Number(roundNumber);
+  if (roundNum < 1 || roundNum > 4) {
+    return res.status(400).json({ error: 'Round number must be between 1 and 4.' });
+  }
+
+  const db = readDB();
+  const participant = (db.participants || []).find((p) => p.studentId === studentId);
+  if (!participant) {
+    return res.status(404).json({ error: `Student with ID ${studentId} not found.` });
+  }
+
+  if (!Array.isArray(db.retakePermissions)) {
+    db.retakePermissions = [];
+  }
+
+  // Check if student already has an active, unused permission for this round
+  const existingActive = db.retakePermissions.find(
+    (p) => p.studentId === studentId && Number(p.roundNumber) === roundNum && p.status === 'GRANTED'
+  );
+
+  if (existingActive) {
+    return res.json({
+      success: true,
+      message: `Retake access is already ACTIVE for ${participant.fullName} (Round 0${roundNum}).`,
+      permission: existingActive,
+    });
+  }
+
+  const newPermission = {
+    id: `PERM-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+    studentId,
+    studentName: participant.fullName,
+    roundNumber: roundNum,
+    status: 'GRANTED',
+    grantedBy: req.user?.username || 'ADMINISTRATOR',
+    grantedAt: new Date().toISOString(),
+    usedAt: null,
+    revokedAt: null,
+    reason: reason || 'Retake authorized by administrator',
+  };
+
+  db.retakePermissions.unshift(newPermission);
+  writeDB(db);
+
+  addAuditLog(req.user?.username || 'ADMIN', 'GRANT_RETAKE_ACCESS', 'admin_action', newPermission.id, {
+    studentId,
+    studentName: participant.fullName,
+    roundNumber: roundNum,
+    reason: newPermission.reason,
+  });
+
+  res.json({
+    success: true,
+    message: `Retake access successfully granted for ${participant.fullName} (Round 0${roundNum}).`,
+    permission: newPermission,
+  });
+});
+
+// 3. Revoke Retake Permission (Admin Protected)
+app.post('/api/retake/revoke', requireAdmin, (req, res) => {
+  const { permissionId, studentId, roundNumber } = req.body;
+  const db = readDB();
+
+  if (!Array.isArray(db.retakePermissions)) {
+    db.retakePermissions = [];
+  }
+
+  let perm = null;
+  if (permissionId) {
+    perm = db.retakePermissions.find((p) => p.id === permissionId && p.status === 'GRANTED');
+  } else if (studentId && roundNumber) {
+    perm = db.retakePermissions.find(
+      (p) => p.studentId === studentId && Number(p.roundNumber) === Number(roundNumber) && p.status === 'GRANTED'
+    );
+  }
+
+  if (!perm) {
+    return res.status(404).json({ error: 'Active retake permission not found to revoke.' });
+  }
+
+  perm.status = 'REVOKED';
+  perm.revokedAt = new Date().toISOString();
+  perm.revokedBy = req.user?.username || 'ADMINISTRATOR';
+  writeDB(db);
+
+  addAuditLog(req.user?.username || 'ADMIN', 'REVOKE_RETAKE_ACCESS', 'admin_action', perm.id, {
+    studentId: perm.studentId,
+    roundNumber: perm.roundNumber,
+  });
+
+  res.json({
+    success: true,
+    message: `Retake access for ${perm.studentName} (Round 0${perm.roundNumber}) has been revoked.`,
+    permission: perm,
+  });
+});
+
+// 4. Check Retake Permission for a Student and Round
+app.get('/api/retake/check/:studentId/:roundNumber', (req, res) => {
+  const { studentId, roundNumber } = req.params;
+  const db = readDB();
+  const perm = (db.retakePermissions || []).find(
+    (p) => p.studentId === studentId && Number(p.roundNumber) === Number(roundNumber) && p.status === 'GRANTED'
+  );
+
+  res.json({
+    success: true,
+    hasPermission: !!perm,
+    permission: perm || null,
   });
 });
 

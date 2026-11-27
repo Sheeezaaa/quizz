@@ -689,8 +689,64 @@ export async function apiStartQuizAttempt(roundNumber = 1) {
     if (res.ok && data.success && data.attempt && Array.isArray(data.attempt.questions) && data.attempt.questions.length > 0) {
       return { success: true, attempt: data.attempt };
     }
+    // Strict refusal from server (already completed, locked without admin permission, or timed out)
+    if (res.status === 403 || res.status === 409 || data?.isLocked) {
+      return {
+        success: false,
+        error: data.error || 'You have already completed this round. Retake permission is required from the administrator.',
+        isLocked: true,
+        completed: true,
+        score: data.score,
+      };
+    }
   } catch (err) {
-    // Network or server error: Fall back to local stored question bank
+    // Network or server error: Fall back to local stored question bank with strict permission check
+  }
+
+  // Strict Fallback Check: Check if logged-in student has already completed this round
+  const loggedStudent = getLoggedInStudent();
+  const studentId = loggedStudent?.studentId;
+  if (studentId) {
+    const historyKey = `bob_student_history_${studentId}`;
+    let prevHistory = [];
+    try {
+      const saved = localStorage.getItem(historyKey);
+      if (saved) prevHistory = JSON.parse(saved);
+    } catch {}
+
+    const completedInHistory = prevHistory.some((h) => Number(h.roundNumber || 1) === Number(roundNumber));
+    const savedResultKey = `bob_student_results_${studentId}`;
+    const hasSavedResult = !!localStorage.getItem(savedResultKey);
+
+    if (completedInHistory || hasSavedResult) {
+      // Check retake permission in localStorage
+      let localPerms = [];
+      try {
+        const storedPerms = localStorage.getItem('bob_retake_permissions');
+        if (storedPerms) localPerms = JSON.parse(storedPerms);
+      } catch {}
+
+      const activePermIndex = localPerms.findIndex(
+        (p) => p.studentId === studentId && Number(p.roundNumber) === Number(roundNumber) && p.status === 'GRANTED'
+      );
+
+      if (activePermIndex === -1) {
+        return {
+          success: false,
+          error: 'You have already completed this round. Retake permission is required from the administrator.',
+          isLocked: true,
+          completed: true,
+        };
+      }
+
+      // Mark local permission as used
+      localPerms[activePermIndex].status = 'USED';
+      localPerms[activePermIndex].usedAt = new Date().toISOString();
+      try {
+        localStorage.setItem('bob_retake_permissions', JSON.stringify(localPerms));
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+    }
   }
 
   // Fallback: Retrieve all questions saved by admin in Question Bank
@@ -2138,4 +2194,221 @@ export async function apiSimulateTamper(docId) {
 
   simulateTamperOnDocument(docId);
   return { success: true };
+}
+
+// ==========================================
+// ADMIN-CONTROLLED RETAKE PERMISSION CLIENT API
+// ==========================================
+
+export async function apiGetRetakePermissions() {
+  try {
+    const res = await fetch(`${API_BASE}/retake/permissions`, {
+      headers: {
+        Authorization: `Bearer ${getAdminAuthToken()}`
+      }
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      if (Array.isArray(data.permissions)) {
+        try {
+          localStorage.setItem('bob_retake_permissions', JSON.stringify(data.permissions));
+        } catch {}
+      }
+      return data;
+    }
+  } catch (err) {}
+
+  // Local Fallback Synthesis
+  const participants = getStoredParticipants() || [];
+  let storedPerms = [];
+  try {
+    const s = localStorage.getItem('bob_retake_permissions');
+    if (s) storedPerms = JSON.parse(s);
+  } catch {}
+
+  const students = participants.map((p) => {
+    let prevHistory = [];
+    try {
+      const s = localStorage.getItem(`bob_student_history_${p.studentId}`);
+      if (s) prevHistory = JSON.parse(s);
+    } catch {}
+
+    const hasSavedResult = !!localStorage.getItem(`bob_student_results_${p.studentId}`);
+    const roundStatus = {};
+
+    for (let r = 1; r <= 4; r++) {
+      const rAttempts = prevHistory.filter((a) => Number(a.roundNumber || 1) === r);
+      const isCompleted = rAttempts.length > 0 || (r === 1 && hasSavedResult);
+      const rPerm = storedPerms.find((perm) => perm.studentId === p.studentId && Number(perm.roundNumber) === r && perm.status === 'GRANTED');
+      const latest = rAttempts[rAttempts.length - 1];
+
+      roundStatus[r] = {
+        roundNumber: r,
+        isCompleted,
+        attemptCount: isCompleted ? Math.max(1, rAttempts.length) : 0,
+        score: latest ? latest.score : (isCompleted ? 80 : null),
+        completedAt: latest?.date || null,
+        hasRetakePermission: !!rPerm,
+        retakePermission: rPerm || null,
+      };
+    }
+
+    return {
+      studentId: p.studentId,
+      fullName: p.fullName,
+      email: p.email,
+      department: p.degreeProgram || 'Computer Science',
+      campus: p.campus || 'Main Campus',
+      registrationStatus: p.registrationStatus,
+      rounds: roundStatus,
+      totalAttempts: Object.values(roundStatus).reduce((acc, rs) => acc + rs.attemptCount, 0),
+    };
+  });
+
+  return {
+    success: true,
+    students,
+    permissions: storedPerms,
+    stats: {
+      totalStudents: participants.length,
+      totalPermissions: storedPerms.length,
+      activeGrantedCount: storedPerms.filter((p) => p.status === 'GRANTED').length,
+      usedCount: storedPerms.filter((p) => p.status === 'USED').length,
+      revokedCount: storedPerms.filter((p) => p.status === 'REVOKED').length,
+    }
+  };
+}
+
+export async function apiGrantRetakeAccess(studentId, roundNumber = 1, reason = 'Retake authorized by administrator') {
+  try {
+    const res = await fetch(`${API_BASE}/retake/grant`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAdminAuthToken()}`
+      },
+      body: JSON.stringify({ studentId, roundNumber: Number(roundNumber), reason })
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      let stored = [];
+      try {
+        const s = localStorage.getItem('bob_retake_permissions');
+        if (s) stored = JSON.parse(s);
+      } catch {}
+      const filtered = stored.filter(p => !(p.studentId === studentId && Number(p.roundNumber) === Number(roundNumber) && p.status === 'GRANTED'));
+      stored = [data.permission, ...filtered];
+      localStorage.setItem('bob_retake_permissions', JSON.stringify(stored));
+      window.dispatchEvent(new Event('storage'));
+      return data;
+    }
+    if (data?.error) return { success: false, error: data.error };
+  } catch (err) {}
+
+  // Fallback local grant
+  const participants = getStoredParticipants() || [];
+  const p = participants.find(part => part.studentId === studentId);
+  const newPermission = {
+    id: `PERM-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+    studentId,
+    studentName: p ? p.fullName : studentId,
+    roundNumber: Number(roundNumber),
+    status: 'GRANTED',
+    grantedBy: 'ADMINISTRATOR',
+    grantedAt: new Date().toISOString(),
+    usedAt: null,
+    revokedAt: null,
+    reason: reason || 'Retake authorized by administrator'
+  };
+
+  let stored = [];
+  try {
+    const s = localStorage.getItem('bob_retake_permissions');
+    if (s) stored = JSON.parse(s);
+  } catch {}
+
+  const filtered = stored.filter(perm => !(perm.studentId === studentId && Number(perm.roundNumber) === Number(roundNumber) && perm.status === 'GRANTED'));
+  stored = [newPermission, ...filtered];
+  localStorage.setItem('bob_retake_permissions', JSON.stringify(stored));
+  window.dispatchEvent(new Event('storage'));
+
+  return {
+    success: true,
+    message: `Retake access successfully granted for ${newPermission.studentName} (Round 0${roundNumber}).`,
+    permission: newPermission
+  };
+}
+
+export async function apiRevokeRetakeAccess(permissionId, studentId, roundNumber) {
+  try {
+    const res = await fetch(`${API_BASE}/retake/revoke`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAdminAuthToken()}`
+      },
+      body: JSON.stringify({ permissionId, studentId, roundNumber })
+    });
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      let stored = [];
+      try {
+        const s = localStorage.getItem('bob_retake_permissions');
+        if (s) stored = JSON.parse(s);
+      } catch {}
+      stored = stored.map(perm => {
+        if ((permissionId && perm.id === permissionId) || (studentId && roundNumber && perm.studentId === studentId && Number(perm.roundNumber) === Number(roundNumber))) {
+          return { ...perm, status: 'REVOKED', revokedAt: new Date().toISOString() };
+        }
+        return perm;
+      });
+      localStorage.setItem('bob_retake_permissions', JSON.stringify(stored));
+      window.dispatchEvent(new Event('storage'));
+      return data;
+    }
+  } catch (err) {}
+
+  // Fallback local revocation
+  let stored = [];
+  try {
+    const s = localStorage.getItem('bob_retake_permissions');
+    if (s) stored = JSON.parse(s);
+  } catch {}
+  stored = stored.map(perm => {
+    if ((permissionId && perm.id === permissionId) || (studentId && roundNumber && perm.studentId === studentId && Number(perm.roundNumber) === Number(roundNumber))) {
+      return { ...perm, status: 'REVOKED', revokedAt: new Date().toISOString() };
+    }
+    return perm;
+  });
+  localStorage.setItem('bob_retake_permissions', JSON.stringify(stored));
+  window.dispatchEvent(new Event('storage'));
+
+  return { success: true, message: 'Retake access revoked.' };
+}
+
+export async function apiCheckRetakePermission(studentId, roundNumber = 1) {
+  try {
+    const res = await fetch(`${API_BASE}/retake/check/${encodeURIComponent(studentId)}/${roundNumber}`);
+    const data = await safeJson(res);
+    if (res.ok && data.success) {
+      return data;
+    }
+  } catch (err) {}
+
+  // Fallback local check
+  let stored = [];
+  try {
+    const s = localStorage.getItem('bob_retake_permissions');
+    if (s) stored = JSON.parse(s);
+  } catch {}
+
+  const perm = stored.find(
+    p => p.studentId === studentId && Number(p.roundNumber) === Number(roundNumber) && p.status === 'GRANTED'
+  );
+
+  return {
+    success: true,
+    hasPermission: !!perm,
+    permission: perm || null
+  };
 }

@@ -50,7 +50,9 @@ import {
   Copy,
   Phone,
   Share2,
-  Mail
+  Mail,
+  Unlock,
+  KeyRound
 } from 'lucide-react';
 import { 
   apiStudentLogin, 
@@ -77,7 +79,8 @@ import {
   apiFinalizeTeam,
   setStudentAuthToken,
   getStudentAuthToken,
-  apiGetQuestions
+  apiGetQuestions,
+  apiCheckRetakePermission
 } from '../utils/api';
 import { 
   getLoggedInStudent, 
@@ -172,6 +175,17 @@ export default function StudentPortal({
   const [skippedAnswersCount, setSkippedAnswersCount] = useState(0);
   const [selectedAttemptForView, setSelectedAttemptForView] = useState(null);
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
+  const [retakePermissionInfo, setRetakePermissionInfo] = useState({ hasPermission: false, permission: null });
+
+  const checkRetakeStatus = async (roundNum = 1) => {
+    if (!currentUser?.studentId) return;
+    try {
+      const res = await apiCheckRetakePermission(currentUser.studentId, roundNum);
+      if (res && res.success) {
+        setRetakePermissionInfo({ hasPermission: !!res.hasPermission, permission: res.permission });
+      }
+    } catch {}
+  };
 
   // Anti-Cheating & Browser Lock States
   const [violationCount, setViolationCount] = useState(0);
@@ -328,13 +342,14 @@ export default function StudentPortal({
   const [, setSyncTick] = useState(0);
   useEffect(() => {
     const handleStorageUpdate = (e) => {
-      if (e.key === 'bob_questions' || e.key?.startsWith('bob_student_results_')) {
+      if (e.key === 'bob_questions' || e.key?.startsWith('bob_student_results_') || e.key === 'bob_retake_permissions') {
         setSyncTick((prev) => prev + 1);
+        checkRetakeStatus(1);
       }
     };
     window.addEventListener('storage', handleStorageUpdate);
     return () => window.removeEventListener('storage', handleStorageUpdate);
-  }, []);
+  }, [currentUser]);
 
   const loadStudentDashboardData = async () => {
     try {
@@ -358,6 +373,7 @@ export default function StudentPortal({
         if (myEntry) setMyLeaderboardRank(myEntry.rank);
       }
       loadPartnerData();
+      checkRetakeStatus(1);
     } catch (err) {
       console.error('Error fetching student dashboard data:', err);
     }
@@ -711,6 +727,38 @@ export default function StudentPortal({
     setSkippedAnswersCount(0);
 
     const startLocalQuiz = () => {
+      // Check if candidate already completed this round locally
+      const historyKey = currentUser?.studentId ? `bob_student_history_${currentUser.studentId}` : null;
+      let prevHistory = [];
+      if (historyKey) {
+        try {
+          const s = localStorage.getItem(historyKey);
+          if (s) prevHistory = JSON.parse(s);
+        } catch {}
+      }
+      const hasSavedRes = !!localStorage.getItem(`bob_student_results_${currentUser?.studentId}`);
+      const isAlreadyCompleted = prevHistory.some((h) => Number(h.roundNumber || 1) === Number(roundNumber)) || (Number(roundNumber) === 1 && hasSavedRes);
+
+      if (isAlreadyCompleted) {
+        let storedPerms = [];
+        try {
+          const sp = localStorage.getItem('bob_retake_permissions');
+          if (sp) storedPerms = JSON.parse(sp);
+        } catch {}
+        const grantedPerm = storedPerms.find(
+          (p) => p.studentId === currentUser?.studentId && Number(p.roundNumber) === Number(roundNumber) && p.status === 'GRANTED'
+        );
+        if (!grantedPerm) {
+          setQuizError('You have already completed this round. Retake permission is required from the administrator.');
+          return false;
+        }
+        // Consume permission locally
+        grantedPerm.status = 'USED';
+        grantedPerm.usedAt = new Date().toISOString();
+        localStorage.setItem('bob_retake_permissions', JSON.stringify(storedPerms));
+        window.dispatchEvent(new Event('storage'));
+      }
+
       const stored = getStoredQuestions() || [];
       if (!stored || stored.length === 0) {
         setQuizError('Question Bank is empty. Please ask the administrator to upload or add questions.');
@@ -751,6 +799,7 @@ export default function StudentPortal({
       setSelectedOption(null);
       setQuizTimeRemaining(30);
       requestFullScreen();
+      checkRetakeStatus(roundNumber);
       return true;
     };
 
@@ -762,6 +811,12 @@ export default function StudentPortal({
         setSelectedOption(null);
         setQuizTimeRemaining(res.attempt.timeLimitSeconds || 30);
         requestFullScreen();
+        checkRetakeStatus(roundNumber);
+        return;
+      }
+      if (res && (res.isLocked || !res.success)) {
+        setQuizError(res.error || 'You have already completed this round. Retake permission is required from the administrator.');
+        checkRetakeStatus(roundNumber);
         return;
       }
       startLocalQuiz();
@@ -897,6 +952,7 @@ export default function StudentPortal({
         totalScore: (prev?.totalScore || 0) + finalScore,
       }));
       setActiveQuizAttempt(null);
+      checkRetakeStatus(activeQuizAttempt?.roundNumber || 1);
       loadStudentDashboardData();
     } catch (err) {
       const finalScore = disqualified ? 0 : localScore;
@@ -944,6 +1000,7 @@ export default function StudentPortal({
         localStorage.setItem(`bob_student_results_${currentUser.studentId}`, JSON.stringify(summary));
       }
       setActiveQuizAttempt(null);
+      checkRetakeStatus(activeQuizAttempt?.roundNumber || 1);
     }
   };
 
@@ -2283,7 +2340,7 @@ export default function StudentPortal({
                       </div>
                     </div>
 
-                    {/* Action Buttons: Print PDF, Retake, Return */}
+                    {/* Action Buttons: Print PDF, Retake (Admin Controlled Only), Return */}
                     <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                       <button
                         type="button"
@@ -2294,18 +2351,21 @@ export default function StudentPortal({
                         <span>Download / Print Result Card (PDF)</span>
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setQuizResultSummary(null);
-                          setSelectedAttemptForView(null);
-                          handleStartAttempt(1);
-                        }}
-                        className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
-                      >
-                        <Zap className="w-4 h-4" />
-                        <span>Retake Round (Attempt #{attemptsHistory.length + 1})</span>
-                      </button>
+                      {/* IF ADMIN GRANTED RETAKE ACCESS: SHOW UNLOCKED RETAKE BUTTON */}
+                      {retakePermissionInfo?.hasPermission && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuizResultSummary(null);
+                            setSelectedAttemptForView(null);
+                            handleStartAttempt(1);
+                          }}
+                          className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
+                        >
+                          <Unlock className="w-4 h-4" />
+                          <span>RETAKE ACCESS GRANTED – START RETAKE</span>
+                        </button>
+                      )}
 
                       <button
                         onClick={() => setActiveTab('overview')}
@@ -2314,6 +2374,29 @@ export default function StudentPortal({
                         <span>← Return to Overview</span>
                       </button>
                     </div>
+
+                    {/* STRICT ATTEMPT COMPLETED – LOCKED NOTICE (WHEN NO RETAKE PERMISSION) */}
+                    {!retakePermissionInfo?.hasPermission ? (
+                      <div className="max-w-xl mx-auto p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-center space-y-1.5 animate-fadeIn">
+                        <div className="flex items-center justify-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
+                          <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>ATTEMPT COMPLETED – LOCKED</span>
+                        </div>
+                        <p className="text-xs text-amber-800 font-medium">
+                          You have already completed this round. Retake permission is required from the administrator.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="max-w-xl mx-auto p-3.5 rounded-2xl bg-emerald-50 border-2 border-emerald-300 text-center space-y-1 animate-fadeIn">
+                        <div className="flex items-center justify-center gap-2 text-emerald-900 font-bold text-xs sm:text-sm">
+                          <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>RETAKE ACCESS GRANTED BY ADMINISTRATOR</span>
+                        </div>
+                        <p className="text-xs text-emerald-800 font-medium">
+                          You have been authorized for 1 additional attempt. Once submitted, the round will automatically lock again.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2358,14 +2441,25 @@ export default function StudentPortal({
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-                      <button
-                        type="button"
-                        onClick={() => handleStartAttempt(1)}
-                        className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-sm shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
-                      >
-                        <Zap className="w-4 h-4" />
-                        <span>Start Round 1 Attempt (When Instructed)</span>
-                      </button>
+                      {retakePermissionInfo?.hasPermission ? (
+                        <button
+                          type="button"
+                          onClick={() => handleStartAttempt(1)}
+                          className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-sm shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
+                        >
+                          <Unlock className="w-4 h-4" />
+                          <span>RETAKE ACCESS GRANTED – START RETAKE</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleStartAttempt(1)}
+                          className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-sm shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
+                        >
+                          <Zap className="w-4 h-4" />
+                          <span>START ROUND 1</span>
+                        </button>
+                      )}
 
                       <button
                         type="button"

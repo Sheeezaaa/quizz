@@ -112,6 +112,7 @@ import ResultsManagement from './admin/ResultsManagement';
 import AnnouncementsManager from './admin/AnnouncementsManager';
 import AuditLogsViewer from './admin/AuditLogsViewer';
 import EncryptedVaultManager from './admin/EncryptedVaultManager';
+import RetakePermissionsManager from './admin/RetakePermissionsManager';
 import winterMountainBg from '../assets/winter-mountain-bg.jpg';
 
 export default function AdminPanel({ 
@@ -868,6 +869,7 @@ export default function AdminPanel({
     { id: 'rapidfire', label: 'Round 3: Rapid Fire', icon: Zap, badge: 'Live' },
     { id: 'buzzer', label: 'Round 4: Buzzer Final', icon: Trophy, badge: 'Live' },
     { id: 'results', label: 'Results & Standings', icon: Award, badge: null },
+    { id: 'retake', label: 'Manage Retake Permissions', icon: KeyRound, badge: 'Controlled' },
     { id: 'questions', label: 'Question Bank (Excel)', icon: FileSpreadsheet, badge: `${(questions || []).length}` },
     { id: 'subjects', label: '7 CS Subjects', icon: BookOpen, badge: '7' },
     { id: 'rounds', label: '4 Rounds Config', icon: Layers, badge: '4' },
@@ -3363,6 +3365,10 @@ export default function AdminPanel({
 
           {activeTab === 'results' && (
             <ResultsManagement isDark={isDark} />
+          )}
+
+          {activeTab === 'retake' && (
+            <RetakePermissionsManager isDark={isDark} />
           )}
 
           {activeTab === 'announcements' && (
