@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Trophy, 
   Award, 
@@ -7,48 +7,99 @@ import {
   Eye, 
   EyeOff, 
   RefreshCw, 
-  Zap, 
-  Gavel, 
+  Users, 
+  Search, 
+  Filter, 
+  Download, 
+  Printer,
   Sparkles,
-  Users,
-  Search,
-  Filter,
-  Download,
-  Medal,
-  Flame,
+  Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  HelpCircle,
+  FileSpreadsheet,
+  X,
+  Medal,
+  ChevronRight
 } from 'lucide-react';
 import { 
   apiGetLeaderboard, 
-  apiCalculateQualification, 
-  apiPublishResults,
-  apiGetQualificationStatus 
+  apiPublishResults 
 } from '../../utils/api';
+import { getStoredParticipants } from '../../utils/storage';
 
-export default function ResultsManagement({ isDark }) {
-  const [leaderboardData, setLeaderboardData] = useState({ leaderboard: [], totalCompetitors: 0 });
-  const [qualificationStatus, setQualificationStatus] = useState(null);
-  const [selectedViewRound, setSelectedViewRound] = useState('all'); // 'all' | 'r1' | 'r2' | 'r3' | 'r4'
+export default function ResultsManagement({ isDark = true }) {
+  const [leaderboardData, setLeaderboardData] = useState({ leaderboard: [], stats: null, totalCompetitors: 0 });
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'COMPLETED' | 'IN_PROGRESS' | 'PENDING'
   const [isPublished, setIsPublished] = useState(true);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ text: '', isError: false });
-  const [tieNotice, setTieNotice] = useState('');
-
-  useEffect(() => {
-    fetchResults();
-  }, []);
+  const [selectedStudentDetail, setSelectedStudentDetail] = useState(null);
 
   const fetchResults = async () => {
     setLoading(true);
     try {
-      const [lb, qStatus] = await Promise.all([
-        apiGetLeaderboard(),
-        apiGetQualificationStatus(),
-      ]);
-      if (lb) setLeaderboardData(lb);
-      if (qStatus) setQualificationStatus(qStatus);
+      const lb = await apiGetLeaderboard();
+      if (lb && Array.isArray(lb.leaderboard) && lb.leaderboard.length > 0) {
+        setLeaderboardData(lb);
+      } else {
+        // Fallback: build from local storage participants & history
+        const localParticipants = getStoredParticipants() || [];
+        const built = localParticipants.map((p, idx) => {
+          let score = 0;
+          let completed = false;
+          let inProg = false;
+          let answers = [];
+          try {
+            const hist = localStorage.getItem(`bob_student_history_${p.studentId}`);
+            if (hist) {
+              const parsed = JSON.parse(hist);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                const latest = parsed[parsed.length - 1];
+                score = Number(latest.score || 0);
+                completed = true;
+                answers = latest.answers || [];
+              }
+            }
+          } catch {}
+
+          return {
+            rank: idx + 1,
+            studentId: p.studentId,
+            fullName: p.fullName,
+            email: p.email,
+            department: p.degreeProgram || p.department || 'Computer Science',
+            campus: p.campus || 'Main Campus',
+            semester: p.semester || '4th Semester',
+            status: completed ? 'Completed' : 'Pending',
+            isCompleted: completed,
+            isInProgress: inProg,
+            score,
+            totalQuestions: 14,
+            percentage: Math.round((score / 14) * 100),
+            attemptCount: completed ? 1 : 0,
+            completedAt: null,
+            answers,
+            isChampion: idx === 0 && score > 0,
+          };
+        });
+
+        setLeaderboardData({
+          leaderboard: built,
+          stats: {
+            totalStudents: built.length,
+            completedCount: built.filter(b => b.isCompleted).length,
+            inProgressCount: 0,
+            pendingCount: built.filter(b => !b.isCompleted).length,
+            topScore: built.length > 0 ? Math.max(...built.map(b => b.score)) : 0,
+            averageScore: built.filter(b => b.isCompleted).length > 0
+              ? Number((built.filter(b => b.isCompleted).reduce((s, b) => s + b.score, 0) / built.filter(b => b.isCompleted).length).toFixed(1))
+              : 0
+          },
+          totalCompetitors: built.length
+        });
+      }
     } catch (err) {
       console.error('Error fetching results:', err);
     } finally {
@@ -56,30 +107,9 @@ export default function ResultsManagement({ isDark }) {
     }
   };
 
-  const handleRunQualification = async (roundNum) => {
-    setLoading(true);
-    setStatusMessage({ text: '', isError: false });
-    setTieNotice('');
-    try {
-      const res = await apiCalculateQualification(roundNum);
-      if (res.success) {
-        setStatusMessage({
-          text: `Qualification calculated for Round 0${roundNum}! ${res.qualifiedCount} of ${res.totalEvaluated} students advanced.`,
-          isError: false,
-        });
-        if (res.hasTie) {
-          setTieNotice(res.tieProtocolMessage);
-        }
-        fetchResults();
-      } else {
-        setStatusMessage({ text: res.error || 'Qualification calculation failed.', isError: true });
-      }
-    } catch (err) {
-      setStatusMessage({ text: err.message, isError: true });
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchResults();
+  }, []);
 
   const handleTogglePublish = async () => {
     const nextState = !isPublished;
@@ -95,569 +125,593 @@ export default function ResultsManagement({ isDark }) {
   };
 
   const exportCSV = () => {
-    if (leaderboardData.leaderboard.length === 0) return;
-    const headers = ["Rank", "Student ID", "Full Name", "Department", "Semester", "Round 1 (MCQ)", "Round 2 (Core)", "Round 3 (Rapid)", "Round 4 (Buzzer)", "Total Score", "Status"];
-    const rows = leaderboardData.leaderboard.map((item, idx) => [
+    const list = leaderboardData.leaderboard;
+    if (!list || list.length === 0) return;
+
+    const headers = ["Rank", "Student ID", "Full Name", "Email", "Department", "Campus", "Status", "Score", "Total MCQs", "Accuracy %", "Attempts", "Completed At"];
+    const rows = list.map((item, idx) => [
       `"${item.rank || idx + 1}"`,
       `"${item.studentId}"`,
       `"${item.fullName}"`,
+      `"${item.email || ''}"`,
       `"${item.department || 'Computer Science'}"`,
-      `"${item.semester || '4th'}"`,
-      `"${item.round1Score || 0}"`,
-      `"${item.round2Score || 0}"`,
-      `"${item.round3Score || 0}"`,
-      `"${item.round4Score || 0}"`,
-      `"${item.totalScore || 0}"`,
-      `"${item.isChampion ? 'Champion' : item.isQualifiedRound3 ? 'Finalist' : item.isQualifiedRound2 ? 'Semi-Finalist' : item.isQualifiedRound1 ? 'Qualified' : 'Participated'}"`
+      `"${item.campus || 'Main Campus'}"`,
+      `"${item.status || (item.isCompleted ? 'Completed' : 'Pending')}"`,
+      `"${item.score || 0}"`,
+      `"${item.totalQuestions || 14}"`,
+      `"${item.percentage || 0}%"`,
+      `"${item.attemptCount || 1}"`,
+      `"${item.completedAt ? new Date(item.completedAt).toLocaleString() : 'N/A'}"`
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `BOB_Results_Round_${selectedViewRound}_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `Battle_of_Brains_Student_Results_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const round1List = leaderboardData.leaderboard.filter((s) => (s.round1Score !== undefined && s.round1Score !== null) || s.isQualifiedRound1);
-  const round2List = leaderboardData.leaderboard.filter((s) => (s.round2Score !== undefined && s.round2Score !== null) || s.isQualifiedRound2);
-  const round3List = leaderboardData.leaderboard.filter((s) => (s.round3Score !== undefined && s.round3Score !== null) || s.isQualifiedRound3);
-  const round4List = leaderboardData.leaderboard.filter((s) => (s.round4Score !== undefined && s.round4Score !== null) || s.isChampion);
+  // Filtered leaderboard
+  const filteredStudents = useMemo(() => {
+    return (leaderboardData.leaderboard || []).filter((item) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchQuery = !q || 
+        (item.studentId || '').toLowerCase().includes(q) ||
+        (item.fullName || '').toLowerCase().includes(q) ||
+        (item.department || '').toLowerCase().includes(q) ||
+        (item.campus || '').toLowerCase().includes(q);
 
-  const round1Count = leaderboardData.leaderboard.filter((s) => s.isQualifiedRound1).length;
-  const round2Count = leaderboardData.leaderboard.filter((s) => s.isQualifiedRound2).length;
-  const round3Count = leaderboardData.leaderboard.filter((s) => s.isQualifiedRound3).length;
-  const champion = leaderboardData.leaderboard.find((s) => s.isChampion) || leaderboardData.leaderboard[0];
-  const runnerUp = leaderboardData.leaderboard.filter(s => s.studentId !== champion?.studentId)[0];
+      const matchStatus = 
+        statusFilter === 'ALL' ||
+        (statusFilter === 'COMPLETED' && (item.isCompleted || item.status === 'Completed')) ||
+        (statusFilter === 'IN_PROGRESS' && (item.isInProgress || item.status === 'In Progress')) ||
+        (statusFilter === 'PENDING' && (!item.isCompleted && !item.isInProgress && item.status !== 'Completed'));
 
-  // Filtering by search
-  const filterBySearch = (list) => {
-    if (!searchQuery.trim()) return list;
-    const q = searchQuery.toLowerCase();
-    return list.filter(item => 
-      (item.fullName || '').toLowerCase().includes(q) ||
-      (item.studentId || '').toLowerCase().includes(q) ||
-      (item.registrationRef || '').toLowerCase().includes(q)
-    );
+      return matchQuery && matchStatus;
+    });
+  }, [leaderboardData.leaderboard, searchQuery, statusFilter]);
+
+  const stats = leaderboardData.stats || {
+    totalStudents: leaderboardData.leaderboard.length,
+    completedCount: leaderboardData.leaderboard.filter(l => l.isCompleted || l.status === 'Completed').length,
+    inProgressCount: leaderboardData.leaderboard.filter(l => l.isInProgress || l.status === 'In Progress').length,
+    pendingCount: leaderboardData.leaderboard.filter(l => !l.isCompleted && l.status !== 'Completed').length,
+    topScore: leaderboardData.leaderboard.length > 0 ? Math.max(...leaderboardData.leaderboard.map(l => l.score || 0)) : 0,
+    averageScore: 0
   };
 
+  // Theme Helpers
+  const cardTheme = isDark
+    ? 'bg-slate-900/90 border-slate-800 text-slate-100 shadow-xl'
+    : 'bg-white border-slate-200 text-slate-900 shadow-sm';
+
+  const headingColor = isDark ? 'text-white' : 'text-slate-900';
+  const subtextColor = isDark ? 'text-slate-400' : 'text-slate-600';
+  const tableHeaderBg = isDark ? 'bg-slate-950/80 text-slate-400 border-slate-800' : 'bg-slate-50 text-slate-700 border-slate-200';
+  const tableRowHover = isDark ? 'hover:bg-slate-800/40 border-slate-800/70' : 'hover:bg-blue-50/40 border-slate-200';
+
   return (
-    <div className="space-y-6 animate-fadeIn">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 mb-2">
-            <Trophy className="w-3.5 h-3.5 text-amber-400" />
-            <span>Leaderboard & Tournament Qualification Center</span>
+    <div className="space-y-6">
+      {/* Top Header Card */}
+      <div className={`p-6 sm:p-7 rounded-2xl border ${cardTheme} relative overflow-hidden`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <span className={`p-3 rounded-2xl border ${
+                isDark 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                  : 'bg-emerald-50 text-emerald-600 border-emerald-200 shadow-sm'
+              }`}>
+                <Award className="w-6 h-6" />
+              </span>
+              <div>
+                <h1 className={`text-2xl sm:text-3xl font-heading font-black tracking-tight ${headingColor}`}>
+                  Student Results & Official Standings
+                </h1>
+                <p className={`text-xs sm:text-sm mt-0.5 font-medium ${subtextColor}`}>
+                  Single Round Combined CS Championship • All Registered Students & Live Scores
+                </p>
+              </div>
+            </div>
           </div>
-          <h3 className={`text-xl font-heading font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            Official Tournament Results & Round Progression
-          </h3>
-          <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'} mt-0.5`}>
-            Detailed results for Round 1 (Top 80%), Round 2 (Top 4), Round 3 (Top 2), and Round 4 (Buzzer Champion).
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={exportCSV}
-            className="px-3.5 py-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-heading font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export Results</span>
-          </button>
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={exportCSV}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-heading font-bold text-xs shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export CSV / Excel</span>
+            </button>
 
-          <button
-            onClick={handleTogglePublish}
-            className={`px-4 py-2 rounded-xl text-xs font-heading font-bold flex items-center gap-2 border transition-all cursor-pointer ${
-              isPublished
-                ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-600/30'
-                : 'bg-rose-600/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30'
-            }`}
-          >
-            {isPublished ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            <span>{isPublished ? 'Published' : 'Draft (Hidden)'}</span>
-          </button>
+            <button
+              onClick={handleTogglePublish}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-heading font-bold transition-all cursor-pointer ${
+                isPublished
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                  : isDark
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+              }`}
+            >
+              {isPublished ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              <span>{isPublished ? 'Public: Published' : 'Public: Hidden'}</span>
+            </button>
 
-          <button
-            onClick={fetchResults}
-            className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-              isDark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900'
-            }`}
-            title="Refresh Leaderboard"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-500' : ''}`} />
-          </button>
+            <button
+              onClick={fetchResults}
+              disabled={loading}
+              className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                isDark
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 shadow-sm'
+              }`}
+              title="Refresh results"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* Notifications */}
       {statusMessage.text && (
-        <div className={`p-3.5 rounded-xl text-xs flex items-center justify-between ${
-          statusMessage.isError ? 'bg-rose-500/15 border border-rose-500/30 text-rose-300' : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+        <div className={`p-4 rounded-xl border text-xs font-semibold flex items-center justify-between gap-3 ${
+          statusMessage.isError
+            ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+            : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
         }`}>
           <span>{statusMessage.text}</span>
-          <button onClick={() => setStatusMessage({ text: '', isError: false })}>×</button>
+          <button onClick={() => setStatusMessage({ text: '', isError: false })}>
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
-      {/* Tie-Breaker Notice Alert */}
-      {tieNotice && (
-        <div className="p-4 rounded-xl bg-amber-500/15 border-2 border-amber-500/50 text-amber-300 text-xs flex items-start gap-3 animate-fadeIn">
-          <Gavel className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <strong className="text-white block font-heading font-bold text-sm">Official Tie-Breaker Triggered!</strong>
-            <p className="leading-relaxed">{tieNotice}</p>
-            <div className="text-[11px] text-amber-200">
-              Protocol: Conduct 2 additional tie-breaker questions. If tie persists, conduct sudden-death buzzer decider.
-            </div>
+      {/* 4 Summary Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {/* Total Students */}
+        <div className={`p-5 rounded-2xl border ${cardTheme}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Enrolled</span>
+            <Users className="w-5 h-5 text-blue-500" />
           </div>
+          <div className={`text-2xl sm:text-3xl font-heading font-black mt-2 ${headingColor}`}>
+            {stats.totalStudents}
+          </div>
+          <span className="text-[11px] text-blue-500 font-medium">Registered Candidates</span>
         </div>
-      )}
 
-      {/* Automated Qualification Triggers Bar */}
-      <div className={`p-5 rounded-2xl border ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'}`}>
-        <span className="text-[11px] font-heading font-bold uppercase tracking-wider text-slate-400 block mb-3">
-          Execute Round Qualification Engine
-        </span>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          
-          <button
-            onClick={() => handleRunQualification(1)}
-            disabled={loading}
-            className="p-3.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-left transition-all cursor-pointer group"
-          >
-            <div className="text-[10px] font-mono font-bold text-blue-400">ROUND 01 SCREENING</div>
-            <div className="text-xs font-heading font-bold text-white mt-1 group-hover:text-blue-300">
-              Qualify Top 80% →
-            </div>
-            <div className="text-[10px] text-slate-400 mt-1">Advanced: {round1Count} students</div>
-          </button>
+        {/* Completed Attempts */}
+        <div className={`p-5 rounded-2xl border ${cardTheme}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Completed Quizzes</span>
+            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+          </div>
+          <div className={`text-2xl sm:text-3xl font-heading font-black mt-2 ${headingColor}`}>
+            {stats.completedCount}
+          </div>
+          <span className="text-[11px] text-emerald-500 font-medium">Submitted & Graded</span>
+        </div>
 
-          <button
-            onClick={() => handleRunQualification(2)}
-            disabled={loading}
-            className="p-3.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-left transition-all cursor-pointer group"
-          >
-            <div className="text-[10px] font-mono font-bold text-indigo-400">ROUND 02 CORE CS</div>
-            <div className="text-xs font-heading font-bold text-white mt-1 group-hover:text-indigo-300">
-              Qualify Top 4 →
-            </div>
-            <div className="text-[10px] text-slate-400 mt-1">Advanced: {round2Count} students</div>
-          </button>
+        {/* Pending / In Progress */}
+        <div className={`p-5 rounded-2xl border ${cardTheme}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Pending / Waiting</span>
+            <Clock className="w-5 h-5 text-amber-500" />
+          </div>
+          <div className={`text-2xl sm:text-3xl font-heading font-black mt-2 ${headingColor}`}>
+            {stats.pendingCount}
+          </div>
+          <span className="text-[11px] text-amber-500 font-medium">Awaiting Attempt</span>
+        </div>
 
-          <button
-            onClick={() => handleRunQualification(3)}
-            disabled={loading}
-            className="p-3.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-left transition-all cursor-pointer group"
-          >
-            <div className="text-[10px] font-mono font-bold text-amber-400">ROUND 03 RAPID FIRE</div>
-            <div className="text-xs font-heading font-bold text-white mt-1 group-hover:text-amber-300">
-              Qualify Top 2 Finalists →
-            </div>
-            <div className="text-[10px] text-slate-400 mt-1">Finalists: {round3Count} students</div>
-          </button>
-
-          <button
-            onClick={() => handleRunQualification(4)}
-            disabled={loading}
-            className="p-3.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-left transition-all cursor-pointer group"
-          >
-            <div className="text-[10px] font-mono font-bold text-emerald-400">ROUND 04 BUZZER FINAL</div>
-            <div className="text-xs font-heading font-bold text-white mt-1 group-hover:text-emerald-300">
-              Crown Champion 🏆
-            </div>
-            <div className="text-[10px] text-slate-400 mt-1">Winner: {champion?.fullName || 'TBD'}</div>
-          </button>
-
+        {/* Top Score */}
+        <div className={`p-5 rounded-2xl border ${cardTheme}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Tournament Leader</span>
+            <Trophy className="w-5 h-5 text-yellow-500" />
+          </div>
+          <div className={`text-2xl sm:text-3xl font-heading font-black mt-2 text-amber-400`}>
+            {stats.topScore} <span className="text-xs font-normal text-slate-400">pts</span>
+          </div>
+          <span className="text-[11px] text-slate-400 font-medium">Highest Achieved</span>
         </div>
       </div>
 
-      {/* Round Breakdown View Navigation */}
-      <div className={`p-1.5 rounded-2xl border flex flex-wrap items-center gap-1.5 ${
-        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-slate-100 border-slate-200'
-      }`}>
-        <button
-          onClick={() => setSelectedViewRound('all')}
-          className={`py-2 px-3.5 rounded-xl text-xs font-heading font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-            selectedViewRound === 'all'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-          }`}
-        >
-          <Trophy className="w-3.5 h-3.5" />
-          <span>All Rounds Summary</span>
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/25">
-            {leaderboardData.leaderboard.length}
-          </span>
-        </button>
+      {/* Filter & Search Bar */}
+      <div className={`p-4 rounded-2xl border ${cardTheme} flex flex-col md:flex-row items-center justify-between gap-3`}>
+        {/* Search */}
+        <div className="relative w-full md:w-80">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by ID, Name, Department..."
+            className={`w-full pl-9 pr-4 py-2 rounded-xl border text-xs font-medium focus:outline-none ${
+              isDark 
+                ? 'bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-blue-500' 
+                : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:bg-white'
+            }`}
+          />
+        </div>
 
-        <button
-          onClick={() => setSelectedViewRound('r1')}
-          className={`py-2 px-3.5 rounded-xl text-xs font-heading font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-            selectedViewRound === 'r1'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-          }`}
-        >
-          <span>Round 1: Screening (Top 80%)</span>
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/25">
-            {round1Count} Qualified
-          </span>
-        </button>
-
-        <button
-          onClick={() => setSelectedViewRound('r2')}
-          className={`py-2 px-3.5 rounded-xl text-xs font-heading font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-            selectedViewRound === 'r2'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-              : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-          }`}
-        >
-          <span>Round 2: Core CS (Top 4)</span>
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/25">
-            {round2Count} Semi-Finalists
-          </span>
-        </button>
-
-        <button
-          onClick={() => setSelectedViewRound('r3')}
-          className={`py-2 px-3.5 rounded-xl text-xs font-heading font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-            selectedViewRound === 'r3'
-              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
-              : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-          }`}
-        >
-          <Flame className="w-3.5 h-3.5 text-amber-300" />
-          <span>Round 3: Rapid Fire (Top 2)</span>
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/25">
-            {round3Count} Finalists
-          </span>
-        </button>
-
-        <button
-          onClick={() => setSelectedViewRound('r4')}
-          className={`py-2 px-3.5 rounded-xl text-xs font-heading font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-            selectedViewRound === 'r4'
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-              : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-          }`}
-        >
-          <Award className="w-3.5 h-3.5 text-amber-300" />
-          <span>Round 4: Buzzer Champion</span>
-        </button>
-      </div>
-
-      {/* Search Input Filter */}
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Filter contestants by name, Student ID, or Pass Reference..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className={`w-full pl-9 pr-4 py-2 rounded-xl text-xs border focus:outline-none ${
-            isDark ? 'bg-black/50 border-white/10 text-white focus:border-blue-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-blue-500'
-          }`}
-        />
-      </div>
-
-      {/* ========================================================= */}
-      {/* ROUND 4 PODIUM SHOWCASE (If R4 selected or Champion exists) */}
-      {/* ========================================================= */}
-      {selectedViewRound === 'r4' && (
-        <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-emerald-500/15 border-2 border-amber-500/40 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <span>GRAND FINAL BUZZER SHOWDOWN RESULTS</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto pt-2">
-            {/* Champion Card */}
-            <div className="p-5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/60 shadow-xl space-y-2 text-left">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black bg-amber-500 text-black uppercase">
-                🏆 Tournament Champion
+        {/* Status Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
+          {[
+            { id: 'ALL', label: 'All Students', count: leaderboardData.leaderboard.length },
+            { id: 'COMPLETED', label: 'Completed', count: stats.completedCount },
+            { id: 'IN_PROGRESS', label: 'In Progress', count: stats.inProgressCount },
+            { id: 'PENDING', label: 'Pending', count: stats.pendingCount },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                statusFilter === tab.id
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : isDark
+                  ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                statusFilter === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+              }`}>
+                {tab.count}
               </span>
-              <h4 className="text-xl font-heading font-black text-white mt-1">
-                {champion?.fullName || 'TBD'}
-              </h4>
-              <div className="text-xs font-mono text-slate-400">{champion?.studentId} • {champion?.department || 'Computer Science'}</div>
-              <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs">
-                <span className="text-slate-400">Buzzer Final Score:</span>
-                <span className="text-lg font-mono font-black text-amber-400">{champion?.round4Score || champion?.totalScore || 0} pts</span>
-              </div>
-            </div>
-
-            {/* Runner-Up Card */}
-            <div className="p-5 rounded-2xl bg-slate-800/40 border border-slate-700 space-y-2 text-left">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black bg-slate-300 text-black uppercase">
-                🥈 Grand Final Runner-Up
-              </span>
-              <h4 className="text-xl font-heading font-black text-white mt-1">
-                {runnerUp?.fullName || 'TBD'}
-              </h4>
-              <div className="text-xs font-mono text-slate-400">{runnerUp?.studentId} • {runnerUp?.department || 'Computer Science'}</div>
-              <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs">
-                <span className="text-slate-400">Final Score:</span>
-                <span className="text-lg font-mono font-black text-slate-300">{runnerUp?.round4Score || runnerUp?.totalScore || 0} pts</span>
-              </div>
-            </div>
-          </div>
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* Official Master Leaderboard Table */}
-      <div className={`rounded-xl border overflow-hidden ${isDark ? 'border-slate-800 bg-[#090f1d]' : 'border-slate-200 bg-white'}`}>
-        <div className="p-4 border-b flex items-center justify-between border-white/5 bg-black/40">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <span className="font-heading font-bold text-white text-xs uppercase tracking-wider">
-              {selectedViewRound === 'all' && `Overall Tournament Championship Standings (${leaderboardData.totalCompetitors} Competitors)`}
-              {selectedViewRound === 'r1' && `Round 01: Screening Test Standings (Top 80% Qualified)`}
-              {selectedViewRound === 'r2' && `Round 02: Core CS Technical Standings (Top 4 Advanced)`}
-              {selectedViewRound === 'r3' && `Round 03: Rapid Fire Speed Standings (Top 2 Finalists)`}
-              {selectedViewRound === 'r4' && `Round 04: Grand Final Buzzer Standings`}
-            </span>
-          </div>
-          <span className="text-[11px] text-slate-400 font-mono">
-            Synced: {new Date(leaderboardData.lastUpdated || Date.now()).toLocaleTimeString()}
-          </span>
-        </div>
-
+      {/* Main Results Table */}
+      <div className={`rounded-2xl border overflow-hidden ${cardTheme}`}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className={`border-b ${isDark ? 'border-slate-800 bg-black/20 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
-                <th className="p-3.5 font-heading font-bold text-center w-12">Rank</th>
-                <th className="p-3.5 font-heading font-bold">Contestant</th>
-                <th className="p-3.5 font-heading font-bold">Department</th>
-
-                {selectedViewRound === 'all' && (
-                  <>
-                    <th className="p-3.5 font-heading font-bold text-center">R1 (MCQ)</th>
-                    <th className="p-3.5 font-heading font-bold text-center">R2 (Core)</th>
-                    <th className="p-3.5 font-heading font-bold text-center">R3 (Rapid)</th>
-                    <th className="p-3.5 font-heading font-bold text-center">R4 (Buzzer)</th>
-                    <th className="p-3.5 font-heading font-bold text-center text-blue-400">Total Score</th>
-                  </>
-                )}
-
-                {selectedViewRound === 'r1' && (
-                  <>
-                    <th className="p-3.5 font-heading font-bold text-center text-blue-400">R1 Score (10 MCQs)</th>
-                    <th className="p-3.5 font-heading font-bold text-center">Cutoff Status</th>
-                  </>
-                )}
-
-                {selectedViewRound === 'r2' && (
-                  <>
-                    <th className="p-3.5 font-heading font-bold text-center text-indigo-400">R2 Core Score</th>
-                    <th className="p-3.5 font-heading font-bold text-center">Semi-Final Cutoff</th>
-                  </>
-                )}
-
-                {selectedViewRound === 'r3' && (
-                  <>
-                    <th className="p-3.5 font-heading font-bold text-center text-amber-400">R3 Rapid Points</th>
-                    <th className="p-3.5 font-heading font-bold text-center">Grand Final Slot</th>
-                  </>
-                )}
-
-                {selectedViewRound === 'r4' && (
-                  <>
-                    <th className="p-3.5 font-heading font-bold text-center text-emerald-400">Buzzer Final Points</th>
-                    <th className="p-3.5 font-heading font-bold text-center">Cumulative Score</th>
-                  </>
-                )}
-
-                <th className="p-3.5 font-heading font-bold text-right">Official Status</th>
+          <table className="w-full text-left text-xs">
+            <thead className={`border-b text-[11px] font-heading font-black uppercase tracking-wider ${tableHeaderBg}`}>
+              <tr>
+                <th className="p-4 w-14 text-center">Rank</th>
+                <th className="p-4">Candidate Information</th>
+                <th className="p-4">Department & Campus</th>
+                <th className="p-4 text-center">Status</th>
+                <th className="p-4 text-center">Score / Out of</th>
+                <th className="p-4 text-center">Accuracy %</th>
+                <th className="p-4 text-center">Attempt</th>
+                <th className="p-4 text-center">Completion Time</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
-              {(() => {
-                let displayList = leaderboardData.leaderboard;
-                if (selectedViewRound === 'r1') {
-                  displayList = leaderboardData.leaderboard.filter(s => s.round1Score !== undefined || s.isQualifiedRound1);
-                  if (displayList.length === 0) displayList = leaderboardData.leaderboard;
-                } else if (selectedViewRound === 'r2') {
-                  displayList = leaderboardData.leaderboard.filter(s => s.isQualifiedRound1);
-                  if (displayList.length === 0) displayList = leaderboardData.leaderboard.slice(0, 8);
-                } else if (selectedViewRound === 'r3') {
-                  displayList = leaderboardData.leaderboard.filter(s => s.isQualifiedRound2);
-                  if (displayList.length === 0) displayList = leaderboardData.leaderboard.slice(0, 4);
-                } else if (selectedViewRound === 'r4') {
-                  displayList = leaderboardData.leaderboard.filter(s => s.isQualifiedRound3 || s.isChampion);
-                  if (displayList.length === 0) displayList = leaderboardData.leaderboard.slice(0, 2);
-                }
 
-                const filtered = filterBySearch(displayList);
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
+              {filteredStudents.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="p-10 text-center text-slate-400">
+                    <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="font-heading font-bold text-sm">No student records matching your filter</p>
+                    <p className="text-xs mt-1">Try adjusting the search query or status filter above.</p>
+                  </td>
+                </tr>
+              ) : (
+                filteredStudents.map((item, idx) => {
+                  const isCompleted = item.isCompleted || item.status === 'Completed';
+                  const isInProg = item.isInProgress || item.status === 'In Progress';
+                  const rank = item.rank || idx + 1;
 
-                if (filtered.length === 0) {
                   return (
-                    <tr>
-                      <td colSpan={9} className="p-8 text-center text-slate-500">
-                        No contestant records found for this round.
-                      </td>
-                    </tr>
-                  );
-                }
-
-                return filtered.map((item, idx) => {
-                  return (
-                    <tr key={item.studentId} className={`hover:bg-white/[0.02] transition-colors ${
-                      item.isChampion ? 'bg-amber-500/10' : ''
-                    }`}>
-                      <td className="p-3.5 text-center font-mono font-black">
-                        {idx === 0 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-black font-black text-xs shadow-md">
-                            1
+                    <tr key={item.studentId} className={`transition-colors ${tableRowHover}`}>
+                      {/* Rank */}
+                      <td className="p-4 text-center">
+                        {isCompleted && rank === 1 ? (
+                          <span className="w-7 h-7 rounded-full bg-amber-400/20 text-amber-500 font-black text-xs inline-flex items-center justify-center border border-amber-400/40">
+                            🥇
                           </span>
-                        ) : idx === 1 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300 text-black font-black text-xs">
-                            2
+                        ) : isCompleted && rank === 2 ? (
+                          <span className="w-7 h-7 rounded-full bg-slate-300/20 text-slate-400 font-black text-xs inline-flex items-center justify-center border border-slate-400/40">
+                            🥈
                           </span>
-                        ) : idx === 2 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700 text-white font-black text-xs">
-                            3
+                        ) : isCompleted && rank === 3 ? (
+                          <span className="w-7 h-7 rounded-full bg-amber-700/20 text-amber-600 font-black text-xs inline-flex items-center justify-center border border-amber-700/40">
+                            🥉
                           </span>
                         ) : (
-                          <span className="text-slate-400">#{item.rank || idx + 1}</span>
+                          <span className="font-mono font-bold text-slate-400">
+                            #{rank}
+                          </span>
                         )}
                       </td>
 
-                      <td className="p-3.5">
-                        <div className="font-heading font-bold text-white flex items-center gap-1.5">
-                          <span>{item.fullName}</span>
-                          {item.isChampion && <span className="text-amber-400 text-sm">👑</span>}
+                      {/* Candidate Information */}
+                      <td className="p-4">
+                        <div className="flex items-center gap-2.5">
+                          <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 font-mono font-bold text-xs select-all">
+                            {item.studentId}
+                          </span>
+                          <div>
+                            <strong className={`font-heading font-black block text-sm ${headingColor}`}>
+                              {item.fullName}
+                            </strong>
+                            <span className="text-[11px] text-slate-400">{item.email}</span>
+                          </div>
                         </div>
-                        <div className="text-[10px] font-mono text-slate-400">{item.studentId} ({item.registrationRef})</div>
                       </td>
 
-                      <td className="p-3.5 text-slate-300">
-                        <div>{item.department || 'Computer Science'}</div>
-                        <div className="text-[10px] text-slate-400">{item.semester || '4th'}</div>
+                      {/* Department & Campus */}
+                      <td className="p-4">
+                        <div className={`font-medium ${headingColor}`}>{item.department || 'Computer Science'}</div>
+                        <span className="text-[11px] text-slate-400">{item.campus || 'Main Campus'} • {item.semester || '4th Semester'}</span>
                       </td>
 
-                      {selectedViewRound === 'all' && (
-                        <>
-                          <td className="p-3.5 text-center font-mono text-slate-300">
-                            {item.round1Score !== undefined ? `${item.round1Score} pts` : '--'}
-                          </td>
-                          <td className="p-3.5 text-center font-mono text-slate-300">
-                            {item.round2Score !== undefined ? `${item.round2Score} pts` : '--'}
-                          </td>
-                          <td className="p-3.5 text-center font-mono text-slate-300">
-                            {item.round3Score !== undefined ? `${item.round3Score} pts` : '--'}
-                          </td>
-                          <td className="p-3.5 text-center font-mono text-slate-300">
-                            {item.round4Score !== undefined ? `${item.round4Score} pts` : '--'}
-                          </td>
-                          <td className="p-3.5 text-center font-mono font-black text-sm text-blue-400">
-                            {item.totalScore}
-                          </td>
-                        </>
-                      )}
-
-                      {selectedViewRound === 'r1' && (
-                        <>
-                          <td className="p-3.5 text-center font-mono font-black text-blue-400">
-                            {item.round1Score !== undefined ? `${item.round1Score} / 10 pts` : '--'}
-                          </td>
-                          <td className="p-3.5 text-center">
-                            {item.isQualifiedRound1 ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                ✓ Top 80% Cutoff Passed
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-slate-500">
-                                Below Cutoff
-                              </span>
-                            )}
-                          </td>
-                        </>
-                      )}
-
-                      {selectedViewRound === 'r2' && (
-                        <>
-                          <td className="p-3.5 text-center font-mono font-black text-indigo-400">
-                            {item.round2Score !== undefined ? `${item.round2Score} pts` : '--'}
-                          </td>
-                          <td className="p-3.5 text-center">
-                            {item.isQualifiedRound2 ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                                ✓ Top 4 Semi-Finalist
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-slate-500">
-                                Eliminated in R2
-                              </span>
-                            )}
-                          </td>
-                        </>
-                      )}
-
-                      {selectedViewRound === 'r3' && (
-                        <>
-                          <td className="p-3.5 text-center font-mono font-black text-amber-400">
-                            {item.round3Score !== undefined ? `${item.round3Score} pts` : '--'}
-                          </td>
-                          <td className="p-3.5 text-center">
-                            {item.isQualifiedRound3 ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                ✓ Grand Finalist (Top 2)
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-slate-500">
-                                3rd/4th Place
-                              </span>
-                            )}
-                          </td>
-                        </>
-                      )}
-
-                      {selectedViewRound === 'r4' && (
-                        <>
-                          <td className="p-3.5 text-center font-mono font-black text-emerald-400">
-                            {item.round4Score !== undefined ? `${item.round4Score} pts` : `${item.totalScore} pts`}
-                          </td>
-                          <td className="p-3.5 text-center font-mono font-bold text-white">
-                            {item.totalScore} pts
-                          </td>
-                        </>
-                      )}
-
-                      <td className="p-3.5 text-right whitespace-nowrap">
-                        {item.isChampion ? (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                            🏆 Champion
+                      {/* Status */}
+                      <td className="p-4 text-center">
+                        {isCompleted ? (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            ✓ Completed
                           </span>
-                        ) : item.isQualifiedRound3 ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                            Finalist (R4)
-                          </span>
-                        ) : item.isQualifiedRound2 ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                            Semi-Finalist (R3)
-                          </span>
-                        ) : item.isQualifiedRound1 ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                            Qualified (R2)
+                        ) : isInProg ? (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 animate-pulse">
+                            ⏳ In Progress
                           </span>
                         ) : (
-                          <span className="text-[10px] text-slate-500">Participated</span>
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700">
+                            Pending
+                          </span>
                         )}
+                      </td>
+
+                      {/* Score */}
+                      <td className="p-4 text-center">
+                        <span className={`text-base font-heading font-black font-mono ${
+                          isCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
+                        }`}>
+                          {item.score || 0}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-mono"> / {item.totalQuestions || 14}</span>
+                      </td>
+
+                      {/* Accuracy */}
+                      <td className="p-4 text-center">
+                        <div className="flex flex-col items-center">
+                          <span className={`font-mono font-bold ${
+                            item.percentage >= 80 ? 'text-emerald-500' : item.percentage >= 50 ? 'text-blue-500' : 'text-slate-400'
+                          }`}>
+                            {item.percentage || 0}%
+                          </span>
+                          <div className="w-16 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden mt-1">
+                            <div 
+                              className={`h-full ${
+                                item.percentage >= 80 ? 'bg-emerald-500' : item.percentage >= 50 ? 'bg-blue-500' : 'bg-slate-400'
+                              }`} 
+                              style={{ width: `${item.percentage || 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Attempt Count */}
+                      <td className="p-4 text-center font-mono font-medium">
+                        {item.attemptCount > 1 ? (
+                          <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-bold">
+                            Attempt #{item.attemptCount} (Retake)
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 text-[11px]">
+                            Attempt #{item.attemptCount || 1}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Completion Time */}
+                      <td className="p-4 text-center font-mono text-[11px] text-slate-400">
+                        {item.completedAt ? (
+                          <span>{new Date(item.completedAt).toLocaleString()}</span>
+                        ) : (
+                          <span className="text-slate-500">—</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setSelectedStudentDetail(item)}
+                            className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                              isDark
+                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 shadow-sm'
+                            }`}
+                            title="View student breakdown & answers"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-blue-500" />
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setSelectedStudentDetail(item);
+                              setTimeout(() => window.print(), 300);
+                            }}
+                            className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                              isDark
+                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 shadow-sm'
+                            }`}
+                            title="Print / Save Official Result Card"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-emerald-500" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
-                });
-              })()}
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* Detailed Student Answer Breakdown Modal */}
+      {selectedStudentDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className={`w-full max-w-3xl rounded-3xl border ${cardTheme} shadow-2xl p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto`}>
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                  Candidate Result Transcript
+                </span>
+                <h3 className={`text-xl font-heading font-black mt-2 ${headingColor}`}>
+                  {selectedStudentDetail.fullName} ({selectedStudentDetail.studentId})
+                </h3>
+                <p className={`text-xs mt-0.5 ${subtextColor}`}>
+                  {selectedStudentDetail.department} • {selectedStudentDetail.campus}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setSelectedStudentDetail(null)}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scorecard Summary Pill Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-xl bg-blue-50 dark:bg-slate-800/60 border border-blue-200 dark:border-slate-700 text-center">
+                <span className="text-[10px] font-bold uppercase text-slate-400">Total Score</span>
+                <div className="text-xl font-black font-heading text-blue-600 dark:text-blue-400 mt-0.5">
+                  {selectedStudentDetail.score} pts
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-slate-800/60 border border-emerald-200 dark:border-slate-700 text-center">
+                <span className="text-[10px] font-bold uppercase text-slate-400">Correct Answers</span>
+                <div className="text-xl font-black font-heading text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {selectedStudentDetail.correctCount || selectedStudentDetail.score} MCQs
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-slate-800/60 border border-rose-200 dark:border-slate-700 text-center">
+                <span className="text-[10px] font-bold uppercase text-slate-400">Wrong Answers</span>
+                <div className="text-xl font-black font-heading text-rose-600 dark:text-rose-400 mt-0.5">
+                  {selectedStudentDetail.wrongCount || Math.max(0, (selectedStudentDetail.totalQuestions || 14) - selectedStudentDetail.score)} MCQs
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-indigo-50 dark:bg-slate-800/60 border border-indigo-200 dark:border-slate-700 text-center">
+                <span className="text-[10px] font-bold uppercase text-slate-400">Accuracy %</span>
+                <div className="text-xl font-black font-heading text-indigo-600 dark:text-indigo-400 mt-0.5">
+                  {selectedStudentDetail.percentage}%
+                </div>
+              </div>
+            </div>
+
+            {/* Recorded Questions & Selected Options */}
+            <div className="space-y-3">
+              <h4 className={`text-sm font-heading font-black uppercase tracking-wider ${headingColor}`}>
+                Question-by-Question Evaluation Breakdown
+              </h4>
+
+              {selectedStudentDetail.allocatedQuestions && selectedStudentDetail.allocatedQuestions.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedStudentDetail.allocatedQuestions.map((q, qIdx) => {
+                    const ans = (selectedStudentDetail.answers || []).find(a => a.questionId === q.id);
+                    const isCorrect = ans ? ans.isCorrect : false;
+                    const hasAnswered = ans && ans.selectedOptionIndex !== undefined;
+
+                    return (
+                      <div 
+                        key={q.id || qIdx} 
+                        className={`p-4 rounded-xl border text-xs space-y-2 ${
+                          isCorrect
+                            ? 'bg-emerald-500/5 border-emerald-500/30'
+                            : hasAnswered
+                            ? 'bg-rose-500/5 border-rose-500/30'
+                            : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-400 font-mono">
+                            Question #{qIdx + 1} • {q.subject || 'Computer Science'}
+                          </span>
+                          {isCorrect ? (
+                            <span className="px-2 py-0.5 rounded-md font-mono font-bold text-[10px] bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
+                              +1.0 Pt • Correct
+                            </span>
+                          ) : hasAnswered ? (
+                            <span className="px-2 py-0.5 rounded-md font-mono font-bold text-[10px] bg-rose-500/20 text-rose-500 border border-rose-500/30">
+                              0.0 Pt • Incorrect
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md font-mono font-bold text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-500">
+                              Unanswered / Skipped
+                            </span>
+                          )}
+                        </div>
+
+                        <p className={`font-semibold ${headingColor}`}>{q.question}</p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                          {(q.options || []).map((opt, optIdx) => {
+                            const isSelected = ans && ans.selectedOptionIndex === optIdx;
+                            return (
+                              <div
+                                key={optIdx}
+                                className={`p-2 rounded-lg border text-[11px] font-medium flex items-center justify-between ${
+                                  isSelected
+                                    ? isCorrect
+                                      ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 font-bold'
+                                      : 'bg-rose-500/20 border-rose-500/40 text-rose-400 font-bold'
+                                    : 'bg-slate-100/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+                                }`}
+                              >
+                                <span>{String.fromCharCode(65 + optIdx)}. {opt}</span>
+                                {isSelected && (
+                                  <span className="text-[10px] font-mono uppercase font-bold">Selected</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-6 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-center text-xs text-slate-400">
+                  <p className="font-bold">No individual question log recorded for this attempt.</p>
+                  <p className="mt-1">Candidate status: {selectedStudentDetail.status} • Total Points: {selectedStudentDetail.score}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <button
+                onClick={() => window.print()}
+                className="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Official Result Card</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedStudentDetail(null)}
+                className="py-2.5 px-5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -868,7 +868,7 @@ export default function AdminPanel({
     { id: 'schedule', label: 'Quiz Schedule & Access Control', icon: CalendarClock, badge: 'Live PKT' },
     { id: 'teams', label: 'Teams Roster (2-3)', icon: Users, badge: 'Official' },
     { id: 'registrations', label: 'Individual Candidates', icon: IdCard, badge: `${(participants || []).length}` },
-    { id: 'results', label: 'Results & Standings', icon: Award, badge: null },
+    { id: 'results', label: 'Results & Standings', icon: Award, badge: 'All Students' },
     { id: 'retake', label: 'Manage Retake Permissions', icon: KeyRound, badge: 'Controlled' },
     { id: 'questions', label: 'Question Bank (Excel)', icon: FileSpreadsheet, badge: `${(questions || []).length}` },
     { id: 'subjects', label: '7 CS Subjects', icon: BookOpen, badge: '7' },

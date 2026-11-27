@@ -4485,79 +4485,128 @@ app.get('/api/qualification/status', (req, res) => {
 // RESULTS & LIVE LEADERBOARD
 // ====================================================================
 
-// Leaderboard: Public view gets published results; Admin gets all
+// Leaderboard: Public view gets published results; Admin gets all students
 app.get('/api/results/leaderboard', (req, res) => {
   const db = readDB();
   const results = db.results || [];
   const participants = db.participants || [];
+  const attempts = db.attempts || [];
+  const publishedCount = db.schedule?.publishedQuestionCount || (db.publishedQuestions?.length) || 14;
 
-  // Group by student to calculate cumulative total
   const studentMap = {};
+
+  // 1. Process all registered participants
   participants.forEach((p) => {
+    const pAttempts = attempts.filter((a) => a.studentId === p.studentId);
+    const completedAttempt = pAttempts.find((a) => a.status === 'completed' || a.status === 'timed_out');
+    const inProgressAttempt = pAttempts.find((a) => a.status === 'in_progress');
+    const resultRecord = results.find((r) => r.studentId === p.studentId);
+
+    const latestAttempt = completedAttempt || inProgressAttempt || pAttempts[0];
+
+    const score = resultRecord?.score ?? (latestAttempt?.score ?? 0);
+    const totalQ = latestAttempt?.allocatedQuestionIds?.length || publishedCount;
+    const isCompleted = Boolean(completedAttempt || (resultRecord && resultRecord.completedAt));
+    const isInProgress = Boolean(!isCompleted && inProgressAttempt);
+
+    const answers = latestAttempt?.answers || [];
+    const correctCount = answers.filter((a) => a.isCorrect).length;
+    const wrongCount = answers.filter((a) => !a.isCorrect && a.selectedOptionIndex !== undefined).length;
+    const percentage = totalQ > 0 ? Math.round((score / totalQ) * 100) : 0;
+
     studentMap[p.studentId] = {
       studentId: p.studentId,
       fullName: p.fullName,
-      department: p.department,
-      semester: p.semester,
+      email: p.email,
+      department: p.degreeProgram || p.department || 'Computer Science',
+      campus: p.campus || 'Main Campus',
+      semester: p.semester || '4th Semester',
       registrationRef: p.id,
-      round1Score: 0,
-      round2Score: 0,
-      round3Score: 0,
-      round4Score: 0,
-      totalScore: 0,
-      highestRoundReached: 1,
-      isQualifiedRound1: false,
-      isQualifiedRound2: false,
-      isQualifiedRound3: false,
+      status: isCompleted ? 'Completed' : (isInProgress ? 'In Progress' : 'Pending'),
+      isCompleted,
+      isInProgress,
+      score: Number(score.toFixed(2)),
+      totalQuestions: totalQ,
+      correctCount,
+      wrongCount,
+      percentage,
+      attemptCount: pAttempts.length,
+      completedAt: resultRecord?.completedAt || latestAttempt?.finishedAt || null,
+      startedAt: latestAttempt?.startedAt || null,
+      answers: answers,
+      allocatedQuestions: latestAttempt?.allocatedQuestions || [],
+      roundNumber: 1,
+      totalScore: Number(score.toFixed(2)),
       isChampion: false,
     };
   });
 
-  results.forEach((r) => {
-    if (!studentMap[r.studentId]) {
-      studentMap[r.studentId] = {
-        studentId: r.studentId,
-        fullName: r.studentName || r.studentId,
-        round1Score: 0,
-        round2Score: 0,
-        round3Score: 0,
-        round4Score: 0,
-        totalScore: 0,
-        highestRoundReached: r.roundNumber,
+  // 2. Catch any attempts by unregistered or on-the-fly candidate IDs
+  attempts.forEach((a) => {
+    if (!studentMap[a.studentId]) {
+      const answers = a.answers || [];
+      const totalQ = a.allocatedQuestionIds?.length || publishedCount;
+      const score = Number(a.score || 0);
+      const isCompleted = a.status === 'completed' || a.status === 'timed_out';
+      const isInProgress = a.status === 'in_progress';
+
+      studentMap[a.studentId] = {
+        studentId: a.studentId,
+        fullName: a.studentName || a.studentId,
+        email: `${a.studentId.toLowerCase()}@student.comsats.edu.pk`,
+        department: 'Computer Science',
+        campus: 'Main Campus',
+        semester: '4th Semester',
+        registrationRef: a.id,
+        status: isCompleted ? 'Completed' : (isInProgress ? 'In Progress' : 'Pending'),
+        isCompleted,
+        isInProgress,
+        score: Number(score.toFixed(2)),
+        totalQuestions: totalQ,
+        correctCount: answers.filter((ans) => ans.isCorrect).length,
+        wrongCount: answers.filter((ans) => !ans.isCorrect && ans.selectedOptionIndex !== undefined).length,
+        percentage: totalQ > 0 ? Math.round((score / totalQ) * 100) : 0,
+        attemptCount: 1,
+        completedAt: a.finishedAt || null,
+        startedAt: a.startedAt || null,
+        answers: answers,
+        allocatedQuestions: a.allocatedQuestions || [],
+        roundNumber: 1,
+        totalScore: Number(score.toFixed(2)),
+        isChampion: false,
       };
     }
-
-    const s = studentMap[r.studentId];
-    if (r.roundNumber === 1) {
-      s.round1Score = r.score;
-      s.isQualifiedRound1 = r.isQualified;
-      if (r.isQualified) s.highestRoundReached = Math.max(s.highestRoundReached, 2);
-    } else if (r.roundNumber === 2) {
-      s.round2Score = r.score;
-      s.isQualifiedRound2 = r.isQualified;
-      if (r.isQualified) s.highestRoundReached = Math.max(s.highestRoundReached, 3);
-    } else if (r.roundNumber === 3) {
-      s.round3Score = r.score;
-      s.isQualifiedRound3 = r.isQualified;
-      if (r.isQualified) s.highestRoundReached = Math.max(s.highestRoundReached, 4);
-    } else if (r.roundNumber === 4) {
-      s.round4Score = r.score;
-      if (r.isQualified) s.isChampion = true;
-    }
-
-    s.totalScore = Number((s.round1Score + s.round2Score + s.round3Score + s.round4Score).toFixed(2));
   });
 
   const leaderboard = Object.values(studentMap);
-  // Sort descending by total score, then by round 4, round 3, round 2, round 1
-  leaderboard.sort((a, b) => b.totalScore - a.totalScore || b.round4Score - a.round4Score || b.round3Score - a.round3Score || b.round2Score - a.round2Score);
+  // Sort descending by total score, then by completed timestamp
+  leaderboard.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (a.completedAt && b.completedAt) return new Date(a.completedAt) - new Date(b.completedAt);
+    if (a.isCompleted && !b.isCompleted) return -1;
+    if (!a.isCompleted && b.isCompleted) return 1;
+    return a.studentId.localeCompare(b.studentId);
+  });
 
   leaderboard.forEach((item, idx) => {
     item.rank = idx + 1;
+    if (idx === 0 && item.score > 0 && item.isCompleted) item.isChampion = true;
   });
+
+  const stats = {
+    totalStudents: leaderboard.length,
+    completedCount: leaderboard.filter((l) => l.isCompleted).length,
+    inProgressCount: leaderboard.filter((l) => l.isInProgress).length,
+    pendingCount: leaderboard.filter((l) => !l.isCompleted && !l.isInProgress).length,
+    topScore: leaderboard.length > 0 ? Math.max(...leaderboard.map((l) => l.score)) : 0,
+    averageScore: leaderboard.filter((l) => l.isCompleted).length > 0
+      ? Number((leaderboard.filter((l) => l.isCompleted).reduce((sum, l) => sum + l.score, 0) / leaderboard.filter((l) => l.isCompleted).length).toFixed(1))
+      : 0,
+  };
 
   res.json({
     leaderboard,
+    stats,
     totalCompetitors: leaderboard.length,
     lastUpdated: new Date().toISOString(),
   });
