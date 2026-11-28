@@ -159,7 +159,7 @@ export default function PracticeArena({ initialMode = 'round1' }) {
             className="px-6 py-2.5 rounded-lg text-xs font-heading font-bold bg-[#2563eb] text-white shadow-md flex items-center gap-2"
           >
             <Zap className="w-3.5 h-3.5" />
-            <span>Single Round Championship: 30s MCQs (All 7 CS Disciplines)</span>
+            <span>Single Round Championship: 15s MCQs (All 7 CS Disciplines)</span>
           </button>
         </div>
 

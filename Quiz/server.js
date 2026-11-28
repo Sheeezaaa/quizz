@@ -82,12 +82,12 @@ const DEFAULT_ROUNDS = [
     roundNumber: 1, 
     title: 'Single Combined Grand Quiz (All 7 CS Subjects)', 
     stageBadge: 'Official Championship Round • 7 CS Subjects', 
-    timeLimitSeconds: 30, 
+    timeLimitSeconds: 15, 
     questionsCount: 14, 
     markingCorrect: 1.0, 
     markingNegative: 0.0, 
     qualificationRule: 'Highest overall score determines the Champion of Battle of Brains.', 
-    strictRule: 'Strict 30 seconds per question. Answers will NOT be accepted after timer expires.', 
+    strictRule: 'Strict 15 seconds per question. Answers will NOT be accepted after timer expires.', 
     isActive: true, 
     isCompleted: false 
   }
@@ -2319,7 +2319,7 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
           expiresAt: ongoing.expiresAt,
           questions: ongoing.allocatedQuestions,
           submittedCount: (ongoing.answers || []).length,
-          timeLimitSeconds: 30,
+          timeLimitSeconds: 15,
         },
       });
     } else {
@@ -2363,7 +2363,7 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
   }));
 
   const now = new Date();
-  const perQuestionSeconds = 30; // 30 seconds per question strict rule
+  const perQuestionSeconds = 15; // 15 seconds per question strict rule
   const totalSeconds = perQuestionSeconds * selected.length;
 
   let expiresAtMs = now.getTime() + totalSeconds * 1000 + 10000;
@@ -2403,7 +2403,7 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
       roundNumber: 1,
       expiresAt: newAttempt.expiresAt,
       questions: sanitizedAllocated,
-      timeLimitSeconds: 30,
+      timeLimitSeconds: 15,
       totalSeconds,
     },
   });

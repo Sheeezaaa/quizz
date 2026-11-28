@@ -411,7 +411,7 @@ export default function QuizScheduleAccessControl({ isDark = true }) {
               <Info className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" /> Automatic Access Rules:
             </p>
             <p className="font-medium">• <strong className={isDark ? 'text-white font-bold' : 'text-slate-950 font-black'}>Before Start Time:</strong> Students can log in 24/7; quiz arena displays live countdown; Start Quiz button is disabled.</p>
-            <p className="font-medium">• <strong className={isDark ? 'text-white font-bold' : 'text-slate-950 font-black'}>During Window:</strong> Eligible students can take the quiz with 30s per question timer.</p>
+            <p className="font-medium">• <strong className={isDark ? 'text-white font-bold' : 'text-slate-950 font-black'}>During Window:</strong> Eligible students can take the quiz with 15s per question timer.</p>
             <p className="font-medium">• <strong className={isDark ? 'text-white font-bold' : 'text-slate-950 font-black'}>After End Time:</strong> Access strictly blocks all new attempts and rejects answers submitted after cutoff.</p>
           </div>
 
@@ -593,7 +593,7 @@ export default function QuizScheduleAccessControl({ isDark = true }) {
               ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
               : 'bg-blue-50 text-blue-700 border-blue-200'
           }`}>
-            30 Sec / MCQ • +1 Pt Correct • No Negative Marking
+            15 Sec / MCQ • +1 Pt Correct • No Negative Marking
           </span>
         </div>
 

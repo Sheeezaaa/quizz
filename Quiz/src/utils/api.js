@@ -887,7 +887,7 @@ export async function apiStartQuizAttempt(roundNumber = 1) {
     roundNumber: 1, // Single combined round
     questions: sanitizedAllocated,
     submittedCount: 0,
-    timeLimitSeconds: 30, // 30-second countdown timer per question
+    timeLimitSeconds: 15, // 15-second countdown timer per question
     isLocalFallback: true,
   };
 

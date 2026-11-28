@@ -176,7 +176,7 @@ export default function StudentPortal({
   const [activeQuizAttempt, setActiveQuizAttempt] = useState(null);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
-  const [quizTimeRemaining, setQuizTimeRemaining] = useState(30);
+  const [quizTimeRemaining, setQuizTimeRemaining] = useState(15);
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
   const [quizResultSummary, setQuizResultSummary] = useState(null);
   const [quizError, setQuizError] = useState('');
@@ -1078,14 +1078,14 @@ export default function StudentPortal({
         roundNumber: Number(roundNumber) || 1,
         questions: sanitizedAllocated,
         submittedCount: 0,
-        timeLimitSeconds: 30,
+        timeLimitSeconds: 15,
         isLocalFallback: true,
       };
 
       setActiveQuizAttempt(localAttempt);
       setCurrentQIndex(0);
       setSelectedOption(null);
-      setQuizTimeRemaining(30);
+      setQuizTimeRemaining(15);
       requestFullScreen();
       checkRetakeStatus(roundNumber);
       return true;
@@ -1097,7 +1097,7 @@ export default function StudentPortal({
         setActiveQuizAttempt(res.attempt);
         setCurrentQIndex(0);
         setSelectedOption(null);
-        setQuizTimeRemaining(res.attempt.timeLimitSeconds || 30);
+        setQuizTimeRemaining(res.attempt.timeLimitSeconds || 15);
         requestFullScreen();
         checkRetakeStatus(roundNumber);
         return;
@@ -1129,7 +1129,7 @@ export default function StudentPortal({
         activeQuizAttempt.id,
         currentQ.id,
         selectedOption,
-        (activeQuizAttempt.timeLimitSeconds || 30) - quizTimeRemaining
+        (activeQuizAttempt.timeLimitSeconds || 15) - quizTimeRemaining
       );
 
       if (res && res.isCorrect) {
@@ -1177,7 +1177,7 @@ export default function StudentPortal({
 
     if (currentQIndex + 1 < activeQuizAttempt.questions.length) {
       setCurrentQIndex((prev) => prev + 1);
-      setQuizTimeRemaining(activeQuizAttempt.timeLimitSeconds || 30);
+      setQuizTimeRemaining(activeQuizAttempt.timeLimitSeconds || 15);
     } else {
       handleFinishAttempt(false);
     }
@@ -2940,9 +2940,9 @@ export default function StudentPortal({
                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                       <div 
                         className={`h-full transition-all duration-1000 ${
-                          quizTimeRemaining <= 10 ? 'bg-gradient-to-r from-amber-500 to-rose-600 animate-pulse' : 'bg-gradient-to-r from-sky-500 to-blue-600'
+                          quizTimeRemaining <= 5 ? 'bg-gradient-to-r from-amber-500 to-rose-600 animate-pulse' : 'bg-gradient-to-r from-sky-500 to-blue-600'
                         }`}
-                        style={{ width: `${Math.max(0, Math.min(100, (quizTimeRemaining / (activeQuizAttempt.timeLimitSeconds || 30)) * 100))}%` }}
+                        style={{ width: `${Math.max(0, Math.min(100, (quizTimeRemaining / (activeQuizAttempt.timeLimitSeconds || 15)) * 100))}%` }}
                       />
                     </div>
 
@@ -3296,7 +3296,7 @@ export default function StudentPortal({
 
                         <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200">
                           <strong className="block text-slate-900 font-bold">⏱️ Timer & Rules:</strong>
-                          <span className="text-slate-600">30 seconds / question</span>
+                          <span className="text-slate-600">15 seconds / question</span>
                           <span className="block text-[10px] text-indigo-600 font-bold mt-0.5">+1 Pt Correct • No Neg</span>
                         </div>
                       </div>
@@ -3577,7 +3577,7 @@ export default function StudentPortal({
                       <span>3. Strict Question Countdown Timers</span>
                     </div>
                     <p className="text-amber-800 font-medium leading-relaxed">
-                      Round 1 MCQs enforce a strict 30-second timer per question. Answers will NOT be accepted after the timer expires, and the system will automatically advance to the next question.
+                      Round 1 MCQs enforce a strict 15-second timer per question. Answers will NOT be accepted after the timer expires, and the system will automatically advance to the next question.
                     </p>
                   </div>
 
@@ -4031,13 +4031,13 @@ export default function StudentPortal({
                 {/* Academic Evaluation Summary Table */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-2 border-slate-300 rounded-xl overflow-hidden shadow-xs">
-                    <thead className="bg-slate-900 text-white font-mono text-[11px] uppercase border-b-2 border-slate-700 print:bg-slate-100 print:text-black">
-                      <tr>
-                        <th className="py-3 px-3.5 text-white print:text-slate-900 font-bold">Examination Stage</th>
-                        <th className="py-3 px-2 text-center text-white print:text-slate-900 font-bold">Total MCQs</th>
-                        <th className="py-3 px-2 text-center text-emerald-300 print:text-emerald-700 font-bold">Correct</th>
-                        <th className="py-3 px-2 text-center text-rose-300 print:text-rose-700 font-bold">Wrong / Skip</th>
-                        <th className="py-3 px-3.5 text-right text-blue-300 print:text-blue-800 font-bold">Marks Scored</th>
+                    <thead className="bg-slate-100 text-slate-800 font-mono text-[11px] uppercase border-b-2 border-slate-300">
+                      <tr className="bg-slate-100 text-slate-900 border-b border-slate-300">
+                        <th className="py-3 px-3.5 text-slate-900 font-extrabold tracking-wider">Examination Stage</th>
+                        <th className="py-3 px-2 text-center text-slate-900 font-extrabold tracking-wider">Total MCQs</th>
+                        <th className="py-3 px-2 text-center text-emerald-800 font-extrabold tracking-wider">Correct</th>
+                        <th className="py-3 px-2 text-center text-rose-800 font-extrabold tracking-wider">Wrong / Skip</th>
+                        <th className="py-3 px-3.5 text-right text-blue-900 font-extrabold tracking-wider">Marks Scored</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 text-slate-800 font-medium bg-white">
@@ -4047,7 +4047,7 @@ export default function StudentPortal({
                             Round 01: Screening Examination
                           </strong>
                           <span className="text-[10px] text-slate-600 font-semibold block mt-0.5">
-                            All 7 Core CS Subject Disciplines (30s Timer per MCQ)
+                            All 7 Core CS Subject Disciplines (15s Timer per MCQ)
                           </span>
                         </td>
                         <td className="py-3.5 px-2 text-center font-mono font-black text-slate-900">{totalQ}</td>

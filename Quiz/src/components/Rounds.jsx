@@ -34,7 +34,7 @@ export default function Rounds({ onTryPractice, rounds: propRounds }) {
             Single Round <span className="text-[#3b82f6]">Championship Quiz</span>
           </h2>
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            One comprehensive grand competition round evenly distributed across all seven core Computer Science domains. 30 seconds per question, +1 point for correct answers, and zero negative marking.
+            One comprehensive grand competition round evenly distributed across all seven core Computer Science domains. 15 seconds per question, +1 point for correct answers, and zero negative marking.
           </p>
         </div>
 

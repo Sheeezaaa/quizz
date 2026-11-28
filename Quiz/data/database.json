@@ -113,11 +113,11 @@
       "roundNumber": 1,
       "title": "Battle of Brains — Combined Grand Quiz",
       "stageBadge": "Official Single Round • All 7 CS Subjects",
-      "timeLimitSeconds": 30,
+      "timeLimitSeconds": 15,
       "questionsCount": 14,
       "markingCorrect": 1,
       "markingNegative": 0,
-      "strictRule": "Strict 30 seconds per question. Answers will NOT be accepted after timer expires.",
+      "strictRule": "Strict 15 seconds per question. Answers will NOT be accepted after timer expires.",
       "isActive": true,
       "isCompleted": false
     }
