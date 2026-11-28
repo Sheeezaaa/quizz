@@ -216,7 +216,19 @@ export default function AdminPanel({
   useEffect(() => {
     if (!isAuthenticated) return;
 
+    const refreshParticipantsList = async () => {
+      try {
+        const serverList = await apiGetParticipants();
+        if (serverList && Array.isArray(serverList)) {
+          setParticipants(serverList);
+        }
+      } catch {}
+    };
+
     const handleStorageEvent = (e) => {
+      if (e.key === 'bob_participants_updated' || e.key === 'bob_registered_participants_v2') {
+        refreshParticipantsList();
+      }
       if (e.key === 'bob_live_student_login_event' && e.newValue) {
         try {
           const evt = JSON.parse(e.newValue);
@@ -227,6 +239,7 @@ export default function AdminPanel({
             if (prev.some((s) => s.studentId === evt.studentId)) return prev;
             return [{ ...evt, isOnline: true }, ...prev];
           });
+          refreshParticipantsList();
         } catch {}
       }
     };
@@ -240,11 +253,13 @@ export default function AdminPanel({
           if (prev.some((s) => s.studentId === e.detail.studentId)) return prev;
           return [{ ...e.detail, isOnline: true }, ...prev];
         });
+        refreshParticipantsList();
       }
     };
 
     window.addEventListener('storage', handleStorageEvent);
     window.addEventListener('bob_student_login_detected', handleCustomLogin);
+    window.addEventListener('bob_participants_updated', refreshParticipantsList);
 
     const checkLogins = async () => {
       try {
@@ -266,6 +281,7 @@ export default function AdminPanel({
             }
           }
         }
+        refreshParticipantsList();
       } catch {}
     };
 
@@ -275,6 +291,7 @@ export default function AdminPanel({
     return () => {
       window.removeEventListener('storage', handleStorageEvent);
       window.removeEventListener('bob_student_login_detected', handleCustomLogin);
+      window.removeEventListener('bob_participants_updated', refreshParticipantsList);
       clearInterval(interval);
     };
   }, [isAuthenticated]);

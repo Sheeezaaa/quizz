@@ -554,28 +554,53 @@ export default function StudentPortal({
         setCurrentUser(res.user);
         setLoggedInStudent(res.user);
         if (res.token) setStudentAuthToken(res.token);
+        try {
+          saveParticipant(res.user);
+          localStorage.setItem('bob_participants_updated', Date.now().toString());
+          window.dispatchEvent(new CustomEvent('bob_participants_updated', { detail: res.user }));
+        } catch {}
       } else {
-        // Fallback: auto-register local candidate so ANY random student ID logs in successfully
+        // Fallback: auto-register local candidate so ANY random student ID or Email logs in successfully
+        const rawIdent = identifier.trim();
+        const isEmail = rawIdent.includes('@');
         const existing = getStoredParticipants() || [];
-        const cleanId = identifier.trim().toUpperCase();
-        let user = existing.find(p => p.studentId?.toUpperCase() === cleanId);
+        const cleanId = rawIdent.toUpperCase();
+        let user = existing.find(p => 
+          (p.studentId && p.studentId.toUpperCase() === cleanId) ||
+          (p.email && p.email.toLowerCase() === rawIdent.toLowerCase())
+        );
         if (!user) {
+          const studentEmail = isEmail 
+            ? rawIdent.toLowerCase() 
+            : `${rawIdent.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`;
+          const studentName = isEmail
+            ? rawIdent.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+            : `Student ${cleanId}`;
+
           user = {
             id: generateParticipantId(existing),
-            fullName: `Student ${cleanId}`,
+            fullName: studentName,
             studentId: cleanId,
             universityName: 'COMSATS University Islamabad',
             campus: 'Islamabad Campus',
-            email: `${identifier.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`,
-            phone: '0300-0000000',
+            region: 'Federal Capital',
+            email: studentEmail,
+            phone: '+92 300 0000000',
             department: 'Software Engineering',
             degreeProgram: 'BS Software Engineering',
             semester: '4th Semester',
+            registrationStatus: 'Approved',
             status: 'Verified',
+            isOnline: true,
+            lastLoginAt: new Date().toISOString(),
             teamMembers: [],
             registeredAt: new Date().toISOString(),
           };
           saveParticipant(user);
+          try {
+            localStorage.setItem('bob_participants_updated', Date.now().toString());
+            window.dispatchEvent(new CustomEvent('bob_participants_updated', { detail: user }));
+          } catch {}
         }
         setCurrentUser(user);
         setLoggedInStudent(user);
@@ -586,26 +611,46 @@ export default function StudentPortal({
       requestFullScreen();
     } catch (err) {
       // Fallback in case of network issue
+      const rawIdent = identifier.trim();
+      const isEmail = rawIdent.includes('@');
       const existing = getStoredParticipants() || [];
-      const cleanId = identifier.trim().toUpperCase();
-      let user = existing.find(p => p.studentId?.toUpperCase() === cleanId);
+      const cleanId = rawIdent.toUpperCase();
+      let user = existing.find(p => 
+        (p.studentId && p.studentId.toUpperCase() === cleanId) ||
+        (p.email && p.email.toLowerCase() === rawIdent.toLowerCase())
+      );
       if (!user) {
+        const studentEmail = isEmail 
+          ? rawIdent.toLowerCase() 
+          : `${rawIdent.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`;
+        const studentName = isEmail
+          ? rawIdent.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+          : `Student ${cleanId}`;
+
         user = {
           id: generateParticipantId(existing),
-          fullName: `Student ${cleanId}`,
+          fullName: studentName,
           studentId: cleanId,
           universityName: 'COMSATS University Islamabad',
           campus: 'Islamabad Campus',
-          email: `${identifier.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`,
-          phone: '0300-0000000',
+          region: 'Federal Capital',
+          email: studentEmail,
+          phone: '+92 300 0000000',
           department: 'Software Engineering',
           degreeProgram: 'BS Software Engineering',
           semester: '4th Semester',
+          registrationStatus: 'Approved',
           status: 'Verified',
+          isOnline: true,
+          lastLoginAt: new Date().toISOString(),
           teamMembers: [],
           registeredAt: new Date().toISOString(),
         };
         saveParticipant(user);
+        try {
+          localStorage.setItem('bob_participants_updated', Date.now().toString());
+          window.dispatchEvent(new CustomEvent('bob_participants_updated', { detail: user }));
+        } catch {}
       }
       setCurrentUser(user);
       setLoggedInStudent(user);

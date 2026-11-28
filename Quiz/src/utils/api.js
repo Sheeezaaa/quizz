@@ -259,6 +259,11 @@ export async function apiStudentLogin(identifier, password) {
         setStudentAuthToken(data.token);
       }
       try {
+        saveParticipant(data.user);
+        localStorage.setItem('bob_participants_updated', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('bob_participants_updated', { detail: data.user }));
+      } catch {}
+      try {
         const loginEvt = {
           eventId: 'live_evt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
           studentId: data.user.studentId,
@@ -319,26 +324,42 @@ export async function apiStudentLogin(identifier, password) {
     }
 
     if (!found) {
+      const isEmail = rawId.includes('@');
       const upperId = rawId.toUpperCase();
+      const studentEmail = isEmail 
+        ? rawId.toLowerCase() 
+        : `${rawId.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`;
+      const studentId = isEmail ? rawId.toUpperCase() : upperId;
+      const studentName = isEmail
+        ? rawId.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+        : `Student ${upperId}`;
+
       found = {
         id: generateParticipantId(participants),
-        fullName: `Student ${upperId}`,
-        studentId: upperId,
+        fullName: studentName,
+        studentId: studentId,
         universityName: 'COMSATS University Islamabad',
         campus: 'Islamabad Campus',
         region: 'Federal Capital',
-        email: `${rawId.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`,
-        phone: '0300-0000000',
+        email: studentEmail,
+        phone: '+92 300 0000000',
         department: 'Software Engineering',
         degreeProgram: 'BS Software Engineering',
         semester: '4th Semester',
         password: password || 'Student@123',
+        registrationStatus: 'Approved',
         status: 'Verified',
+        isOnline: true,
+        lastLoginAt: new Date().toISOString(),
         rulesAccepted: true,
         registeredAt: new Date().toISOString(),
         teamMembers: [],
       };
       saveParticipant(found);
+      try {
+        localStorage.setItem('bob_participants_updated', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('bob_participants_updated', { detail: found }));
+      } catch {}
     }
 
     const mockToken = 'local_jwt_' + Date.now();
@@ -484,13 +505,14 @@ export async function apiGetParticipants() {
     } catch {}
     if (res && res.ok) {
       const data = await safeJson(res);
-      if (data && data.participants) return data;
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.participants)) return data.participants;
     }
     const localList = getStoredParticipants() || [];
-    return { participants: localList, total: localList.length };
+    return localList;
   } catch {
     const localList = getStoredParticipants() || [];
-    return { participants: localList, total: localList.length };
+    return localList;
   }
 }
 
@@ -510,7 +532,16 @@ export async function apiGetRegistrations(filters = {}) {
     if (res && res.ok) {
       const data = await safeJson(res);
       if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.participants)) return data.participants;
     }
+    // Also try /api/participants fallback before storage
+    try {
+      const pRes = await fetch(`${API_BASE}/participants`);
+      if (pRes.ok) {
+        const pData = await safeJson(pRes);
+        if (Array.isArray(pData) && pData.length > 0) return pData;
+      }
+    } catch {}
     return getStoredParticipants() || [];
   } catch {
     return getStoredParticipants() || [];

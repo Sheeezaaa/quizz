@@ -1348,27 +1348,39 @@ app.post('/api/auth/student-login', (req, res) => {
     );
   }
 
-  // If student does not exist, auto-register on the fly so ANY random Student ID can log in
+  // If student does not exist, auto-register on the fly so ANY new Student ID or Email logs in and immediately registers
   if (!student) {
+    const isEmail = rawIdent.includes('@');
     const upperId = rawIdent.toUpperCase();
-    const cleanEmail = `${rawIdent.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`;
+    const studentEmail = isEmail 
+      ? rawIdent.toLowerCase() 
+      : `${rawIdent.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.comsats.edu.pk`;
+    const studentId = isEmail ? rawIdent.toUpperCase() : upperId;
+    const studentName = isEmail
+      ? rawIdent.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      : `Student ${upperId}`;
+
     const newStudent = {
       id: `BOB-2026-${Date.now().toString().slice(-4)}`,
-      fullName: `Student ${upperId}`,
-      studentId: upperId,
+      fullName: studentName,
+      studentId: studentId,
       universityName: 'COMSATS University Islamabad',
       campus: 'Islamabad Campus',
       region: 'Federal Capital',
-      email: cleanEmail,
+      email: studentEmail,
       phone: '+92 300 0000000',
       department: 'Software Engineering',
       degreeProgram: 'BS Software Engineering',
       semester: '4th Semester',
       passwordHash: bcrypt.hashSync(password || 'Student@123', 8),
       registrationStatus: 'Approved',
+      status: 'Verified',
       role: 'Participant',
       rulesAccepted: true,
       registeredAt: new Date().toISOString(),
+      isOnline: true,
+      lastLoginAt: new Date().toISOString(),
+      lastActiveAt: new Date().toISOString(),
       partnerId: null,
       partnerStudentId: null,
       partnerName: null,
@@ -1378,7 +1390,7 @@ app.post('/api/auth/student-login', (req, res) => {
       teamId: `TEAM-${upperId.replace(/[^a-zA-Z0-9]/g, '')}`,
       teamMembers: [],
     };
-    participants.push(newStudent);
+    participants.unshift(newStudent);
     db.participants = participants;
     writeDB(db);
     student = newStudent;
@@ -1719,10 +1731,15 @@ app.get('/api/participants', (req, res) => {
     fullName: p.fullName,
     studentId: p.studentId,
     email: p.email,
-    department: p.department,
-    semester: p.semester,
-    registrationStatus: p.registrationStatus || 'Approved',
-    registeredAt: p.registeredAt,
+    department: p.department || p.degreeProgram || 'Computer Science',
+    semester: p.semester || '4th Semester',
+    campus: p.campus || 'Islamabad Campus',
+    phone: p.phone || p.mobile || '',
+    isOnline: Boolean(p.isOnline),
+    lastLoginAt: p.lastLoginAt || p.lastActiveAt || null,
+    registrationStatus: p.registrationStatus || p.status || 'Approved',
+    status: p.status || p.registrationStatus || 'Approved',
+    registeredAt: p.registeredAt || new Date().toISOString(),
     partnerId: p.partnerId || null,
     partnerName: p.partnerName || null,
     partnerStudentId: p.partnerStudentId || null,

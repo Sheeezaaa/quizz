@@ -125,8 +125,24 @@ export const getStoredParticipants = () => {
 
 export const saveParticipant = (newParticipant) => {
   try {
-    const existing = getStoredParticipants();
-    const updated = [newParticipant, ...existing];
+    const existing = getStoredParticipants() || [];
+    const pId = newParticipant.id;
+    const sId = (newParticipant.studentId || '').toUpperCase();
+    const email = (newParticipant.email || '').toLowerCase();
+
+    const idx = existing.findIndex(p => 
+      (pId && p.id === pId) ||
+      (sId && (p.studentId || '').toUpperCase() === sId) ||
+      (email && (p.email || '').toLowerCase() === email)
+    );
+
+    let updated;
+    if (idx !== -1) {
+      updated = [...existing];
+      updated[idx] = { ...existing[idx], ...newParticipant };
+    } else {
+      updated = [newParticipant, ...existing];
+    }
     localStorage.setItem(STORAGE_KEYS.PARTICIPANTS, JSON.stringify(updated));
     return { success: true, participants: updated };
   } catch (err) {

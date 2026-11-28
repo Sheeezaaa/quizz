@@ -65,8 +65,8 @@ export default function RegistrationManager({ isDark }) {
   const [actionPrompt, setActionPrompt] = useState(null); // { id, action: 'Reject' | 'Correction_Requested', note: '' }
   const [statusMessage, setStatusMessage] = useState({ text: '', isError: false });
 
-  const fetchRegistrations = async () => {
-    setLoading(true);
+  const fetchRegistrations = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const data = await apiGetRegistrations({
         status: statusFilter,
@@ -79,7 +79,7 @@ export default function RegistrationManager({ isDark }) {
     } catch (err) {
       console.error('Error fetching registrations:', err);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
@@ -114,12 +114,41 @@ export default function RegistrationManager({ isDark }) {
   useEffect(() => {
     if (activeTab === 'registrations') {
       fetchRegistrations();
+
+      const handleStorageUpdate = (e) => {
+        if (
+          e.key === 'bob_live_student_login_event' ||
+          e.key === 'bob_registered_participants_v2' ||
+          e.key === 'bob_participants_updated'
+        ) {
+          fetchRegistrations(true);
+        }
+      };
+
+      const handleCustomEvent = () => {
+        fetchRegistrations(true);
+      };
+
+      window.addEventListener('storage', handleStorageUpdate);
+      window.addEventListener('bob_student_login_detected', handleCustomEvent);
+      window.addEventListener('bob_participants_updated', handleCustomEvent);
+
+      const poller = setInterval(() => {
+        fetchRegistrations(true);
+      }, 3000);
+
+      return () => {
+        window.removeEventListener('storage', handleStorageUpdate);
+        window.removeEventListener('bob_student_login_detected', handleCustomEvent);
+        window.removeEventListener('bob_participants_updated', handleCustomEvent);
+        clearInterval(poller);
+      };
     } else if (activeTab === 'cohorts') {
       fetchCohorts();
     } else if (activeTab === 'outbox') {
       fetchOutbox();
     }
-  }, [activeTab, statusFilter, deptFilter]);
+  }, [activeTab, statusFilter, deptFilter, search]);
 
   const handlePromoteCohort = async () => {
     if (selectedStudentsForPromotion.length === 0) {
