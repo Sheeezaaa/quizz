@@ -366,6 +366,48 @@ export default function AdminPanel({
   const [isUploadingQuestions, setIsUploadingQuestions] = useState(false);
   const [questionStatusMessage, setQuestionStatusMessage] = useState({ text: '', isError: false });
 
+  // Deduplicate live login cards so student appears only ONCE
+  const uniqueLiveStudentLogins = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    for (const log of (liveStudentLogins || [])) {
+      if (!log) continue;
+      const key = (log.studentId || log.email || log.fullName || '').toLowerCase().trim();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        result.push(log);
+      }
+    }
+    return result;
+  }, [liveStudentLogins]);
+
+  // Unique deduplicated participants list
+  const uniqueParticipants = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    for (const p of (participants || [])) {
+      if (!p) continue;
+      const key = (p.studentId || p.email || p.id || '').toUpperCase().trim();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        result.push(p);
+      }
+    }
+    return result;
+  }, [participants]);
+
+  // Filtered participants list
+  const filteredParticipants = useMemo(() => {
+    return uniqueParticipants.filter((p) => {
+      const q = studentSearch.trim().toLowerCase();
+      const matchesQuery = !q || [p.fullName, p.studentId, p.id, p.email, p.phone]
+        .some((v) => (v || '').toLowerCase().includes(q));
+      const matchesDept = departmentFilter === 'All' || p.department === departmentFilter;
+      const matchesSem = semesterFilter === 'All' || p.semester === semesterFilter;
+      return matchesQuery && matchesDept && matchesSem;
+    });
+  }, [uniqueParticipants, studentSearch, departmentFilter, semesterFilter]);
+
   // Sync local theme with parent currentTheme
   useEffect(() => {
     if (currentTheme) {
@@ -545,8 +587,6 @@ export default function AdminPanel({
       if (Array.isArray(updated)) setLiveProctorAlerts(updated);
     } catch {}
   };
-
-  if (!isOpen) return null;
 
   // Handle Login
   const handleLogin = async (e) => {
@@ -1021,48 +1061,6 @@ export default function AdminPanel({
     return matchesSearch && matchesSub && matchesRound;
   });
 
-  // Deduplicate live login cards so student appears only ONCE
-  const uniqueLiveStudentLogins = useMemo(() => {
-    const seen = new Set();
-    const result = [];
-    for (const log of (liveStudentLogins || [])) {
-      if (!log) continue;
-      const key = (log.studentId || log.email || log.fullName || '').toLowerCase().trim();
-      if (key && !seen.has(key)) {
-        seen.add(key);
-        result.push(log);
-      }
-    }
-    return result;
-  }, [liveStudentLogins]);
-
-  // Unique deduplicated participants list
-  const uniqueParticipants = useMemo(() => {
-    const seen = new Set();
-    const result = [];
-    for (const p of (participants || [])) {
-      if (!p) continue;
-      const key = (p.studentId || p.email || p.id || '').toUpperCase().trim();
-      if (key && !seen.has(key)) {
-        seen.add(key);
-        result.push(p);
-      }
-    }
-    return result;
-  }, [participants]);
-
-  // Filtered participants list
-  const filteredParticipants = useMemo(() => {
-    return uniqueParticipants.filter((p) => {
-      const q = studentSearch.trim().toLowerCase();
-      const matchesQuery = !q || [p.fullName, p.studentId, p.id, p.email, p.phone]
-        .some((v) => (v || '').toLowerCase().includes(q));
-      const matchesDept = departmentFilter === 'All' || p.department === departmentFilter;
-      const matchesSem = semesterFilter === 'All' || p.semester === semesterFilter;
-      return matchesQuery && matchesDept && matchesSem;
-    });
-  }, [uniqueParticipants, studentSearch, departmentFilter, semesterFilter]);
-
   // Calculate days remaining to event
   const calculateDaysLeft = () => {
     try {
@@ -1104,6 +1102,8 @@ export default function AdminPanel({
   const inputTheme = isDark 
     ? 'admin-input bg-slate-950/90 border-slate-700/80 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500/20' 
     : 'admin-input bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-blue-500/20';
+
+  if (!isOpen) return null;
 
   /* =========================================================================
      SCREEN 1: FROSTED GLASS WINTER MOUNTAIN ADMIN LOGIN (MATCHING USER IMAGE 2)
