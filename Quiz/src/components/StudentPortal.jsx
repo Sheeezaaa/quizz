@@ -2021,25 +2021,33 @@ export default function StudentPortal({
                   </>
                 ) : (
                   /* 5. IF NO TEAM YET: CREATE OR JOIN TEAM HUB */
-                  <div className="p-8 rounded-3xl bg-white border-2 border-sky-300 shadow-xl space-y-6 text-slate-900 text-center">
+                  <div className={`p-6 sm:p-8 rounded-3xl border-2 shadow-xl space-y-6 text-center transition-all ${
+                    isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                  }`}>
                     <div className="max-w-md mx-auto space-y-2">
-                      <div className="w-16 h-16 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mx-auto text-2xl font-black">
+                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-2xl font-black ${
+                        isDark ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-100 text-blue-600 border border-blue-200'
+                      }`}>
                         👥
                       </div>
-                      <h3 className="text-2xl font-heading font-black text-slate-900">Create or Join a Team</h3>
-                      <p className="text-xs text-slate-600 font-medium">
+                      <h3 className={`text-2xl font-heading font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        Create or Join a Team
+                      </h3>
+                      <p className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                         You are currently registered individually. To participate with peers in Battle of Brains 2026, you can create a team or join via an invitation code.
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto pt-4 text-left">
                       {/* Option A: Create Team */}
-                      <div className="p-6 rounded-2xl bg-sky-50 border-2 border-sky-200 space-y-4">
-                        <div className="flex items-center gap-2 font-heading font-black text-slate-900 text-base">
+                      <div className={`p-6 rounded-2xl border-2 space-y-4 transition-all ${
+                        isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-gradient-to-b from-amber-50/70 to-white border-amber-200 shadow-xs'
+                      }`}>
+                        <div className={`flex items-center gap-2 font-heading font-black text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           <Crown className="w-5 h-5 text-amber-500" />
                           <span>Create a New Team</span>
                         </div>
-                        <p className="text-xs text-slate-600 font-medium">
+                        <p className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                           Become the Team Leader, choose a team name, and generate your team invitation link.
                         </p>
                         <button
@@ -2064,19 +2072,21 @@ export default function StudentPortal({
                               alert(res?.error || 'Failed to create team.');
                             }
                           }}
-                          className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-black text-xs shadow-md transition-all cursor-pointer"
+                          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-md shadow-blue-500/25 transition-all cursor-pointer"
                         >
                           + Create Team Now
                         </button>
                       </div>
 
                       {/* Option B: Join via Code */}
-                      <div className="p-6 rounded-2xl bg-sky-50 border-2 border-sky-200 space-y-4">
-                        <div className="flex items-center gap-2 font-heading font-black text-slate-900 text-base">
-                          <UserPlus className="w-5 h-5 text-blue-600" />
+                      <div className={`p-6 rounded-2xl border-2 space-y-4 transition-all ${
+                        isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-gradient-to-b from-emerald-50/70 to-white border-emerald-200 shadow-xs'
+                      }`}>
+                        <div className={`flex items-center gap-2 font-heading font-black text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          <UserPlus className="w-5 h-5 text-emerald-600" />
                           <span>Join With Invite Code</span>
                         </div>
-                        <p className="text-xs text-slate-600 font-medium">
+                        <p className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                           Have an invitation code from your Team Leader? Enter it to join their team.
                         </p>
                         <button
@@ -2100,7 +2110,7 @@ export default function StudentPortal({
                               alert(res?.error || 'Failed to join team. Please check the code.');
                             }
                           }}
-                          className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-heading font-black text-xs shadow-md transition-all cursor-pointer"
+                          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-500/25 transition-all cursor-pointer"
                         >
                           Enter Invite Code
                         </button>
@@ -2109,28 +2119,69 @@ export default function StudentPortal({
                   </div>
                 )}
 
-                {/* 6. TOURNAMENT & TEAM FORMATION RULES BANNER */}
-                <div className="p-6 rounded-3xl bg-slate-900 text-white border-2 border-slate-800 space-y-4">
-                  <h4 className="font-heading font-black text-sm uppercase tracking-wider text-amber-400 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4" />
+                {/* 6. TOURNAMENT & TEAM FORMATION RULES BANNER (100% HIGH CONTRAST & READABLE) */}
+                <div className={`p-6 sm:p-7 rounded-3xl border-2 space-y-4 transition-all ${
+                  isDark 
+                    ? 'bg-slate-900 border-slate-800 text-white shadow-xl' 
+                    : 'bg-white border-slate-200/90 text-slate-900 shadow-md'
+                }`}>
+                  <h4 className={`font-heading font-black text-sm uppercase tracking-wider flex items-center gap-2 ${
+                    isDark ? 'text-amber-400' : 'text-amber-700'
+                  }`}>
+                    <ShieldCheck className={`w-5 h-5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
                     <span>Official Team Formation Guidelines</span>
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                    <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700">
-                      <strong className="text-white block font-bold mb-1">👥 2 to 3 Members</strong>
-                      <span className="text-slate-300">Each team must have at least 2 members and at most 3 members.</span>
+                    <div className={`p-4 rounded-2xl border-2 transition-all ${
+                      isDark 
+                        ? 'bg-slate-950/90 border-slate-800 text-slate-200' 
+                        : 'bg-blue-50/80 border-blue-200 text-slate-900 shadow-xs'
+                    }`}>
+                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                        👥 2 to 3 Members
+                      </strong>
+                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Each team must have at least 2 members and at most 3 members.
+                      </span>
                     </div>
-                    <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700">
-                      <strong className="text-white block font-bold mb-1">👑 Team Leader</strong>
-                      <span className="text-slate-300">The first student creates the team, shares the invite link, and locks final registration.</span>
+
+                    <div className={`p-4 rounded-2xl border-2 transition-all ${
+                      isDark 
+                        ? 'bg-slate-950/90 border-slate-800 text-slate-200' 
+                        : 'bg-amber-50/80 border-amber-200 text-slate-900 shadow-xs'
+                    }`}>
+                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                        👑 Team Leader
+                      </strong>
+                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        The first student creates the team, shares the invite link, and locks final registration.
+                      </span>
                     </div>
-                    <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700">
-                      <strong className="text-white block font-bold mb-1">📱 Unique Mobile</strong>
-                      <span className="text-slate-300">Every member must register with their own unique mobile number and password.</span>
+
+                    <div className={`p-4 rounded-2xl border-2 transition-all ${
+                      isDark 
+                        ? 'bg-slate-950/90 border-slate-800 text-slate-200' 
+                        : 'bg-emerald-50/80 border-emerald-200 text-slate-900 shadow-xs'
+                    }`}>
+                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                        📱 Unique Mobile
+                      </strong>
+                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Every member must register with their own unique mobile number and password.
+                      </span>
                     </div>
-                    <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700">
-                      <strong className="text-white block font-bold mb-1">🔐 Independent Login</strong>
-                      <span className="text-slate-300">Members can log in individually using their Team Name or Mobile Number.</span>
+
+                    <div className={`p-4 rounded-2xl border-2 transition-all ${
+                      isDark 
+                        ? 'bg-slate-950/90 border-slate-800 text-slate-200' 
+                        : 'bg-purple-50/80 border-purple-200 text-slate-900 shadow-xs'
+                    }`}>
+                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                        🔐 Independent Login
+                      </strong>
+                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Members can log in individually using their Team Name or Mobile Number.
+                      </span>
                     </div>
                   </div>
                 </div>
