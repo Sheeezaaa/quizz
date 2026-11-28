@@ -40,6 +40,7 @@ import {
   ShieldAlert,
   Mail,
   User,
+  UserCheck,
   ArrowRight,
   Sun,
   Moon,
