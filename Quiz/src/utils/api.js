@@ -1391,6 +1391,8 @@ export async function apiReportProctorInfraction(infractionType, details, roundN
   try {
     const local = JSON.parse(localStorage.getItem('bob_live_proctor_alerts_v1') || '[]');
     localStorage.setItem('bob_live_proctor_alerts_v1', JSON.stringify([alertItem, ...local].slice(0, 60)));
+    localStorage.setItem('bob_live_proctor_alert_event', JSON.stringify(alertItem));
+    window.dispatchEvent(new CustomEvent('bob_proctor_breach_detected', { detail: alertItem }));
   } catch {}
 
   try {

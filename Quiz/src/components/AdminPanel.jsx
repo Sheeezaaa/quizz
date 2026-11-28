@@ -396,9 +396,36 @@ export default function AdminPanel({
     };
   }, [isOpen]);
 
-  // Real-Time Proctoring Malpractice Alert Poller (Surfaces All Offending Student IDs)
+  // Real-Time Proctoring Malpractice Alert Poller & Instant Cross-Tab Breach Listener
   useEffect(() => {
     if (!isOpen || !isAuthenticated) return;
+
+    const handleStorageProctor = (e) => {
+      if (e.key === 'bob_live_proctor_alert_event' && e.newValue) {
+        try {
+          const alert = JSON.parse(e.newValue);
+          setLiveProctorAlerts((prev) => [alert, ...prev.filter((x) => x.id !== alert.id)]);
+          setShowProctorToast(true);
+          if (!isSirenMuted) {
+            playAntiCheatBuzzer();
+          }
+        } catch {}
+      }
+    };
+
+    const handleCustomProctor = (e) => {
+      if (e.detail) {
+        const alert = e.detail;
+        setLiveProctorAlerts((prev) => [alert, ...prev.filter((x) => x.id !== alert.id)]);
+        setShowProctorToast(true);
+        if (!isSirenMuted) {
+          playAntiCheatBuzzer();
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageProctor);
+    window.addEventListener('bob_proctor_breach_detected', handleCustomProctor);
 
     const pollAlerts = async () => {
       try {
@@ -419,7 +446,11 @@ export default function AdminPanel({
 
     pollAlerts();
     const interval = setInterval(pollAlerts, 2500);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('storage', handleStorageProctor);
+      window.removeEventListener('bob_proctor_breach_detected', handleCustomProctor);
+      clearInterval(interval);
+    };
   }, [isOpen, isAuthenticated, seenAlertIds, isSirenMuted]);
 
   const handleActionOnCheatingAlert = async (alertId, action) => {
@@ -3852,29 +3883,35 @@ export default function AdminPanel({
                 {unackViolators.map((violator) => (
                   <div
                     key={violator.studentId}
-                    className="flex items-center justify-between p-2 rounded-xl bg-rose-500/10 border border-rose-500/30 gap-2"
+                    className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-1"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="px-2.5 py-0.5 rounded-lg bg-rose-600 text-white font-mono font-black text-xs shrink-0 shadow-sm select-all">
-                        {violator.studentId}
-                      </span>
-                      <span className="text-xs text-white font-bold truncate">
-                        {violator.studentName}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="px-2.5 py-0.5 rounded-lg bg-rose-600 text-white font-mono font-black text-xs shrink-0 shadow-sm select-all">
+                          {violator.studentId}
+                        </span>
+                        <strong className="text-xs text-white font-heading font-black truncate">
+                          {violator.studentName}
+                        </strong>
+                      </div>
+                      <span className="text-[10px] font-mono text-rose-300 bg-rose-500/25 px-2 py-0.5 rounded font-bold">
+                        {violator.unacknowledgedCount} Violation{violator.unacknowledgedCount > 1 ? 's' : ''}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[10px] font-mono text-rose-300 bg-rose-500/20 px-1.5 py-0.5 rounded">
-                        {violator.unacknowledgedCount}x
-                      </span>
+
+                    <div className="flex items-center justify-between text-[11px] font-mono text-slate-300">
+                      <div className="truncate">
+                        Gmail: <strong className="text-white select-all">{violator.studentEmail || violator.latestAlert?.studentEmail || 'student@gmail.com'}</strong>
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
                           setActiveCheatingAlert(violator.latestAlert);
                           setShowProctorToast(false);
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-heading font-bold text-[11px] cursor-pointer shadow-sm"
+                        className="px-2.5 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-heading font-bold text-[10px] cursor-pointer shadow-sm shrink-0"
                       >
-                        Review
+                        Review & Act
                       </button>
                     </div>
                   </div>
@@ -4016,7 +4053,7 @@ export default function AdminPanel({
               </div>
 
               <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                <span>Active Stage: <strong className="text-white">Round 0{activeCheatingAlert.roundNumber}</strong></span>
+                <span>Active Stage: <strong className="text-white">Single Combined Championship (7 CS Subjects)</strong></span>
                 <span>Detected At: <strong className="font-mono text-slate-300">{new Date(activeCheatingAlert.timestamp).toLocaleTimeString()}</strong></span>
               </div>
             </div>

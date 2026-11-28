@@ -17,8 +17,6 @@ import {
 } from 'lucide-react';
 import { PRACTICE_QUESTIONS } from '../data/sampleQuestions';
 import { 
-  playAntiCheatBuzzer, 
-  playDisqualificationSiren, 
   playBuzzerPress, 
   playCorrectChime 
 } from '../utils/soundEffects';
@@ -40,12 +38,7 @@ export default function PracticeArena({ initialMode = 'round1' }) {
   const [timeLeft, setTimeLeft] = useState(30);
   const [quizFinished, setQuizFinished] = useState(false);
 
-  // Practice Arena: Anti-cheat disabled on public website browsing so visitors aren't startled by buzzers
-  const [antiCheatActive, setAntiCheatActive] = useState(false);
-  const [tabViolations, setTabViolations] = useState([]);
-  const [showWarningModal, setShowWarningModal] = useState(false);
-  const [latestViolationReason, setLatestViolationReason] = useState('');
-  const [isDisqualified, setIsDisqualified] = useState(false);
+  // Practice Arena is 100% free practice mode with no buzzers or proctoring restrictions
 
   const resetQuiz = () => {
     setCurrentQuestions(getRandomizedPracticePool(activeTab));
@@ -55,8 +48,7 @@ export default function PracticeArena({ initialMode = 'round1' }) {
     setScore(0);
     setHasBuzzed(false);
     setQuizFinished(false);
-    setIsDisqualified(false);
-    setShowWarningModal(false);
+
 
     if (activeTab === 'round1') setTimeLeft(30);
     else if (activeTab === 'rapidFire') setTimeLeft(3);
@@ -73,89 +65,10 @@ export default function PracticeArena({ initialMode = 'round1' }) {
     resetQuiz();
   }, [activeTab]);
 
-  // =========================================================================
-  // ANTI-CHEAT & TAB SWITCH BUZZER PROCTORING LISTENER
-  // =========================================================================
-  useEffect(() => {
-    // Only monitor if anti-cheat is active, quiz is currently running, and user is not finished/disqualified
-    if (!antiCheatActive || quizFinished || isDisqualified) return;
-
-    const triggerInfraction = (reason) => {
-      // 1. SOUND THE LOUD WARNING BUZZER ALARM!
-      playAntiCheatBuzzer();
-
-      const timeString = new Date().toLocaleTimeString();
-      const infractionRecord = { time: timeString, reason };
-
-      setTabViolations((prev) => {
-        const updated = [...prev, infractionRecord];
-        try {
-          localStorage.setItem('bob_proctoring_incidents', JSON.stringify(updated));
-        } catch {}
-
-        if (updated.length >= 2) {
-          setIsDisqualified(true);
-          playDisqualificationSiren();
-        }
-        return updated;
-      });
-
-      setLatestViolationReason(reason);
-      setShowWarningModal(true);
-    };
-
-    // Detect switching tabs or minimizing browser window
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        triggerInfraction('Browser Tab Switched / Window Minimized to Background');
-      }
-    };
-
-    // Detect browser window losing focus (clicking into another app or window)
-    const handleWindowBlur = () => {
-      triggerInfraction('Browser Window Lost Focus (Switched to Another App / Window)');
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleWindowBlur);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleWindowBlur);
-    };
-  }, [antiCheatActive, quizFinished, isDisqualified]);
-
-  // Block right-click context menu and copying during competition
-  useEffect(() => {
-    if (!antiCheatActive || quizFinished || isDisqualified) return;
-
-    const handleContextMenu = (e) => {
-      e.preventDefault();
-      playAntiCheatBuzzer();
-    };
-
-    const handleKeyDown = (e) => {
-      // Prevent Ctrl+C, Ctrl+V, Ctrl+U, F12
-      if (
-        (e.ctrlKey && ['c', 'v', 'u', 'a', 'p'].includes(e.key.toLowerCase())) ||
-        e.key === 'F12'
-      ) {
-        e.preventDefault();
-        playAntiCheatBuzzer();
-      }
-    };
-
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [antiCheatActive, quizFinished, isDisqualified]);
+  // Practice mode: No anti-cheat listeners or alarms
 
   useEffect(() => {
-    if (quizFinished || isDisqualified) return;
+    if (quizFinished) return;
     if (activeTab === 'buzzer' && !hasBuzzed) return;
 
     if (timeLeft <= 0) {
@@ -168,7 +81,7 @@ export default function PracticeArena({ initialMode = 'round1' }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, quizFinished, isDisqualified, activeTab, hasBuzzed]);
+  }, [timeLeft, quizFinished, activeTab, hasBuzzed]);
 
   const handleTimeExpired = () => {
     if (isAnswered) return;
@@ -182,14 +95,14 @@ export default function PracticeArena({ initialMode = 'round1' }) {
   };
 
   const handleBuzz = () => {
-    if (hasBuzzed || isAnswered || isDisqualified) return;
+    if (hasBuzzed || isAnswered) return;
     playBuzzerPress();
     setHasBuzzed(true);
     setTimeLeft(10);
   };
 
   const handleSelectOption = (idx) => {
-    if (isAnswered || isDisqualified) return;
+    if (isAnswered) return;
     if (activeTab === 'buzzer' && !hasBuzzed) return;
 
     setSelectedOption(idx);
@@ -201,7 +114,6 @@ export default function PracticeArena({ initialMode = 'round1' }) {
       setScore((prev) => prev + 1);
     } else {
       if (activeTab === 'buzzer') {
-        playAntiCheatBuzzer();
         setScore((prev) => Number((prev - 0.5).toFixed(1)));
       }
     }
@@ -251,65 +163,21 @@ export default function PracticeArena({ initialMode = 'round1' }) {
           </button>
         </div>
 
-        {/* Anti-Cheat & Tab Switch Proctoring Bar */}
-        <div className="mb-6 p-4 rounded-2xl bg-black/60 border border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3">
-            <div className={`w-3 h-3 rounded-full ${antiCheatActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`} />
-            <div>
-              <span className="font-heading font-bold text-white flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4 text-amber-400" />
-                <span>Strict Competition Anti-Cheat & Tab-Switch Alarm</span>
-              </span>
-              <p className="text-[11px] text-slate-400">
-                Switching browser tabs or minimizing the window triggers the loud buzzer alarm and records a violation.
-              </p>
-            </div>
+        {/* Practice Mode Friendly Banner */}
+        <div className="mb-6 p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2.5 text-slate-300">
+            <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
+            <span><strong>Interactive Practice Arena:</strong> Practice freely with unlimited random questions. No quiz timer cutoffs or proctoring alarms apply here.</span>
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border ${
-              tabViolations.length > 0 
-                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse' 
-                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-            }`}>
-              Tab Violations: {tabViolations.length} / 2 Allowed
-            </span>
-
-            <button
-              onClick={() => playAntiCheatBuzzer()}
-              className="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
-              title="Test the loud electronic buzzer sound"
-            >
-              <Volume2 className="w-3.5 h-3.5 text-rose-400" />
-              <span>Test Buzzer</span>
-            </button>
-          </div>
+          <span className="px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-mono font-bold shrink-0 hidden sm:inline-block">
+            Practice Mode
+          </span>
         </div>
 
         {/* Simulator Box */}
         <div className="p-6 sm:p-8 rounded-2xl bg-[#0b1020]/90 border border-white/10 shadow-2xl relative">
           
-          {isDisqualified ? (
-            <div className="text-center py-10 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-rose-600/20 border-2 border-rose-500 flex items-center justify-center text-rose-500 mx-auto animate-pulse">
-                <ShieldAlert className="w-8 h-8" />
-              </div>
-              <h3 className="text-2xl font-heading font-black text-rose-500">
-                DISQUALIFIED: CHEATING INFRACTION DETECTED
-              </h3>
-              <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
-                You have repeatedly switched browser tabs or minimized the quiz window during the competition. As per Rule 03 (Integrity Code), your participation has been invalidated.
-              </p>
-              <div className="pt-4">
-                <button
-                  onClick={resetQuiz}
-                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs"
-                >
-                  Restart Authorized Session
-                </button>
-              </div>
-            </div>
-          ) : quizFinished ? (
+          {quizFinished ? (
             <div className="text-center py-8">
               <div className="w-14 h-14 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 mx-auto mb-4">
                 <Trophy className="w-7 h-7" />
@@ -471,92 +339,7 @@ export default function PracticeArena({ initialMode = 'round1' }) {
 
       </div>
 
-      {/* =========================================================================
-          FULL-SCREEN EMERGENCY PROCTORING BUZZER ALARM MODAL (OFFICIAL PROCTORING)
-          ========================================================================= */}
-      {showWarningModal && (
-        <div className="proctor-modal-container fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-xl animate-fadeIn">
-          <div className="relative w-full max-w-lg bg-gradient-to-b from-[#180e14] via-[#120a10] to-[#0c050a] border border-rose-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_25px_70px_rgba(244,63,94,0.35)] text-center space-y-6 overflow-hidden ring-1 ring-rose-500/20">
-            
-            {/* Ambient Red Glow */}
-            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-44 bg-rose-600/25 rounded-full blur-3xl pointer-events-none" />
-
-            {/* Glowing Shield Icon */}
-            <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-3xl bg-rose-500/20 animate-ping opacity-25" />
-              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-rose-500/30 to-red-600/20 border-2 border-rose-500/60 flex items-center justify-center text-rose-400 shadow-xl shadow-rose-950">
-                <ShieldAlert className="w-10 h-10 text-rose-400 drop-shadow-[0_0_12px_rgba(244,63,94,0.6)]" />
-              </div>
-            </div>
-
-            {/* Header Status & Text */}
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[11px] font-mono font-bold uppercase tracking-wider">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                <span>Proctored Violation Buzzer Sounded</span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-heading font-black text-white tracking-tight leading-snug">
-                {isDisqualified ? 'Disqualified: Cheating Detected' : 'Unauthorized Tab / Browser Switch!'}
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans max-w-md mx-auto pt-1">
-                {isDisqualified
-                  ? 'Multiple unauthorized window blur or browser tab switch events were recorded during your examination session. In accordance with Article 03 (Integrity & Proctoring Regulations), this session has been locked.'
-                  : 'Switching browser tabs, minimizing the screen, or accessing external applications during an active test session is strictly prohibited. An infraction alert has been logged with the proctoring console.'}
-              </p>
-            </div>
-
-            {/* Infraction Details Box (Clean & Readable, No Truncation) */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-black/60 border border-rose-500/30 text-left text-xs font-mono space-y-3 shadow-inner">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2.5 border-b border-white/10">
-                <span className="text-[11px] font-bold uppercase text-slate-400">Infraction Type:</span>
-                <span className="font-semibold text-rose-200 text-left sm:text-right">
-                  {latestViolationReason || 'Browser Window Lost Focus / Tab Switch'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
-                <span className="text-[11px] font-bold uppercase text-slate-400">Violation Count:</span>
-                <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold text-xs">
-                  {tabViolations.length} / 2 Maximum Allowed
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase text-slate-400">System Status:</span>
-                <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  🚨 Alarm Sounded & Logged to Admin
-                </span>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div>
-              {!isDisqualified ? (
-                <button
-                  type="button"
-                  onClick={() => setShowWarningModal(false)}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-heading font-black text-sm tracking-wide shadow-xl shadow-rose-600/40 hover:shadow-rose-600/60 transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <span>I Acknowledge — Return to Examination</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowWarningModal(false);
-                    resetQuiz();
-                  }}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-heading font-black text-sm tracking-wide shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>Reset Authorized Session</span>
-                </button>
-              )}
-            </div>
-
-          </div>
-        </div>
-      )}
-
+      
     </section>
   );
 }

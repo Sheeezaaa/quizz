@@ -256,8 +256,8 @@ export default function StudentPortal({
   // Anti-Cheat Violation Handler: Sounds buzzer ONLY when a LIVE quiz is in progress (activeQuizAttempt)
   // When student is browsing dashboard, announcements, rules, admit card or outside live exam, buzzer is completely silent
   const recordAntiCheatViolation = (reason = 'Tab switch or external application window detected.', infractionType = 'BROWSER_SWITCH') => {
-    // Siren and violation report MUST ONLY occur if the quiz is LIVE (activeQuizAttempt is running)
-    if (!currentUser || !isOpen || !activeQuizAttempt) return;
+    // BUZZER and infraction report MUST ONLY occur if student is ACTIVELY taking the LIVE competition quiz
+    if (!currentUser || !isOpen || !activeQuizAttempt || activeQuizAttempt.isFinished || activeTab !== 'quiz') return;
     try {
       playAntiCheatBuzzer();
     } catch {}
@@ -277,18 +277,19 @@ export default function StudentPortal({
   // ACTIVE ONLY WHEN A LIVE QUIZ ATTEMPT IS IN PROGRESS (activeQuizAttempt)
   // When student is simply viewing dashboard/announcements/rules, NO siren or admin alert is triggered
   useEffect(() => {
-    // Strictly activate proctoring only during active live quiz attempt
-    if (!currentUser || !isOpen || !activeQuizAttempt) return;
+    // Strictly activate proctoring ONLY when student is actively taking the official live quiz
+    if (!currentUser || !isOpen || !activeQuizAttempt || activeQuizAttempt.isFinished || activeTab !== 'quiz') return;
 
     let lastReportTime = 0;
     const reportSwitch = (infractionMsg, type = "BROWSER_SWITCH") => {
-      if (!activeQuizAttempt) return;
+      if (!activeQuizAttempt || activeQuizAttempt.isFinished || activeTab !== 'quiz') return;
       const now = Date.now();
       if (now - lastReportTime < 2000) return;
       lastReportTime = now;
 
       const sid = currentUser?.studentId || "CONTESTANT";
-      const fullDetail = `${currentUser?.fullName || "Student"} (${sid}): ${infractionMsg}`;
+      const sEmail = currentUser?.email || "student@gmail.com";
+      const fullDetail = `${currentUser?.fullName || "Student"} (${sid} • ${sEmail}): ${infractionMsg}`;
 
       // Trigger loud buzzer and report to invigilator console ONLY during live quiz
       recordAntiCheatViolation(fullDetail, type);
@@ -362,7 +363,7 @@ export default function StudentPortal({
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("copy", handleCopy);
     };
-  }, [currentUser, isOpen, activeQuizAttempt]);
+  }, [currentUser, isOpen, activeQuizAttempt, activeTab]);
 
   // Automatically request Full Screen upon student login or opening the portal
   useEffect(() => {
