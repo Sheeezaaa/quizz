@@ -1446,8 +1446,13 @@ app.post('/api/auth/student-login', (req, res) => {
     loginTime: nowIso,
     seenByAdmin: false,
   };
-  db.liveLoginEvents.unshift(loginEvent);
-  if (db.liveLoginEvents.length > 50) db.liveLoginEvents = db.liveLoginEvents.slice(0, 50);
+  // Ensure each student's name/ID appears only ONCE in liveLoginEvents
+  const remainingEvents = (db.liveLoginEvents || []).filter(
+    (e) => (e.studentId || '').toUpperCase() !== student.studentId.toUpperCase() &&
+           (e.email || '').toLowerCase() !== (student.email || '').toLowerCase() &&
+           (e.fullName || '').toLowerCase() !== (student.fullName || '').toLowerCase()
+  );
+  db.liveLoginEvents = [loginEvent, ...remainingEvents].slice(0, 50);
 
   writeDB(db);
 
@@ -1471,15 +1476,34 @@ app.post('/api/auth/student-login', (req, res) => {
 // Admin Live Student Logins & Active Online Sessions (GET /api/admin/live-logins)
 app.get('/api/admin/live-logins', requireAdmin, (req, res) => {
   const db = readDB();
-  const events = db.liveLoginEvents || [];
-  const participants = db.participants || [];
+  const rawEvents = db.liveLoginEvents || [];
+  const rawParticipants = db.participants || [];
   const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
 
-  const onlineStudents = participants.filter((p) => {
-    if (p.isOnline) return true;
-    if (p.lastActiveAt && new Date(p.lastActiveAt).getTime() > fiveMinutesAgo) return true;
-    if (p.lastLoginAt && new Date(p.lastLoginAt).getTime() > fiveMinutesAgo) return true;
-    return false;
+  // Deduplicate live login events so every student appears only ONCE
+  const seenEventStudents = new Set();
+  const events = [];
+  for (const ev of rawEvents) {
+    const key = (ev.studentId || ev.email || ev.fullName || '').toLowerCase().trim();
+    if (key && !seenEventStudents.has(key)) {
+      seenEventStudents.add(key);
+      events.push(ev);
+    }
+  }
+
+  const seenOnline = new Set();
+  const onlineStudents = [];
+  rawParticipants.forEach((p) => {
+    const isAct = p.isOnline ||
+      (p.lastActiveAt && new Date(p.lastActiveAt).getTime() > fiveMinutesAgo) ||
+      (p.lastLoginAt && new Date(p.lastLoginAt).getTime() > fiveMinutesAgo);
+    if (isAct) {
+      const key = (p.studentId || p.email || p.fullName || '').toLowerCase().trim();
+      if (key && !seenOnline.has(key)) {
+        seenOnline.add(key);
+        onlineStudents.push(p);
+      }
+    }
   });
 
   res.json({
@@ -1626,7 +1650,19 @@ app.put('/api/competition', requireAdmin, (req, res) => {
 app.get('/api/registrations', requireAdmin, (req, res) => {
   const db = readDB();
   const { status, search, department } = req.query;
-  let list = db.participants || [];
+  const rawList = db.participants || [];
+
+  // Deduplicate so each student shows only once
+  const seen = new Set();
+  let list = [];
+  for (const p of rawList) {
+    if (!p) continue;
+    const key = (p.studentId || p.email || p.id || '').toUpperCase().trim();
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      list.push(p);
+    }
+  }
 
   if (status && status !== 'All') {
     list = list.filter((p) => (p.registrationStatus || 'Approved').toLowerCase() === status.toLowerCase());
@@ -1726,7 +1762,19 @@ app.delete('/api/participants/:id', requireAdmin, (req, res) => {
 // Public / Candidate List (sanitized)
 app.get('/api/participants', (req, res) => {
   const db = readDB();
-  const sanitized = (db.participants || []).map((p) => ({
+  const rawList = db.participants || [];
+  const seen = new Set();
+  const deduped = [];
+  for (const p of rawList) {
+    if (!p) continue;
+    const key = (p.studentId || p.email || p.id || '').toUpperCase().trim();
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      deduped.push(p);
+    }
+  }
+
+  const sanitized = deduped.map((p) => ({
     id: p.id,
     fullName: p.fullName,
     studentId: p.studentId,

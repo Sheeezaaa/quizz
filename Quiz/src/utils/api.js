@@ -277,8 +277,13 @@ export async function apiStudentLogin(identifier, password) {
         localStorage.setItem('bob_live_student_login_event', JSON.stringify(loginEvt));
         const historyRaw = localStorage.getItem('bob_live_student_logins_history');
         const history = historyRaw ? JSON.parse(historyRaw) : [];
-        history.unshift(loginEvt);
-        localStorage.setItem('bob_live_student_logins_history', JSON.stringify(history.slice(0, 50)));
+        const dedupedHistory = (history || []).filter(
+          (h) => (h.studentId || '').toUpperCase() !== (data.user.studentId || '').toUpperCase() &&
+                 (h.email || '').toLowerCase() !== (data.user.email || '').toLowerCase() &&
+                 (h.fullName || '').toLowerCase() !== (data.user.fullName || '').toLowerCase()
+        );
+        dedupedHistory.unshift(loginEvt);
+        localStorage.setItem('bob_live_student_logins_history', JSON.stringify(dedupedHistory.slice(0, 50)));
         window.dispatchEvent(new CustomEvent('bob_student_login_detected', { detail: loginEvt }));
       } catch {}
       return { success: true, user: data.user, token: data.token };
@@ -379,8 +384,13 @@ export async function apiStudentLogin(identifier, password) {
       localStorage.setItem('bob_live_student_login_event', JSON.stringify(loginEvt));
       const historyRaw = localStorage.getItem('bob_live_student_logins_history');
       const history = historyRaw ? JSON.parse(historyRaw) : [];
-      history.unshift(loginEvt);
-      localStorage.setItem('bob_live_student_logins_history', JSON.stringify(history.slice(0, 50)));
+      const dedupedHistory = (history || []).filter(
+        (h) => (h.studentId || '').toUpperCase() !== (found.studentId || '').toUpperCase() &&
+               (h.email || '').toLowerCase() !== (found.email || '').toLowerCase() &&
+               (h.fullName || '').toLowerCase() !== (found.fullName || '').toLowerCase()
+      );
+      dedupedHistory.unshift(loginEvt);
+      localStorage.setItem('bob_live_student_logins_history', JSON.stringify(dedupedHistory.slice(0, 50)));
       window.dispatchEvent(new CustomEvent('bob_student_login_detected', { detail: loginEvt }));
     } catch {}
     return { success: true, user: found, token: mockToken };

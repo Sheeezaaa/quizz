@@ -225,6 +225,37 @@ export default function AdminPanel({
       } catch {}
     };
 
+    const filterStudentMatches = (list, target) => {
+      if (!target) return list || [];
+      const sId = (target.studentId || '').toLowerCase().trim();
+      const email = (target.email || '').toLowerCase().trim();
+      const name = (target.fullName || '').toLowerCase().trim();
+      return (list || []).filter((x) => {
+        if (!x) return false;
+        const xId = (x.studentId || '').toLowerCase().trim();
+        const xEmail = (x.email || '').toLowerCase().trim();
+        const xName = (x.fullName || '').toLowerCase().trim();
+        if (sId && xId && sId === xId) return false;
+        if (email && xEmail && email === xEmail) return false;
+        if (name && xName && name === xName) return false;
+        return true;
+      });
+    };
+
+    const deduplicateLoginsList = (list) => {
+      const seen = new Set();
+      const deduped = [];
+      for (const item of (list || [])) {
+        if (!item) continue;
+        const key = (item.studentId || item.email || item.fullName || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          deduped.push(item);
+        }
+      }
+      return deduped;
+    };
+
     const handleStorageEvent = (e) => {
       if (e.key === 'bob_participants_updated' || e.key === 'bob_registered_participants_v2') {
         refreshParticipantsList();
@@ -234,11 +265,11 @@ export default function AdminPanel({
           const evt = JSON.parse(e.newValue);
           setRecentLoginToast(evt);
           playStudentLoginChime();
-          setLiveStudentLogins((prev) => [evt, ...prev.filter((x) => x.studentId !== evt.studentId)].slice(0, 30));
-          setOnlineStudents((prev) => {
-            if (prev.some((s) => s.studentId === evt.studentId)) return prev;
-            return [{ ...evt, isOnline: true }, ...prev];
-          });
+          setLiveStudentLogins((prev) => [evt, ...filterStudentMatches(prev, evt)].slice(0, 30));
+          setOnlineStudents((prev) => [
+            { ...evt, isOnline: true },
+            ...filterStudentMatches(prev, evt)
+          ]);
           refreshParticipantsList();
         } catch {}
       }
@@ -248,11 +279,11 @@ export default function AdminPanel({
       if (e.detail) {
         setRecentLoginToast(e.detail);
         playStudentLoginChime();
-        setLiveStudentLogins((prev) => [e.detail, ...prev.filter((x) => x.studentId !== e.detail.studentId)].slice(0, 30));
-        setOnlineStudents((prev) => {
-          if (prev.some((s) => s.studentId === e.detail.studentId)) return prev;
-          return [{ ...e.detail, isOnline: true }, ...prev];
-        });
+        setLiveStudentLogins((prev) => [e.detail, ...filterStudentMatches(prev, e.detail)].slice(0, 30));
+        setOnlineStudents((prev) => [
+          { ...e.detail, isOnline: true },
+          ...filterStudentMatches(prev, e.detail)
+        ]);
         refreshParticipantsList();
       }
     };
@@ -266,10 +297,10 @@ export default function AdminPanel({
         const res = await apiGetLiveStudentLogins();
         if (res && res.success) {
           if (Array.isArray(res.onlineStudents)) {
-            setOnlineStudents(res.onlineStudents);
+            setOnlineStudents(deduplicateLoginsList(res.onlineStudents));
           }
           if (Array.isArray(res.events) && res.events.length > 0) {
-            setLiveStudentLogins(res.events);
+            setLiveStudentLogins(deduplicateLoginsList(res.events));
             const unseen = res.events.find(
               (ev) => !ev.seenByAdmin && !seenLoginEventIds.has(ev.eventId)
             );
@@ -980,15 +1011,47 @@ export default function AdminPanel({
     return matchesSearch && matchesSub && matchesRound;
   });
 
+  // Deduplicate live login cards so student appears only ONCE
+  const uniqueLiveStudentLogins = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    for (const log of (liveStudentLogins || [])) {
+      if (!log) continue;
+      const key = (log.studentId || log.email || log.fullName || '').toLowerCase().trim();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        result.push(log);
+      }
+    }
+    return result;
+  }, [liveStudentLogins]);
+
+  // Unique deduplicated participants list
+  const uniqueParticipants = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    for (const p of (participants || [])) {
+      if (!p) continue;
+      const key = (p.studentId || p.email || p.id || '').toUpperCase().trim();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        result.push(p);
+      }
+    }
+    return result;
+  }, [participants]);
+
   // Filtered participants list
-  const filteredParticipants = participants.filter((p) => {
-    const q = studentSearch.trim().toLowerCase();
-    const matchesQuery = !q || [p.fullName, p.studentId, p.id, p.email, p.phone]
-      .some((v) => (v || '').toLowerCase().includes(q));
-    const matchesDept = departmentFilter === 'All' || p.department === departmentFilter;
-    const matchesSem = semesterFilter === 'All' || p.semester === semesterFilter;
-    return matchesQuery && matchesDept && matchesSem;
-  });
+  const filteredParticipants = useMemo(() => {
+    return uniqueParticipants.filter((p) => {
+      const q = studentSearch.trim().toLowerCase();
+      const matchesQuery = !q || [p.fullName, p.studentId, p.id, p.email, p.phone]
+        .some((v) => (v || '').toLowerCase().includes(q));
+      const matchesDept = departmentFilter === 'All' || p.department === departmentFilter;
+      const matchesSem = semesterFilter === 'All' || p.semester === semesterFilter;
+      return matchesQuery && matchesDept && matchesSem;
+    });
+  }, [uniqueParticipants, studentSearch, departmentFilter, semesterFilter]);
 
   // Calculate days remaining to event
   const calculateDaysLeft = () => {
@@ -1818,13 +1881,13 @@ export default function AdminPanel({
                   </div>
                 </div>
 
-                {liveStudentLogins.length === 0 ? (
+                {uniqueLiveStudentLogins.length === 0 ? (
                   <div className="py-6 text-center text-xs text-slate-500">
                     No student logins recorded in this session yet. As soon as a student logs in, their live profile, department, and time will appear here immediately.
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {liveStudentLogins.slice(0, 6).map((log, idx) => (
+                    {uniqueLiveStudentLogins.slice(0, 6).map((log, idx) => (
                       <div 
                         key={log.eventId || idx}
                         className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${

@@ -74,7 +74,17 @@ export default function RegistrationManager({ isDark }) {
         department: deptFilter,
       });
       if (Array.isArray(data)) {
-        setRegistrations(data);
+        const seen = new Set();
+        const unique = [];
+        for (const item of data) {
+          if (!item) continue;
+          const key = (item.studentId || item.email || item.id || '').toUpperCase().trim();
+          if (key && !seen.has(key)) {
+            seen.add(key);
+            unique.push(item);
+          }
+        }
+        setRegistrations(unique);
       }
     } catch (err) {
       console.error('Error fetching registrations:', err);

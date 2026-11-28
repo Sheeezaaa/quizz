@@ -116,7 +116,19 @@ export const getStoredParticipants = () => {
       localStorage.setItem(STORAGE_KEYS.PARTICIPANTS, JSON.stringify(INITIAL_REGISTERED_PARTICIPANTS));
       return INITIAL_REGISTERED_PARTICIPANTS;
     }
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return INITIAL_REGISTERED_PARTICIPANTS;
+    const seen = new Set();
+    const unique = [];
+    for (const p of parsed) {
+      if (!p) continue;
+      const key = (p.studentId || p.email || p.id || '').toUpperCase().trim();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        unique.push(p);
+      }
+    }
+    return unique;
   } catch (err) {
     console.error('Error reading participants from localStorage:', err);
     return INITIAL_REGISTERED_PARTICIPANTS;
