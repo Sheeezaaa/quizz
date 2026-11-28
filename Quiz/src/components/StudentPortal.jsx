@@ -83,7 +83,12 @@ import {
   apiCheckRetakePermission,
   apiGetScheduleStatus,
   apiSendStudentHeartbeat,
-  apiStudentLogout
+  apiStudentLogout,
+  apiGetNextAIPracticeQuestion,
+  apiSubmitAIPracticeAnswer,
+  apiGetAIPracticeStats,
+  apiResetAIPracticeHistory,
+  apiGetAIPracticeConcepts
 } from '../utils/api';
 import { 
   getLoggedInStudent, 
@@ -225,6 +230,122 @@ export default function StudentPortal({
         setRetakePermissionInfo({ hasPermission: !!res.hasPermission, permission: res.permission });
       }
     } catch {}
+  };
+
+  // AI Practice Arena States (Dynamic AI Question Generation)
+  const [practiceQuestion, setPracticeQuestion] = useState(null);
+  const [practiceLoading, setPracticeLoading] = useState(false);
+  const [practiceSelectedOption, setPracticeSelectedOption] = useState(null);
+  const [practiceSubmitting, setPracticeSubmitting] = useState(false);
+  const [practiceResult, setPracticeResult] = useState(null);
+  const [practiceSubjectFilter, setPracticeSubjectFilter] = useState('');
+  const [practiceDifficultyFilter, setPracticeDifficultyFilter] = useState('');
+  const [practiceTypeFilter, setPracticeTypeFilter] = useState('');
+  const [practiceStats, setPracticeStats] = useState({
+    totalAttempted: 0,
+    correctCount: 0,
+    accuracyPercentage: 0,
+    currentStreak: 0,
+    practicePoints: 0
+  });
+  const [practiceConcepts, setPracticeConcepts] = useState({ subjects: [], adminReferenceReady: false });
+  const [practiceError, setPracticeError] = useState('');
+  const [practiceTimeStart, setPracticeTimeStart] = useState(Date.now());
+
+  const loadPracticeStats = async () => {
+    try {
+      const res = await apiGetAIPracticeStats();
+      if (res && res.success && res.stats) {
+        setPracticeStats(res.stats);
+      }
+    } catch {}
+  };
+
+  const loadPracticeConcepts = async () => {
+    try {
+      const res = await apiGetAIPracticeConcepts();
+      if (res && res.success) {
+        setPracticeConcepts({
+          subjects: res.subjects || [],
+          adminReferenceReady: !!res.adminReferenceReady
+        });
+      }
+    } catch {}
+  };
+
+  const loadNextPracticeQuestion = async (overrideSubject, overrideDifficulty, overrideType) => {
+    setPracticeLoading(true);
+    setPracticeError('');
+    setPracticeResult(null);
+    setPracticeSelectedOption(null);
+    try {
+      const subjectId = overrideSubject !== undefined ? overrideSubject : practiceSubjectFilter;
+      const difficulty = overrideDifficulty !== undefined ? overrideDifficulty : practiceDifficultyFilter;
+      const questionType = overrideType !== undefined ? overrideType : practiceTypeFilter;
+
+      const res = await apiGetNextAIPracticeQuestion({
+        subjectId: subjectId || undefined,
+        difficulty: difficulty || undefined,
+        questionType: questionType || undefined
+      });
+
+      if (res && res.success && res.question) {
+        setPracticeQuestion(res.question);
+        setPracticeTimeStart(Date.now());
+        if (res.stats) setPracticeStats(res.stats);
+      } else {
+        setPracticeError(res?.error || 'Could not generate a practice question at this time. Please retry.');
+      }
+    } catch (err) {
+      setPracticeError(err?.message || 'Error generating dynamic AI question.');
+    } finally {
+      setPracticeLoading(false);
+    }
+  };
+
+  const handleSelectPracticeOption = (idx) => {
+    if (practiceResult) return;
+    setPracticeSelectedOption(idx);
+  };
+
+  const handleSubmitPracticeAnswer = async () => {
+    if (!practiceQuestion || practiceSelectedOption === null || practiceSubmitting || practiceResult) return;
+    setPracticeSubmitting(true);
+    try {
+      const timeSpent = Math.max(1, Math.round((Date.now() - practiceTimeStart) / 1000));
+      const res = await apiSubmitAIPracticeAnswer({
+        questionId: practiceQuestion.id,
+        selectedIndex: practiceSelectedOption,
+        timeSpentSeconds: timeSpent
+      });
+
+      if (res && res.success) {
+        setPracticeResult(res);
+        if (res.stats) setPracticeStats(res.stats);
+        if (res.isCorrect) {
+          try { playCorrectChime(); } catch {}
+        }
+      } else {
+        setPracticeError(res?.error || 'Failed to submit practice answer.');
+      }
+    } catch (err) {
+      setPracticeError(err?.message || 'Error evaluating practice answer.');
+    } finally {
+      setPracticeSubmitting(false);
+    }
+  };
+
+  const handleResetPracticeHistory = async () => {
+    if (!window.confirm('Reset your practice question history? This will allow previously practiced questions to reappear in your dynamic pool.')) return;
+    try {
+      setPracticeLoading(true);
+      await apiResetAIPracticeHistory();
+      await loadPracticeStats();
+      await loadNextPracticeQuestion();
+    } catch {}
+    finally {
+      setPracticeLoading(false);
+    }
   };
 
   // Anti-Cheating & Browser Lock States
@@ -516,6 +637,17 @@ export default function StudentPortal({
 
     return () => clearInterval(interval);
   }, [isOpen, currentUser, activeQuizAttempt]);
+
+  // Auto-fetch practice stats, concepts & initial question when visiting AI Practice tab
+  useEffect(() => {
+    if (activeTab === 'aiPractice' && currentUser) {
+      loadPracticeStats();
+      loadPracticeConcepts();
+      if (!practiceQuestion && !practiceLoading) {
+        loadNextPracticeQuestion();
+      }
+    }
+  }, [activeTab, currentUser]);
 
   // Timer countdown for active quiz attempt
   useEffect(() => {
@@ -1149,6 +1281,7 @@ export default function StudentPortal({
   const enrolledCount = `${currentTeamTotal}/4`;
   const navTabs = [
     { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null },
+    { id: 'aiPractice', label: 'AI Practice Questions', icon: Sparkles, badge: 'AI Dynamic' },
     { id: 'team', label: 'My Group & Team', icon: Users, badge: enrolledCount },
     { id: 'quiz', label: 'Quiz Arena (Exam)', icon: Zap, badge: 'Live' },
     { id: 'announcements', label: 'Announcements', icon: Bell, badge: announcements.length ? `${announcements.length}` : null },
@@ -1602,6 +1735,13 @@ export default function StudentPortal({
 
                   <div className="flex flex-wrap items-center gap-3">
                     <button
+                      onClick={() => setActiveTab('aiPractice')}
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-bold text-xs flex items-center gap-2 shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>AI Practice Arena</span>
+                    </button>
+                    <button
                       onClick={() => setActiveTab('team')}
                       className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
                     >
@@ -1760,6 +1900,443 @@ export default function StudentPortal({
                   </span>
                 </div>
               </div>
+
+              {/* Dedicated AI Practice Questions Feature Showcase Banner */}
+              <div className="rounded-3xl p-6 sm:p-7 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 border-2 border-purple-500/40 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-300 shrink-0 shadow-lg">
+                    <Sparkles className="w-7 h-7 text-amber-300" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-heading font-black text-lg text-white">AI Practice Questions</h4>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                        DYNAMIC AI
+                      </span>
+                    </div>
+                    <p className="text-xs text-purple-200 mt-1 max-w-xl">
+                      Practice dynamically generated questions crafted from admin curriculum concepts across all 7 Computer Science disciplines with zero repetition.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-4 mt-2 text-[11px] font-mono text-purple-300">
+                      <span>Attempted: <strong className="text-white">{practiceStats?.totalAttempted || 0}</strong></span>
+                      <span>Accuracy: <strong className="text-emerald-400">{practiceStats?.accuracyPercentage || 0}%</strong></span>
+                      <span>Points: <strong className="text-amber-300">{practiceStats?.practicePoints || 0} XP</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('aiPractice')}
+                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-heading font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-900/40 hover:scale-105 transition-all shrink-0 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Start AI Practice</span>
+                </button>
+              </div>
+
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB: AI PRACTICE QUESTIONS (DYNAMIC AI GENERATION)      */}
+          {/* ======================================================== */}
+          {activeTab === 'aiPractice' && (
+            <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn">
+              
+              {/* Top Hero Banner */}
+              <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 border-2 border-purple-500/40 text-white shadow-xl relative overflow-hidden">
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-bold bg-purple-500/30 text-purple-200 border border-purple-400/40 mb-3">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Adaptive AI Dynamic Learning Engine</span>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-heading font-black text-white flex items-center gap-2">
+                      <span>AI Practice Questions</span>
+                    </h2>
+                    <p className="text-xs sm:text-sm text-purple-200 font-medium mt-1 max-w-2xl">
+                      Master Computer Science concepts with dynamic AI-generated questions referenced from the official curriculum. The engine ensures non-repeating questions, instant step-by-step feedback, and full concept explanations.
+                    </p>
+                  </div>
+
+                  {/* Quick Action: Reset History */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleResetPracticeHistory}
+                      className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-purple-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border border-white/10"
+                      title="Reset your practice history to revisit previous question concepts"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Reset History</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Real-time Student Practice Stats Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-purple-500/30 text-xs">
+                  <div className="p-3.5 rounded-2xl bg-white/5 border border-purple-400/20 backdrop-blur-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block">Questions Practiced</span>
+                    <strong className="text-xl sm:text-2xl font-mono font-black text-white mt-1 block">
+                      {practiceStats.totalAttempted}
+                    </strong>
+                    <span className="text-[10px] text-purple-300 font-medium">{practiceStats.correctCount} correct answers</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-white/5 border border-purple-400/20 backdrop-blur-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block">Accuracy Rate</span>
+                    <strong className="text-xl sm:text-2xl font-mono font-black text-emerald-400 mt-1 block">
+                      {practiceStats.accuracyPercentage}%
+                    </strong>
+                    <span className="text-[10px] text-purple-300 font-medium">overall performance</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-white/5 border border-purple-400/20 backdrop-blur-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block">Current Streak</span>
+                    <strong className="text-xl sm:text-2xl font-mono font-black text-amber-300 mt-1 block">
+                      🔥 {practiceStats.currentStreak}
+                    </strong>
+                    <span className="text-[10px] text-purple-300 font-medium">consecutive correct</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-white/5 border border-purple-400/20 backdrop-blur-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block">Practice XP Points</span>
+                    <strong className="text-xl sm:text-2xl font-mono font-black text-sky-300 mt-1 block">
+                      ⭐ {practiceStats.practicePoints}
+                    </strong>
+                    <span className="text-[10px] text-purple-300 font-medium">+10 XP per correct MCQ</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subject & Difficulty Filter Bar */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-3 text-slate-900">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Subject Selector */}
+                  <div className="flex-1">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
+                      Target Computer Science Subject
+                    </label>
+                    <select
+                      value={practiceSubjectFilter}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPracticeSubjectFilter(val);
+                        loadNextPracticeQuestion(val, undefined, undefined);
+                      }}
+                      className="w-full py-2.5 px-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-900 font-medium text-xs focus:outline-none focus:border-purple-500 cursor-pointer"
+                    >
+                      <option value="">🎯 All 7 CS Disciplines (Auto-Blended)</option>
+                      {practiceConcepts.subjects && practiceConcepts.subjects.length > 0 ? (
+                        practiceConcepts.subjects.map((s) => (
+                          <option key={s.id} value={s.id}>{s.name} ({s.topicsCount || 4} topics)</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="pf">Programming Fundamentals (C / C++ / Python)</option>
+                          <option value="oop">Object Oriented Programming (OOP)</option>
+                          <option value="dsa">Data Structures & Algorithms</option>
+                          <option value="dbms">Database Systems & SQL</option>
+                          <option value="cn">Computer Networks & OSI/TCP</option>
+                          <option value="se">Software Engineering & SDLC</option>
+                          <option value="os">Operating Systems & Concurrency</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  {/* Difficulty Filters */}
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
+                      Difficulty Level
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      {[
+                        { id: '', label: 'All' },
+                        { id: 'easy', label: 'Easy' },
+                        { id: 'medium', label: 'Medium' },
+                        { id: 'hard', label: 'Hard' }
+                      ].map((d) => (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => {
+                            setPracticeDifficultyFilter(d.id);
+                            loadNextPracticeQuestion(undefined, d.id, undefined);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-heading font-bold transition-all cursor-pointer ${
+                            practiceDifficultyFilter === d.id
+                              ? 'bg-purple-600 text-white shadow-sm'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Question Type Filters */}
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
+                      Question Type
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      {[
+                        { id: '', label: 'All' },
+                        { id: 'mcq', label: 'MCQs' },
+                        { id: 'conceptual', label: 'Conceptual' },
+                        { id: 'problem-solving', label: 'Problem Solving' }
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            setPracticeTypeFilter(t.id);
+                            loadNextPracticeQuestion(undefined, undefined, t.id);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-heading font-bold transition-all cursor-pointer ${
+                            practiceTypeFilter === t.id
+                              ? 'bg-indigo-600 text-white shadow-sm'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Dynamic Practice Question Card */}
+              <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-slate-200/90 shadow-xl space-y-6 text-slate-900 relative">
+                {practiceLoading ? (
+                  <div className="py-16 text-center space-y-4">
+                    <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div>
+                      <div className="font-heading font-black text-slate-800 text-base">Generating Dynamic AI Practice Question...</div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Synthesizing question from admin learning concepts without repeating previously attempted questions.
+                      </p>
+                    </div>
+                  </div>
+                ) : practiceError && !practiceQuestion ? (
+                  <div className="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-3">
+                    <AlertCircle className="w-8 h-8 text-rose-600 mx-auto" />
+                    <p className="text-sm font-bold text-rose-800">{practiceError}</p>
+                    <button
+                      type="button"
+                      onClick={() => loadNextPracticeQuestion()}
+                      className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-heading font-bold text-xs cursor-pointer shadow-md"
+                    >
+                      Retry Generation
+                    </button>
+                  </div>
+                ) : practiceQuestion ? (
+                  <div className="space-y-6">
+                    {/* Question Header: Topic, Subject, Difficulty, Type */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                          {practiceQuestion.subjectName}
+                        </span>
+                        <span className="px-3 py-1 rounded-full text-xs font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          Topic: {practiceQuestion.topic}
+                        </span>
+                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wide border ${
+                          practiceQuestion.difficulty === 'hard'
+                            ? 'bg-rose-100 text-rose-800 border-rose-200'
+                            : practiceQuestion.difficulty === 'medium'
+                            ? 'bg-amber-100 text-amber-800 border-amber-200'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        }`}>
+                          {practiceQuestion.difficulty}
+                        </span>
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wide bg-blue-100 text-blue-800 border border-blue-200">
+                          {practiceQuestion.questionType || 'MCQ'}
+                        </span>
+                      </div>
+
+                      <div className="text-xs font-mono text-slate-500 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                        <span>AI Dynamic #{practiceQuestion.id?.slice(-6)}</span>
+                      </div>
+                    </div>
+
+                    {/* Question Statement */}
+                    <div className="text-base sm:text-lg font-heading font-bold text-slate-900 leading-relaxed">
+                      {practiceQuestion.question}
+                    </div>
+
+                    {/* Answer Options */}
+                    <div className="space-y-3">
+                      {Array.isArray(practiceQuestion.options) && practiceQuestion.options.map((opt, idx) => {
+                        const isSelected = practiceSelectedOption === idx;
+                        const isSubmitted = !!practiceResult;
+                        const isCorrectOption = isSubmitted && practiceResult.correctIndex === idx;
+                        const isWrongChoice = isSubmitted && isSelected && !practiceResult.isCorrect;
+
+                        let cardStyle = 'border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50/40 text-slate-800';
+                        if (isSelected && !isSubmitted) {
+                          cardStyle = 'border-purple-600 bg-purple-50/80 text-purple-950 ring-2 ring-purple-600/20';
+                        }
+                        if (isCorrectOption) {
+                          cardStyle = 'border-emerald-500 bg-emerald-50 text-emerald-950 font-bold ring-2 ring-emerald-500/30';
+                        } else if (isWrongChoice) {
+                          cardStyle = 'border-rose-500 bg-rose-50 text-rose-950 ring-2 ring-rose-500/30';
+                        } else if (isSubmitted) {
+                          cardStyle = 'border-slate-200 bg-slate-50/60 text-slate-400 opacity-60';
+                        }
+
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectPracticeOption(idx)}
+                            className={`p-4 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${cardStyle} ${
+                              isSubmitted ? 'cursor-default' : 'cursor-pointer hover:shadow-xs'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono font-bold text-xs ${
+                                isCorrectOption
+                                  ? 'bg-emerald-600 text-white'
+                                  : isWrongChoice
+                                  ? 'bg-rose-600 text-white'
+                                  : isSelected
+                                  ? 'bg-purple-600 text-white'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}>
+                                {String.fromCharCode(65 + idx)}
+                              </span>
+                              <span className="text-xs sm:text-sm font-medium leading-relaxed">
+                                {opt}
+                              </span>
+                            </div>
+
+                            {isCorrectOption && (
+                              <span className="flex items-center gap-1 text-xs font-mono font-bold text-emerald-700 shrink-0">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                <span>Correct</span>
+                              </span>
+                            )}
+                            {isWrongChoice && (
+                              <span className="flex items-center gap-1 text-xs font-mono font-bold text-rose-700 shrink-0">
+                                <AlertCircle className="w-4 h-4 text-rose-600" />
+                                <span>Your Answer</span>
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Result Feedback & AI Explanation Section */}
+                    {practiceResult && (
+                      <div className="space-y-4 pt-4 border-t border-slate-200 animate-fadeIn">
+                        {/* Result Alert */}
+                        <div className={`p-4 rounded-2xl border-2 flex items-center gap-3 ${
+                          practiceResult.isCorrect
+                            ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                            : 'bg-rose-50 border-rose-300 text-rose-900'
+                        }`}>
+                          {practiceResult.isCorrect ? (
+                            <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-6 h-6 text-rose-600 shrink-0" />
+                          )}
+                          <div className="flex-1">
+                            <strong className="block font-heading font-black text-sm">
+                              {practiceResult.isCorrect ? 'Excellent! That is correct!' : 'Incorrect Answer'}
+                            </strong>
+                            <p className="text-xs font-medium mt-0.5">
+                              {practiceResult.isCorrect 
+                                ? '+10 Practice XP awarded! Keep up your streak!' 
+                                : `The correct answer is Option ${String.fromCharCode(65 + practiceResult.correctIndex)}: ${practiceResult.correctAnswer}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Step-by-Step AI Explanation */}
+                        {practiceResult.explanation && (
+                          <div className="p-5 rounded-2xl bg-indigo-50/70 border-2 border-indigo-200 space-y-2">
+                            <div className="flex items-center gap-2 text-indigo-900 font-heading font-bold text-xs uppercase tracking-wider">
+                              <Sparkles className="w-4 h-4 text-indigo-600" />
+                              <span>AI Concept Explanation & Learning Objective</span>
+                            </div>
+                            <p className="text-xs sm:text-sm text-indigo-950 leading-relaxed font-medium">
+                              {practiceResult.explanation}
+                            </p>
+                            {practiceResult.learningObjective && (
+                              <div className="pt-2 text-[11px] font-mono text-indigo-700">
+                                💡 <strong>Core Objective:</strong> {practiceResult.learningObjective}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action Buttons: Submit / Check Answer & Next Practice Question */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200">
+                      <div className="text-xs text-slate-500">
+                        {practiceResult ? (
+                          <span>Ready for the next concept challenge?</span>
+                        ) : practiceSelectedOption === null ? (
+                          <span>Select an option above to submit your answer.</span>
+                        ) : (
+                          <span>Option {String.fromCharCode(65 + practiceSelectedOption)} selected. Click Submit to verify.</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
+                        {!practiceResult ? (
+                          <button
+                            type="button"
+                            onClick={handleSubmitPracticeAnswer}
+                            disabled={practiceSelectedOption === null || practiceSubmitting}
+                            className={`w-full sm:w-auto px-6 py-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                              practiceSelectedOption !== null && !practiceSubmitting
+                                ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30 cursor-pointer hover:scale-105'
+                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {practiceSubmitting ? (
+                              <>
+                                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <span>Verifying...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4" />
+                                <span>Submit Answer</span>
+                              </>
+                            )}
+                          </button>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => loadNextPracticeQuestion()}
+                          disabled={practiceLoading}
+                          className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 hover:scale-105 transition-all cursor-pointer"
+                        >
+                          <span>Next Practice Question</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Security & Pedagogical Notice */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500">
+                🔒 <strong>Admin Question Bank Protected:</strong> All practice questions are dynamically synthesized by AI based on curriculum learning concepts and never expose original admin questions or confidential solution templates.
+              </div>
+
             </div>
           )}
 
@@ -2189,9 +2766,10 @@ export default function StudentPortal({
                               alert(res?.error || 'Failed to join team. Please check the code.');
                             }
                           }}
-                          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-500/25 transition-all cursor-pointer"
+                          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-500/25 transition-all cursor-pointer flex items-center justify-center gap-2"
                         >
-                          Enter Invite Code
+                          <UserPlus className="w-4 h-4 text-white" />
+                          <span>Enter Team Invite Code</span>
                         </button>
                       </div>
                     </div>
@@ -2201,11 +2779,11 @@ export default function StudentPortal({
                 {/* 6. TOURNAMENT & TEAM FORMATION RULES BANNER (100% HIGH CONTRAST & READABLE) */}
                 <div className={`p-6 sm:p-7 rounded-3xl border-2 space-y-4 transition-all ${
                   isDark 
-                    ? 'bg-slate-900 border-slate-800 text-white shadow-xl' 
+                    ? 'bg-slate-900 border-slate-700 text-white shadow-xl' 
                     : 'bg-white border-slate-200/90 text-slate-900 shadow-md'
                 }`}>
                   <h4 className={`font-heading font-black text-sm uppercase tracking-wider flex items-center gap-2 ${
-                    isDark ? 'text-amber-400' : 'text-amber-700'
+                    isDark ? 'text-amber-400' : 'text-amber-600'
                   }`}>
                     <ShieldCheck className={`w-5 h-5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
                     <span>Official Team Formation Guidelines</span>
@@ -2213,52 +2791,52 @@ export default function StudentPortal({
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                     <div className={`p-4 rounded-2xl border-2 transition-all ${
                       isDark 
-                        ? 'bg-slate-950/90 border-slate-800 text-slate-200' 
-                        : 'bg-blue-50/80 border-blue-200 text-slate-900 shadow-xs'
+                        ? 'bg-slate-800/90 border-blue-500/40 text-slate-100 shadow-sm' 
+                        : 'bg-blue-50/90 border-blue-200 text-slate-900 shadow-xs'
                     }`}>
-                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-blue-300' : 'text-blue-950'}`}>
                         👥 2 to 3 Members
                       </strong>
-                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                         Each team must have at least 2 members and at most 3 members.
                       </span>
                     </div>
 
                     <div className={`p-4 rounded-2xl border-2 transition-all ${
                       isDark 
-                        ? 'bg-slate-950/90 border-slate-800 text-slate-200' 
-                        : 'bg-amber-50/80 border-amber-200 text-slate-900 shadow-xs'
+                        ? 'bg-slate-800/90 border-amber-500/40 text-slate-100 shadow-sm' 
+                        : 'bg-amber-50/90 border-amber-200 text-slate-900 shadow-xs'
                     }`}>
-                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-amber-300' : 'text-amber-950'}`}>
                         👑 Team Leader
                       </strong>
-                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                         The first student creates the team, shares the invite link, and locks final registration.
                       </span>
                     </div>
 
                     <div className={`p-4 rounded-2xl border-2 transition-all ${
                       isDark 
-                        ? 'bg-slate-950/90 border-slate-800 text-slate-200' 
-                        : 'bg-emerald-50/80 border-emerald-200 text-slate-900 shadow-xs'
+                        ? 'bg-slate-800/90 border-emerald-500/40 text-slate-100 shadow-sm' 
+                        : 'bg-emerald-50/90 border-emerald-200 text-slate-900 shadow-xs'
                     }`}>
-                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-emerald-300' : 'text-emerald-950'}`}>
                         📱 Unique Mobile
                       </strong>
-                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                         Every member must register with their own unique mobile number and password.
                       </span>
                     </div>
 
                     <div className={`p-4 rounded-2xl border-2 transition-all ${
                       isDark 
-                        ? 'bg-slate-950/90 border-slate-800 text-slate-200' 
-                        : 'bg-purple-50/80 border-purple-200 text-slate-900 shadow-xs'
+                        ? 'bg-slate-800/90 border-purple-500/40 text-slate-100 shadow-sm' 
+                        : 'bg-purple-50/90 border-purple-200 text-slate-900 shadow-xs'
                     }`}>
-                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                      <strong className={`block font-black text-sm mb-1.5 ${isDark ? 'text-purple-300' : 'text-purple-950'}`}>
                         🔐 Independent Login
                       </strong>
-                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                      <span className={`leading-relaxed text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                         Members can log in individually using their Team Name or Mobile Number.
                       </span>
                     </div>
@@ -3428,20 +4006,20 @@ export default function StudentPortal({
                 {/* Academic Evaluation Summary Table */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-2 border-slate-300 rounded-xl overflow-hidden shadow-xs">
-                    <thead className="bg-slate-100 text-slate-950 font-mono text-[11px] uppercase border-b-2 border-slate-300">
+                    <thead className="bg-slate-900 text-white font-mono text-[11px] uppercase border-b-2 border-slate-700 print:bg-slate-100 print:text-black">
                       <tr>
-                        <th className="py-3 px-3.5 text-slate-950 font-black">Examination Stage</th>
-                        <th className="py-3 px-2 text-center text-slate-950 font-black">Total MCQs</th>
-                        <th className="py-3 px-2 text-center text-emerald-800 font-black">Correct</th>
-                        <th className="py-3 px-2 text-center text-rose-800 font-black">Wrong / Skip</th>
-                        <th className="py-3 px-3.5 text-right text-blue-900 font-black">Marks Scored</th>
+                        <th className="py-3 px-3.5 text-white print:text-slate-900 font-bold">Examination Stage</th>
+                        <th className="py-3 px-2 text-center text-white print:text-slate-900 font-bold">Total MCQs</th>
+                        <th className="py-3 px-2 text-center text-emerald-300 print:text-emerald-700 font-bold">Correct</th>
+                        <th className="py-3 px-2 text-center text-rose-300 print:text-rose-700 font-bold">Wrong / Skip</th>
+                        <th className="py-3 px-3.5 text-right text-blue-300 print:text-blue-800 font-bold">Marks Scored</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 text-slate-800 font-medium bg-white">
                       <tr>
                         <td className="py-3.5 px-3.5">
                           <strong className="block text-slate-950 font-heading font-black text-xs">
-                            Single Combined Championship
+                            Round 01: Screening Examination
                           </strong>
                           <span className="text-[10px] text-slate-600 font-semibold block mt-0.5">
                             All 7 Core CS Subject Disciplines (30s Timer per MCQ)

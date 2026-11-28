@@ -2849,3 +2849,93 @@ export async function apiStudentLogout(studentId) {
     return { success: false, error: err.message };
   }
 }
+
+// ====================================================================
+// AI PRACTICE QUESTIONS API CLIENT
+// ====================================================================
+
+export async function apiGetNextAIPracticeQuestion({ subjectId = 'all', difficulty = 'All', questionType = 'All' } = {}) {
+  try {
+    const params = new URLSearchParams();
+    if (subjectId && subjectId !== 'all') params.append('subjectId', subjectId);
+    if (difficulty && difficulty !== 'All') params.append('difficulty', difficulty);
+    if (questionType && questionType !== 'All') params.append('questionType', questionType);
+
+    const token = getStudentAuthToken();
+    const res = await fetch(`${API_BASE}/ai-practice/next?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return await safeJson(res);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function apiSubmitAIPracticeAnswer({ questionId, selectedIndex, timeSpentSeconds = 0 }) {
+  try {
+    const token = getStudentAuthToken();
+    const res = await fetch(`${API_BASE}/ai-practice/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ questionId, selectedIndex, timeSpentSeconds })
+    });
+    return await safeJson(res);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function apiGetAIPracticeStats() {
+  try {
+    const token = getStudentAuthToken();
+    const res = await fetch(`${API_BASE}/ai-practice/stats`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return await safeJson(res);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function apiResetAIPracticeHistory() {
+  try {
+    const token = getStudentAuthToken();
+    const res = await fetch(`${API_BASE}/ai-practice/reset-history`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return await safeJson(res);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function apiGetAIPracticeConcepts() {
+  try {
+    const token = getStudentAuthToken();
+    const res = await fetch(`${API_BASE}/ai-practice/concepts`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return await safeJson(res);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}

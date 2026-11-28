@@ -6,6 +6,15 @@ import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import {
+  generateAIPracticeQuestion,
+  getNextPracticeQuestionForStudent,
+  submitPracticeAnswer,
+  getStudentPracticeStats,
+  resetStudentPracticeHistory,
+  extractAdminLearningConcepts,
+  CS_DISCIPLINES
+} from './aiPracticeEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -2650,6 +2659,116 @@ app.get('/api/quiz/my-status', requireParticipant, (req, res) => {
       finishedAt: a.finishedAt,
     })),
   });
+});
+
+// ====================================================================
+// AI-POWERED DYNAMIC PRACTICE QUESTIONS ENGINE (STUDENT DASHBOARD)
+// ====================================================================
+
+// 1. Get Next Practice Question for Student (Avoids repetition, uses AI, strictly sanitizes answers)
+app.get('/api/ai-practice/next', requireParticipant, async (req, res) => {
+  try {
+    const studentId = req.user.studentId;
+    const { subjectId = 'all', difficulty = 'All', questionType = 'All' } = req.query;
+
+    const db = readDB();
+    const sanitizedQuestion = await getNextPracticeQuestionForStudent({
+      studentId,
+      subjectId,
+      difficulty,
+      questionType,
+      db
+    });
+
+    writeDB(db);
+
+    res.json({
+      success: true,
+      question: sanitizedQuestion
+    });
+  } catch (err) {
+    console.error('[AI PRACTICE ERROR]:', err);
+    res.status(500).json({ error: 'Failed to generate practice question: ' + err.message });
+  }
+});
+
+// 2. Submit Answer to Practice Question (Verifies correctness, stores attempt, reveals AI explanation)
+app.post('/api/ai-practice/submit', requireParticipant, (req, res) => {
+  return withDBLock(async () => {
+    try {
+      const studentId = req.user.studentId;
+      const { questionId, selectedIndex, timeSpentSeconds } = req.body;
+
+      if (!questionId || selectedIndex === undefined) {
+        return res.status(400).json({ error: 'Question ID and selectedIndex are required.' });
+      }
+
+      const db = readDB();
+      const outcome = submitPracticeAnswer({
+        studentId,
+        questionId,
+        selectedIndex,
+        timeSpentSeconds,
+        db
+      });
+
+      if (outcome.error) {
+        return res.status(outcome.status || 400).json({ error: outcome.error });
+      }
+
+      writeDB(db);
+
+      res.json(outcome);
+    } catch (err) {
+      console.error('[AI PRACTICE SUBMIT ERROR]:', err);
+      res.status(500).json({ error: 'Failed to evaluate answer: ' + err.message });
+    }
+  });
+});
+
+// 3. Get Student Practice Statistics & Mastery Summary
+app.get('/api/ai-practice/stats', requireParticipant, (req, res) => {
+  try {
+    const studentId = req.user.studentId;
+    const db = readDB();
+    const stats = getStudentPracticeStats({ studentId, db });
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch practice statistics: ' + err.message });
+  }
+});
+
+// 4. Reset Student Practice History (Allows student to practice again from clean slate)
+app.post('/api/ai-practice/reset-history', requireParticipant, (req, res) => {
+  return withDBLock(async () => {
+    try {
+      const studentId = req.user.studentId;
+      const db = readDB();
+      const result = resetStudentPracticeHistory({ studentId, db });
+      writeDB(db);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+});
+
+// 5. Get Learning Concepts Catalog & Disciplines
+app.get('/api/ai-practice/concepts', requireParticipant, (req, res) => {
+  try {
+    const db = readDB();
+    const concepts = extractAdminLearningConcepts(db);
+    res.json({
+      success: true,
+      disciplines: CS_DISCIPLINES,
+      concepts
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ====================================================================
