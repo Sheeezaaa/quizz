@@ -32,6 +32,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'bob_super_secure_jwt_secret_2026';
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 
+// Normalize URL prefix for Vercel Serverless Function rewrites
+app.use((req, res, next) => {
+  if (req.url !== '/' && !req.url.startsWith('/api') && !req.url.startsWith('/assets') && !req.url.includes('.')) {
+    req.url = '/api' + req.url;
+  }
+  next();
+});
+
 // Initial MongoDB connect attempt
 connectMongoDB().then(async (connected) => {
   if (connected) {
@@ -54,8 +62,21 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Database storage file path
-const DB_PATH = path.join(__dirname, 'data', 'database.json');
+// Database storage file path (writable /tmp on Vercel Serverless environment)
+const DEFAULT_DB_FILE = path.join(__dirname, 'data', 'database.json');
+const DB_PATH = process.env.VERCEL
+  ? path.join('/tmp', 'database.json')
+  : DEFAULT_DB_FILE;
+
+// Prime writable database file in /tmp when running on Vercel
+if (process.env.VERCEL && !fs.existsSync(DB_PATH) && fs.existsSync(DEFAULT_DB_FILE)) {
+  try {
+    fs.mkdirSync('/tmp', { recursive: true });
+    fs.copyFileSync(DEFAULT_DB_FILE, DB_PATH);
+  } catch (err) {
+    console.warn('Could not prime /tmp database:', err.message);
+  }
+}
 
 // ====================================================================
 // DEFAULT SEED DATA (7 COMPUTING SUBJECTS, 4 ROUNDS, DEFAULT RULES)
@@ -822,6 +843,14 @@ function normalizeQuestion(q) {
 function loadDBFromDisk() {
   try {
     if (!fs.existsSync(DB_PATH)) {
+      if (fs.existsSync(DEFAULT_DB_FILE)) {
+        try {
+          fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+          fs.copyFileSync(DEFAULT_DB_FILE, DB_PATH);
+          const data = fs.readFileSync(DB_PATH, 'utf8');
+          return JSON.parse(data);
+        } catch {}
+      }
       const initialData = {
         adminPasswordHash: bcrypt.hashSync('admin123', 8),
         details: DEFAULT_DETAILS,
