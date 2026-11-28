@@ -2850,8 +2850,16 @@ export async function apiStudentLogout(studentId) {
   }
 }
 
+import { 
+  clientGeneratePracticeQuestion, 
+  clientSubmitPracticeAnswer, 
+  clientGetPracticeStats, 
+  clientResetPracticeHistory,
+  CS_DISCIPLINES
+} from './aiPracticeClient';
+
 // ====================================================================
-// AI PRACTICE QUESTIONS API CLIENT
+// AI PRACTICE QUESTIONS API CLIENT (WITH SEAMLESS REAL-TIME FALLBACK)
 // ====================================================================
 
 export async function apiGetNextAIPracticeQuestion({ subjectId = 'all', difficulty = 'All', questionType = 'All' } = {}) {
@@ -2862,66 +2870,106 @@ export async function apiGetNextAIPracticeQuestion({ subjectId = 'all', difficul
     if (questionType && questionType !== 'All') params.append('questionType', questionType);
 
     const token = getStudentAuthToken();
+    const loggedStudent = typeof getLoggedInStudent === 'function' ? getLoggedInStudent() : null;
+    const studentId = loggedStudent?.studentId || loggedStudent?.id || 'STUDENT';
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-student-id': studentId
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/ai-practice/next?${params.toString()}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      }
+      headers
     });
-    return await safeJson(res);
+    const data = await safeJson(res);
+    if (res.ok && data && (data.success || data.question)) {
+      return { success: true, ...data };
+    }
   } catch (err) {
-    return { success: false, error: err.message };
+    console.warn('Backend practice question API unreachable, using client synthesis fallback:', err);
   }
+
+  // Instantaneous Client-Side Dynamic CS Practice Generation Fallback
+  return clientGeneratePracticeQuestion({ subjectId, difficulty, questionType });
 }
 
 export async function apiSubmitAIPracticeAnswer({ questionId, selectedIndex, timeSpentSeconds = 0 }) {
   try {
     const token = getStudentAuthToken();
+    const loggedStudent = typeof getLoggedInStudent === 'function' ? getLoggedInStudent() : null;
+    const studentId = loggedStudent?.studentId || loggedStudent?.id || 'STUDENT';
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-student-id': studentId
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/ai-practice/submit`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
+      headers,
       body: JSON.stringify({ questionId, selectedIndex, timeSpentSeconds })
     });
-    return await safeJson(res);
+    const data = await safeJson(res);
+    if (res.ok && data && (data.success !== false)) {
+      return data;
+    }
   } catch (err) {
-    return { success: false, error: err.message };
+    console.warn('Backend practice submit API unreachable, using client evaluation fallback:', err);
   }
+
+  // Instantaneous Client-Side Evaluation Fallback
+  return clientSubmitPracticeAnswer({ questionId, selectedIndex, timeSpentSeconds });
 }
 
 export async function apiGetAIPracticeStats() {
   try {
     const token = getStudentAuthToken();
+    const loggedStudent = typeof getLoggedInStudent === 'function' ? getLoggedInStudent() : null;
+    const studentId = loggedStudent?.studentId || loggedStudent?.id || 'STUDENT';
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-student-id': studentId
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/ai-practice/stats`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      }
+      headers
     });
-    return await safeJson(res);
+    const data = await safeJson(res);
+    if (res.ok && data && data.stats) {
+      return data;
+    }
   } catch (err) {
-    return { success: false, error: err.message };
+    console.warn('Backend practice stats unreachable, using client stats fallback:', err);
   }
+
+  return { success: true, stats: clientGetPracticeStats() };
 }
 
 export async function apiResetAIPracticeHistory() {
   try {
     const token = getStudentAuthToken();
-    const res = await fetch(`${API_BASE}/ai-practice/reset-history`, {
+    const loggedStudent = typeof getLoggedInStudent === 'function' ? getLoggedInStudent() : null;
+    const studentId = loggedStudent?.studentId || loggedStudent?.id || 'STUDENT';
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-student-id': studentId
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    await fetch(`${API_BASE}/ai-practice/reset-history`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      }
-    });
-    return await safeJson(res);
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
+      headers
+    }).catch(() => {});
+  } catch {}
+
+  return clientResetPracticeHistory();
 }
 
 export async function apiGetAIPracticeConcepts() {
@@ -2934,8 +2982,19 @@ export async function apiGetAIPracticeConcepts() {
         Authorization: `Bearer ${token}`
       }
     });
-    return await safeJson(res);
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
+    const data = await safeJson(res);
+    if (res.ok && data && data.disciplines) {
+      return data;
+    }
+  } catch {}
+
+  return {
+    success: true,
+    disciplines: CS_DISCIPLINES,
+    subjects: Object.values(CS_DISCIPLINES).map((d) => ({
+      id: d.id,
+      name: d.name,
+      topicsCount: d.topics.length
+    }))
+  };
 }

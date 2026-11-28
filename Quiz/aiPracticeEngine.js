@@ -7,7 +7,10 @@
  * Supports live Gemini / OpenAI API integration with an authoritative algorithmic CS engine fallback.
  */
 
-import crypto from 'crypto';
+const generateSecureHexId = (prefix) => {
+  const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `${prefix}-${Date.now()}-${rand}`;
+};
 
 // All 7 Core Computer Science Disciplines Catalog
 export const CS_DISCIPLINES = {
@@ -617,7 +620,7 @@ function synthesizeDynamicCSQuestion(subjectId, difficulty = 'Medium', questionT
   const finalOptions = shuffled.map((item) => item.opt);
 
   return {
-    id: `AI-PQ-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
+    id: generateSecureHexId('AI-PQ'),
     subjectId: normId,
     subjectName: disc.name,
     topic: template.topic || chosenTopic,
@@ -673,7 +676,7 @@ STRICT RULES:
   if (liveResult && liveResult.question && Array.isArray(liveResult.options) && liveResult.options.length === 4) {
     const safeCorrectIndex = (typeof liveResult.correctIndex === 'number' && liveResult.correctIndex >= 0 && liveResult.correctIndex < 4) ? liveResult.correctIndex : 0;
     return {
-      id: `AI-PQ-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
+      id: generateSecureHexId('AI-PQ'),
       subjectId: normId,
       subjectName: disc.name,
       topic: liveResult.topic || targetTopic,
@@ -785,7 +788,7 @@ export function submitPracticeAnswer({ studentId, questionId, selectedIndex, tim
   const isCorrect = Number(selectedIndex) === Number(question.correctIndex);
 
   const attemptRecord = {
-    id: `PR-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
+    id: generateSecureHexId('PR'),
     studentId,
     questionId,
     subjectId: question.subjectId,

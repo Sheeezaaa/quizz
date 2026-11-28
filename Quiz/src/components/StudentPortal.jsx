@@ -90,6 +90,7 @@ import {
   apiResetAIPracticeHistory,
   apiGetAIPracticeConcepts
 } from '../utils/api';
+import { clientGeneratePracticeQuestion } from '../utils/aiPracticeClient';
 import { 
   getLoggedInStudent, 
   setLoggedInStudent, 
@@ -289,14 +290,38 @@ export default function StudentPortal({
         questionType: questionType || undefined
       });
 
-      if (res && res.success && res.question) {
+      if (res && (res.question || (res.success && res.question))) {
         setPracticeQuestion(res.question);
         setPracticeTimeStart(Date.now());
         if (res.stats) setPracticeStats(res.stats);
       } else {
-        setPracticeError(res?.error || 'Could not generate a practice question at this time. Please retry.');
+        const fallback = clientGeneratePracticeQuestion({
+          subjectId: subjectId || undefined,
+          difficulty: difficulty || undefined,
+          questionType: questionType || undefined
+        });
+        if (fallback && fallback.question) {
+          setPracticeQuestion(fallback.question);
+          setPracticeTimeStart(Date.now());
+          if (fallback.stats) setPracticeStats(fallback.stats);
+        } else {
+          setPracticeError(res?.error || 'Could not generate a practice question at this time. Please retry.');
+        }
       }
     } catch (err) {
+      try {
+        const fallback = clientGeneratePracticeQuestion({
+          subjectId: overrideSubject !== undefined ? overrideSubject : practiceSubjectFilter,
+          difficulty: overrideDifficulty !== undefined ? overrideDifficulty : practiceDifficultyFilter,
+          questionType: overrideType !== undefined ? overrideType : practiceTypeFilter
+        });
+        if (fallback && fallback.question) {
+          setPracticeQuestion(fallback.question);
+          setPracticeTimeStart(Date.now());
+          if (fallback.stats) setPracticeStats(fallback.stats);
+          return;
+        }
+      } catch {}
       setPracticeError(err?.message || 'Error generating dynamic AI question.');
     } finally {
       setPracticeLoading(false);
