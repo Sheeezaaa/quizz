@@ -10,5 +10,13 @@
     "dev": "npm --prefix Quiz run dev",
     "server": "npm --prefix Quiz run server",
     "test": "npm --prefix Quiz test"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.13.1",
+    "xlsx": "^0.18.5"
   }
 }

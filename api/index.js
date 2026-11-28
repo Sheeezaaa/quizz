@@ -1,3 +1,5 @@
 import app from '../Quiz/server.js';
 
-export default app;
+export default function handler(req, res) {
+  return app(req, res);
+}
