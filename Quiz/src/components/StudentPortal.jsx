@@ -3204,12 +3204,12 @@ export default function StudentPortal({
           transcriptSerial: 'BOB-TR-2026-948210',
         };
 
-        const totalQ = transcriptData.totalQuestions || 5;
-        const maxScore = transcriptData.maxScore || (totalQ * 10);
-        const earnedScore = transcriptData.score ?? 0;
+        const totalQ = transcriptData.totalQuestions || 14;
+        const correctCount = transcriptData.correctCount ?? (transcriptData.score ?? 0);
+        const wrongCount = transcriptData.incorrectCount ?? Math.max(0, totalQ - correctCount);
+        const earnedScore = transcriptData.score ?? correctCount;
+        const maxScore = transcriptData.maxScore && transcriptData.maxScore <= totalQ ? transcriptData.maxScore : totalQ;
         const percentage = transcriptData.percentage ?? Math.round((earnedScore / (maxScore || 1)) * 100);
-        const correctCount = transcriptData.correctCount ?? Math.floor(earnedScore / 10);
-        const wrongCount = (transcriptData.incorrectCount ?? 0) + (transcriptData.skippedCount ?? 0);
         const completedDate = new Date(transcriptData.completedAt || Date.now());
 
         return (
@@ -3282,41 +3282,45 @@ export default function StudentPortal({
 
                 {/* Academic Evaluation Summary Table */}
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border border-slate-300 rounded-lg overflow-hidden">
-                    <thead className="bg-slate-900 text-white font-mono text-[11px] uppercase">
+                  <table className="w-full text-left text-xs border-2 border-slate-300 rounded-xl overflow-hidden shadow-xs">
+                    <thead className="bg-slate-100 text-slate-950 font-mono text-[11px] uppercase border-b-2 border-slate-300">
                       <tr>
-                        <th className="py-2.5 px-3">Examination Stage</th>
-                        <th className="py-2.5 px-2 text-center">Allocated MCQs</th>
-                        <th className="py-2.5 px-2 text-center">Correct</th>
-                        <th className="py-2.5 px-2 text-center">Incorrect / Skip</th>
-                        <th className="py-2.5 px-3 text-right">Marks Scored</th>
+                        <th className="py-3 px-3.5 text-slate-950 font-black">Examination Stage</th>
+                        <th className="py-3 px-2 text-center text-slate-950 font-black">Total MCQs</th>
+                        <th className="py-3 px-2 text-center text-emerald-800 font-black">Correct</th>
+                        <th className="py-3 px-2 text-center text-rose-800 font-black">Wrong / Skip</th>
+                        <th className="py-3 px-3.5 text-right text-blue-900 font-black">Marks Scored</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
+                    <tbody className="divide-y divide-slate-200 text-slate-800 font-medium bg-white">
                       <tr>
-                        <td className="py-3 px-3">
-                          <strong className="block text-slate-900 font-heading font-bold">Round 01: Screening Examination</strong>
-                          <span className="text-[10px] text-slate-500">7 Core CS Subject Disciplines (30s Timer per MCQ)</span>
+                        <td className="py-3.5 px-3.5">
+                          <strong className="block text-slate-950 font-heading font-black text-xs">
+                            Single Combined Championship
+                          </strong>
+                          <span className="text-[10px] text-slate-600 font-semibold block mt-0.5">
+                            All 7 Core CS Subject Disciplines (30s Timer per MCQ)
+                          </span>
                         </td>
-                        <td className="py-3 px-2 text-center font-mono font-bold">{totalQ}</td>
-                        <td className="py-3 px-2 text-center font-mono text-emerald-700 font-bold">
+                        <td className="py-3.5 px-2 text-center font-mono font-black text-slate-900">{totalQ}</td>
+                        <td className="py-3.5 px-2 text-center font-mono text-emerald-700 font-black">
                           {correctCount}
                         </td>
-                        <td className="py-3 px-2 text-center font-mono text-rose-700">
+                        <td className="py-3.5 px-2 text-center font-mono text-rose-700 font-bold">
                           {wrongCount}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono font-black text-sm text-blue-700">
+                        <td className="py-3.5 px-3.5 text-right font-mono font-black text-sm text-blue-800">
                           {earnedScore} / {maxScore} pts
                         </td>
                       </tr>
                     </tbody>
-                    <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                    <tfoot className="bg-slate-50 font-bold border-t-2 border-slate-300">
                       <tr>
-                        <td colSpan={3} className="py-2.5 px-3">
-                          Overall Percentage: <span className="text-emerald-700 font-mono text-sm">{percentage}%</span>
+                        <td colSpan={3} className="py-3 px-3.5 text-slate-900">
+                          Overall Percentage: <span className="text-emerald-700 font-mono text-sm font-black">{percentage}%</span>
                         </td>
-                        <td colSpan={2} className="py-2.5 px-3 text-right">
-                          Standing: <span className="font-mono uppercase text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded border border-emerald-300">QUALIFIED FOR NEXT STAGE</span>
+                        <td colSpan={2} className="py-3 px-3.5 text-right">
+                          Standing: <span className="font-mono uppercase text-emerald-900 bg-emerald-100 px-3 py-1 rounded-md border border-emerald-300 font-black text-[11px]">OFFICIAL ATTEMPT COMPLETED</span>
                         </td>
                       </tr>
                     </tfoot>
