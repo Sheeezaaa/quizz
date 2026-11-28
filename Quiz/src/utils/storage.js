@@ -312,29 +312,40 @@ export const saveStoredRules = (rules) => {
 
 export const parsePKTDateTime = (dateStr, timeStr) => {
   if (!dateStr || !timeStr) return null;
-  let day = 10, month = 12, year = 2026;
   const cleanDate = String(dateStr).trim();
+  const cleanTime = String(timeStr).trim();
 
-  if (cleanDate.includes('/')) {
-    const parts = cleanDate.split('/');
-    day = parseInt(parts[0], 10);
-    month = parseInt(parts[1], 10);
-    year = parseInt(parts[2], 10);
-  } else if (cleanDate.includes('-')) {
-    const parts = cleanDate.split('-');
+  let year = 2026, month = 11, day = 28;
+  const parts = cleanDate.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    const p0 = parseInt(parts[0], 10);
+    const p1 = parseInt(parts[1], 10);
+    const p2 = parseInt(parts[2], 10);
+
     if (parts[0].length === 4) {
-      year = parseInt(parts[0], 10);
-      month = parseInt(parts[1], 10);
-      day = parseInt(parts[2], 10);
-    } else {
-      day = parseInt(parts[0], 10);
-      month = parseInt(parts[1], 10);
-      year = parseInt(parts[2], 10);
+      // YYYY-MM-DD or YYYY/MM/DD
+      year = p0;
+      month = p1;
+      day = p2;
+    } else if (parts[2].length === 4) {
+      // DD/MM/YYYY or MM/DD/YYYY
+      year = p2;
+      if (p0 > 12 && p1 <= 12) {
+        day = p0;
+        month = p1;
+      } else if (p1 > 12 && p0 <= 12) {
+        month = p0;
+        day = p1;
+      } else {
+        // Default DD/MM/YYYY
+        day = p0;
+        month = p1;
+      }
     }
   }
 
   let hours = 10, minutes = 0;
-  const timeMatch = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  const timeMatch = cleanTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
   if (timeMatch) {
     hours = parseInt(timeMatch[1], 10);
     minutes = parseInt(timeMatch[2], 10);
@@ -346,10 +357,12 @@ export const parsePKTDateTime = (dateStr, timeStr) => {
   const pad = (n) => String(n).padStart(2, '0');
   const isoStr = `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00+05:00`;
   const d = new Date(isoStr);
+  const isValid = !isNaN(d.getTime()) && month >= 1 && month <= 12 && day >= 1 && day <= 31;
+
   return {
     iso: isoStr,
     timestamp: d.getTime(),
-    isValid: !isNaN(d.getTime()),
+    isValid,
     day, month, year, hours, minutes
   };
 };
@@ -397,45 +410,68 @@ export const getCompetitionAccessStatusLocal = (customSchedule) => {
   const startParsed = parsePKTDateTime(schedule.startDate, schedule.startTime);
   const endParsed = parsePKTDateTime(schedule.endDate, schedule.endTime);
 
-  const startMs = startParsed?.timestamp || 0;
-  const endMs = endParsed?.timestamp || 0;
+  const startMs = startParsed?.timestamp || schedule.startMs || 0;
+  const endMs = endParsed?.timestamp || schedule.endMs || 0;
+
+  const publishedQuestions = getStoredPublishedQuestions() || [];
+  const hasPublished = Boolean(schedule.isPublished && (publishedQuestions.length >= 7 || schedule.publishedQuestionCount >= 7));
+  const isActivated = schedule.status === "live";
+  const isStopped = schedule.status === "stopped";
 
   let state = "NOT_STARTED";
-  let message = "Competition not started. Please wait for the scheduled start time.";
+  let lockReason = "";
+  let message = "";
 
-  if (schedule.status === "stopped") {
+  if (isStopped) {
     state = "STOPPED";
-    message = "Competition has been halted by the administrator.";
-  } else if (schedule.status === "live" && (!endMs || now < endMs)) {
-    state = "LIVE";
-    message = "Competition is currently LIVE!";
+    lockReason = "Competition has been halted by the administrator.";
+    message = lockReason;
+  } else if (!hasPublished) {
+    state = "NOT_PUBLISHED";
+    lockReason = "Quiz not published. The administrator has not published the quiz yet.";
+    message = lockReason;
+  } else if (!isActivated) {
+    state = "NOT_ACTIVATED";
+    lockReason = "Competition not activated. Waiting for administrator to activate the competition.";
+    message = lockReason;
+  } else if (startMs && now < startMs) {
+    state = "NOT_STARTED";
+    lockReason = "Competition has not started. Please wait for the scheduled start time.";
+    message = lockReason;
   } else if (endMs && now >= endMs) {
     state = "TIME_OVER";
-    message = "The scheduled competition has ended. New quiz attempts are no longer allowed.";
-  } else if (startMs && now >= startMs && (!endMs || now < endMs)) {
-    state = "LIVE";
-    message = "Competition is currently LIVE!";
+    lockReason = "Competition has ended. The scheduled competition time is over.";
+    message = lockReason;
   } else {
-    state = "NOT_STARTED";
-    message = "Competition not started. Please wait for the scheduled start time.";
+    state = "LIVE";
+    lockReason = "";
+    message = "Competition is currently LIVE! Eligible students can now begin their quiz.";
   }
+
+  const isLive = state === "LIVE";
 
   return {
     state,
-    isLive: state === "LIVE",
+    isLive,
     isOver: state === "TIME_OVER" || state === "STOPPED",
+    isPublished: hasPublished,
+    isActivated,
+    lockReason,
     message,
     currentTimeMs: now,
     startMs,
     endMs,
     timeRemainingToStartMs: startMs ? Math.max(0, startMs - now) : 0,
     timeRemainingToEndMs: endMs ? Math.max(0, endMs - now) : 0,
+    publishedQuestionCount: publishedQuestions.length || schedule.publishedQuestionCount || 14,
     schedule: {
       ...schedule,
       startMs,
       endMs,
       startIso: startParsed?.iso,
       endIso: endParsed?.iso,
+      isPublished: hasPublished,
+      status: schedule.status || (isLive ? 'live' : 'scheduled')
     }
   };
 };

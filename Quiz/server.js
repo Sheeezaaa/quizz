@@ -86,29 +86,40 @@ const DEFAULT_ROUNDS = [
 
 function parsePKTDateTime(dateStr, timeStr) {
   if (!dateStr || !timeStr) return null;
-  let day = 10, month = 12, year = 2026;
   const cleanDate = String(dateStr).trim();
+  const cleanTime = String(timeStr).trim();
 
-  if (cleanDate.includes('/')) {
-    const parts = cleanDate.split('/');
-    day = parseInt(parts[0], 10);
-    month = parseInt(parts[1], 10);
-    year = parseInt(parts[2], 10);
-  } else if (cleanDate.includes('-')) {
-    const parts = cleanDate.split('-');
+  let year = 2026, month = 11, day = 28;
+  const parts = cleanDate.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    const p0 = parseInt(parts[0], 10);
+    const p1 = parseInt(parts[1], 10);
+    const p2 = parseInt(parts[2], 10);
+
     if (parts[0].length === 4) {
-      year = parseInt(parts[0], 10);
-      month = parseInt(parts[1], 10);
-      day = parseInt(parts[2], 10);
-    } else {
-      day = parseInt(parts[0], 10);
-      month = parseInt(parts[1], 10);
-      year = parseInt(parts[2], 10);
+      // YYYY-MM-DD or YYYY/MM/DD
+      year = p0;
+      month = p1;
+      day = p2;
+    } else if (parts[2].length === 4) {
+      // DD/MM/YYYY or MM/DD/YYYY
+      year = p2;
+      if (p0 > 12 && p1 <= 12) {
+        day = p0;
+        month = p1;
+      } else if (p1 > 12 && p0 <= 12) {
+        month = p0;
+        day = p1;
+      } else {
+        // Default DD/MM/YYYY
+        day = p0;
+        month = p1;
+      }
     }
   }
 
   let hours = 10, minutes = 0;
-  const timeMatch = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  const timeMatch = cleanTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
   if (timeMatch) {
     hours = parseInt(timeMatch[1], 10);
     minutes = parseInt(timeMatch[2], 10);
@@ -120,10 +131,12 @@ function parsePKTDateTime(dateStr, timeStr) {
   const pad = (n) => String(n).padStart(2, '0');
   const isoStr = `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00+05:00`;
   const d = new Date(isoStr);
+  const isValid = !isNaN(d.getTime()) && month >= 1 && month <= 12 && day >= 1 && day <= 31;
+
   return {
     iso: isoStr,
     timestamp: d.getTime(),
-    isValid: !isNaN(d.getTime()),
+    isValid,
     day, month, year, hours, minutes
   };
 }
@@ -138,42 +151,69 @@ function getCompetitionAccessStatus(db) {
   const startMs = startParsed?.timestamp || schedule.startMs || 0;
   const endMs = endParsed?.timestamp || schedule.endMs || 0;
 
-  let state = "NOT_STARTED";
-  let message = "Competition not started. Please wait for the scheduled start time.";
+  const publishedQuestions = db.publishedQuestions || [];
+  const hasPublished = Boolean(schedule.isPublished && publishedQuestions.length >= 7);
+  const isActivated = schedule.status === "live";
+  const isStopped = schedule.status === "stopped";
 
-  if (schedule.status === "stopped") {
+  let state = "NOT_STARTED";
+  let lockReason = "";
+  let message = "";
+
+  if (isStopped) {
     state = "STOPPED";
-    message = "Competition has been halted by the administrator.";
-  } else if (schedule.status === "live" && (!endMs || now < endMs)) {
-    state = "LIVE";
-    message = "Competition is currently LIVE!";
+    lockReason = "Competition has been halted by the administrator.";
+    message = lockReason;
+  } else if (!hasPublished) {
+    state = "NOT_PUBLISHED";
+    lockReason = "Quiz not published. The administrator has not published the quiz yet.";
+    message = lockReason;
+  } else if (!isActivated) {
+    state = "NOT_ACTIVATED";
+    lockReason = "Competition not activated. Waiting for administrator to activate the competition.";
+    message = lockReason;
+  } else if (startMs && now < startMs) {
+    state = "NOT_STARTED";
+    lockReason = "Competition has not started. Please wait for the scheduled start time.";
+    message = lockReason;
   } else if (endMs && now >= endMs) {
     state = "TIME_OVER";
-    message = "The scheduled competition has ended. New quiz attempts are no longer allowed.";
-  } else if (startMs && now >= startMs && (!endMs || now < endMs)) {
-    state = "LIVE";
-    message = "Competition is currently LIVE!";
+    lockReason = "Competition has ended. The scheduled competition time is over.";
+    message = lockReason;
+  } else if (publishedQuestions.length === 0) {
+    state = "NO_QUESTIONS";
+    lockReason = "No questions available in the published question bank.";
+    message = lockReason;
   } else {
-    state = "NOT_STARTED";
-    message = "Competition not started. Please wait for the scheduled start time.";
+    state = "LIVE";
+    lockReason = "";
+    message = "Competition is currently LIVE! Eligible students can now begin their quiz.";
   }
+
+  const isLive = state === "LIVE";
 
   return {
     state,
-    isLive: state === "LIVE",
+    isLive,
     isOver: state === "TIME_OVER" || state === "STOPPED",
+    isPublished: hasPublished,
+    isActivated,
+    lockReason,
     message,
     currentTimeMs: now,
     startMs,
     endMs,
     timeRemainingToStartMs: startMs ? Math.max(0, startMs - now) : 0,
     timeRemainingToEndMs: endMs ? Math.max(0, endMs - now) : 0,
+    publishedQuestionCount: publishedQuestions.length,
     schedule: {
       ...schedule,
       startMs,
       endMs,
       startIso: startParsed?.iso,
       endIso: endParsed?.iso,
+      isPublished: hasPublished,
+      status: schedule.status || (isLive ? 'live' : 'scheduled')
     }
   };
 }
@@ -2031,7 +2071,16 @@ app.put('/api/schedule', requireAdmin, (req, res) => {
   db.schedule.startMs = startParsed.timestamp;
   db.schedule.endMs = endParsed.timestamp;
   db.schedule.timezone = "Asia/Karachi";
-  db.schedule.status = "scheduled"; // re-schedule
+
+  const now = Date.now();
+  // If schedule is currently live and the new end time is in future, keep live; otherwise if now is within window, set live
+  if (db.schedule.status === "live") {
+    if (now >= endParsed.timestamp) {
+      db.schedule.status = "ended";
+    }
+  } else if (db.schedule.status !== "stopped") {
+    db.schedule.status = (now >= startParsed.timestamp && now < endParsed.timestamp) ? "live" : "scheduled";
+  }
   db.schedule.lastUpdated = new Date().toISOString();
 
   writeDB(db);
@@ -2056,6 +2105,34 @@ app.post('/api/schedule/activate', requireAdmin, (req, res) => {
   db.schedule.status = "live";
   db.schedule.activatedAt = new Date().toISOString();
   db.schedule.lastUpdated = new Date().toISOString();
+
+  // Ensure current competition time window is open for today so students can start right away
+  const now = Date.now();
+  let startParsed = parsePKTDateTime(db.schedule.startDate, db.schedule.startTime);
+  let endParsed = parsePKTDateTime(db.schedule.endDate, db.schedule.endTime);
+
+  if (!startParsed?.isValid || !endParsed?.isValid || endParsed.timestamp <= now || startParsed.timestamp > now) {
+    const nowInPkt = new Date(now + 5 * 3600 * 1000);
+    const day = String(nowInPkt.getUTCDate()).padStart(2, '0');
+    const month = String(nowInPkt.getUTCMonth() + 1).padStart(2, '0');
+    const year = nowInPkt.getUTCFullYear();
+    db.schedule.startDate = `${day}/${month}/${year}`;
+    db.schedule.startTime = "10:00 AM";
+    db.schedule.endDate = `${day}/${month}/${year}`;
+    db.schedule.endTime = "11:59 PM";
+    startParsed = parsePKTDateTime(db.schedule.startDate, db.schedule.startTime);
+    endParsed = parsePKTDateTime(db.schedule.endDate, db.schedule.endTime);
+  }
+
+  db.schedule.startMs = startParsed.timestamp;
+  db.schedule.endMs = endParsed.timestamp;
+  db.schedule.startIso = startParsed.iso;
+  db.schedule.endIso = endParsed.iso;
+
+  if (Array.isArray(db.publishedQuestions) && db.publishedQuestions.length >= 7) {
+    db.schedule.isPublished = true;
+    db.schedule.publishedQuestionCount = db.publishedQuestions.length;
+  }
 
   writeDB(db);
   addAuditLog(req.user?.username || 'ADMIN', 'COMPETITION_ACTIVATED', 'access_control', null);
@@ -2171,25 +2248,13 @@ app.post('/api/quiz/start', requireParticipant, (req, res) => {
 
   // 1. Automatic Competition Access Control Verification (PKT Schedule)
   const access = getCompetitionAccessStatus(db);
-  if (access.state === 'NOT_STARTED') {
+  if (!access.isLive) {
     return res.status(403).json({
-      error: 'COMPETITION NOT STARTED. The scheduled competition has not started yet. Please wait for the scheduled start time.',
-      state: 'NOT_STARTED',
+      error: access.lockReason || access.message || 'Competition is currently not accessible.',
+      state: access.state,
+      lockReason: access.lockReason,
       startMs: access.startMs,
-      isLocked: true,
-    });
-  }
-  if (access.state === 'TIME_OVER') {
-    return res.status(403).json({
-      error: 'COMPETITION TIME OVER. The scheduled competition has ended. New quiz attempts are no longer allowed.',
-      state: 'TIME_OVER',
-      isLocked: true,
-    });
-  }
-  if (access.state === 'STOPPED') {
-    return res.status(403).json({
-      error: 'Competition has been halted by the administrator.',
-      state: 'STOPPED',
+      endMs: access.endMs,
       isLocked: true,
     });
   }

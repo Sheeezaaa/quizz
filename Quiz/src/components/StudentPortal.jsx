@@ -400,12 +400,19 @@ export default function StudentPortal({
         apiGetNotifications(),
         apiGetLeaderboard(),
         apiGetQuestions(),
-        apiGetScheduleStatus,
-  apiSendStudentHeartbeat,
-  apiStudentLogout().catch(() => null),
+        apiGetScheduleStatus(),
       ]);
 
-      if (statusData) setStudentStatus(statusData);
+      if (statusData) {
+        setStudentStatus(statusData);
+        if (statusData.schedule) {
+          setCompetitionSchedule(statusData.schedule);
+          try { saveStoredSchedule(statusData.schedule); } catch {}
+        }
+        if (statusData.competitionAccess) {
+          setScheduleStatus(statusData.competitionAccess);
+        }
+      }
       if (annList) setAnnouncements(annList.filter((a) => a.isPublished));
       if (notifList) setNotifications(notifList);
       if (Array.isArray(questionList) && questionList.length > 0) {
@@ -414,6 +421,7 @@ export default function StudentPortal({
       if (scheduleRes && scheduleRes.schedule) {
         setCompetitionSchedule(scheduleRes.schedule);
         setScheduleStatus(scheduleRes);
+        try { saveStoredSchedule(scheduleRes.schedule); } catch {}
       }
 
       if (lbData && lbData.leaderboard && currentUser) {
@@ -426,6 +434,24 @@ export default function StudentPortal({
       console.error('Error fetching student dashboard data:', err);
     }
   };
+
+  // Live real-time schedule poller so student portal instantly reflects admin changes
+  useEffect(() => {
+    if (!currentUser) return;
+    const pollLiveSchedule = async () => {
+      try {
+        const res = await apiGetScheduleStatus();
+        if (res && res.schedule) {
+          setCompetitionSchedule(res.schedule);
+          setScheduleStatus(res);
+          try { saveStoredSchedule(res.schedule); } catch {}
+        }
+      } catch {}
+    };
+    pollLiveSchedule();
+    const interval = setInterval(pollLiveSchedule, 3000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   const loadPartnerData = async () => {
     if (!currentUser) return;
@@ -825,6 +851,13 @@ export default function StudentPortal({
     setSkippedAnswersCount(0);
 
     const startLocalQuiz = () => {
+      // Check competition schedule & live access
+      const access = getCompetitionAccessStatusLocal();
+      if (!access.isLive) {
+        setQuizError(access.lockReason || access.message || 'Competition is currently not accessible.');
+        return false;
+      }
+
       // Check if candidate already completed this round locally
       const historyKey = currentUser?.studentId ? `bob_student_history_${currentUser.studentId}` : null;
       let prevHistory = [];
@@ -2536,12 +2569,16 @@ export default function StudentPortal({
                   ) || !!pastResult || !!studentStatus?.hasCompletedRound1;
 
                   const currentAccessState = scheduleStatus?.state || 'NOT_STARTED';
-                  const isLive = currentAccessState === 'LIVE';
+                  const isLive = scheduleStatus?.isLive || currentAccessState === 'LIVE';
+                  const isNotPublished = currentAccessState === 'NOT_PUBLISHED' || !scheduleStatus?.isPublished;
+                  const isNotActivated = currentAccessState === 'NOT_ACTIVATED' || !scheduleStatus?.isActivated;
                   const isNotStarted = currentAccessState === 'NOT_STARTED';
                   const isTimeOver = currentAccessState === 'TIME_OVER';
                   const isStopped = currentAccessState === 'STOPPED';
+                  const isNoQuestions = currentAccessState === 'NO_QUESTIONS';
 
-                  const canStartQuiz = isLive && (!hasCompletedAttempt || retakePermissionInfo?.hasPermission);
+                  const isEligible = !currentUser || (currentUser.registrationStatus !== 'Rejected' && currentUser.status !== 'Rejected');
+                  const canStartQuiz = isLive && isEligible && (!hasCompletedAttempt || retakePermissionInfo?.hasPermission);
 
                   return (
                     <div className="p-8 sm:p-10 rounded-3xl bg-white border-2 border-sky-300 space-y-6 text-center shadow-xl text-slate-900 animate-fadeIn">
@@ -2555,21 +2592,27 @@ export default function StudentPortal({
                           <span className={`px-4 py-1.5 rounded-full text-xs font-mono font-black uppercase tracking-wider border shadow-sm flex items-center gap-2 ${
                             isLive
                               ? 'bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse'
-                              : isNotStarted
-                              ? 'bg-amber-100 text-amber-800 border-amber-300'
                               : isTimeOver
                               ? 'bg-rose-100 text-rose-800 border-rose-300'
+                              : isNotPublished || isNotActivated || isNotStarted
+                              ? 'bg-amber-100 text-amber-800 border-amber-300'
                               : 'bg-slate-100 text-slate-800 border-slate-300'
                           }`}>
                             <span className={`w-2 h-2 rounded-full ${
-                              isLive ? 'bg-emerald-500' : isNotStarted ? 'bg-amber-500' : 'bg-rose-500'
+                              isLive ? 'bg-emerald-500' : isTimeOver ? 'bg-rose-500' : 'bg-amber-500'
                             }`} />
                             {isLive
                               ? 'COMPETITION LIVE'
+                              : isNotPublished
+                              ? 'QUIZ NOT PUBLISHED'
+                              : isNotActivated
+                              ? 'COMPETITION NOT ACTIVATED'
                               : isNotStarted
                               ? 'COMPETITION NOT STARTED'
                               : isTimeOver
                               ? 'COMPETITION TIME OVER'
+                              : isNoQuestions
+                              ? 'NO QUESTIONS AVAILABLE'
                               : 'COMPETITION STOPPED'}
                           </span>
                         </div>
@@ -2656,6 +2699,18 @@ export default function StudentPortal({
                       </div>
 
                       {/* Attempt Status Notifications */}
+                      {!isEligible && (
+                        <div className="max-w-xl mx-auto p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-center space-y-1.5 animate-fadeIn">
+                          <div className="flex items-center justify-center gap-2 text-rose-900 font-bold text-xs sm:text-sm">
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                            <span>STUDENT ACCOUNT NOT ELIGIBLE</span>
+                          </div>
+                          <p className="text-xs text-rose-800 font-medium">
+                            Your registration status does not permit quiz participation. Please contact the administrator.
+                          </p>
+                        </div>
+                      )}
+
                       {hasCompletedAttempt && !retakePermissionInfo?.hasPermission && (
                         <div className="max-w-xl mx-auto p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-center space-y-1.5 animate-fadeIn">
                           <div className="flex items-center justify-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
@@ -2680,6 +2735,42 @@ export default function StudentPortal({
                         </div>
                       )}
 
+                      {isNotPublished && (
+                        <div className="max-w-xl mx-auto p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-center space-y-1 animate-fadeIn">
+                          <div className="flex items-center justify-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
+                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>QUIZ NOT PUBLISHED</span>
+                          </div>
+                          <p className="text-xs text-amber-800 font-medium">
+                            The administrator has not yet published the competition question set.
+                          </p>
+                        </div>
+                      )}
+
+                      {!isNotPublished && isNotActivated && (
+                        <div className="max-w-xl mx-auto p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-center space-y-1 animate-fadeIn">
+                          <div className="flex items-center justify-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
+                            <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>COMPETITION NOT ACTIVATED</span>
+                          </div>
+                          <p className="text-xs text-amber-800 font-medium">
+                            The competition schedule is set, but the competition has not been activated by the administrator yet.
+                          </p>
+                        </div>
+                      )}
+
+                      {!isNotPublished && !isNotActivated && isNoQuestions && (
+                        <div className="max-w-xl mx-auto p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-300 text-center space-y-1 animate-fadeIn">
+                          <div className="flex items-center justify-center gap-2 text-rose-900 font-bold text-xs sm:text-sm">
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                            <span>NO QUESTIONS AVAILABLE</span>
+                          </div>
+                          <p className="text-xs text-rose-800 font-medium">
+                            No published questions are available in the question bank. Please contact the administrator.
+                          </p>
+                        </div>
+                      )}
+
                       {isTimeOver && (
                         <div className="max-w-xl mx-auto p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-center space-y-1.5 animate-fadeIn">
                           <div className="flex items-center justify-center gap-2 text-rose-900 font-bold text-xs sm:text-sm">
@@ -2692,7 +2783,7 @@ export default function StudentPortal({
                         </div>
                       )}
 
-                      {isNotStarted && (
+                      {!isNotPublished && !isNotActivated && isNotStarted && (
                         <div className="max-w-xl mx-auto p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-center space-y-1 animate-fadeIn">
                           <div className="flex items-center justify-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
                             <Clock className="w-4 h-4 text-amber-600 shrink-0" />
@@ -2736,10 +2827,18 @@ export default function StudentPortal({
                             <span>
                               {hasCompletedAttempt && !retakePermissionInfo?.hasPermission
                                 ? 'ATTEMPT COMPLETED – LOCKED'
+                                : !isEligible
+                                ? 'STUDENT NOT ELIGIBLE'
+                                : isNotPublished
+                                ? 'QUIZ NOT PUBLISHED'
+                                : isNotActivated
+                                ? 'COMPETITION NOT ACTIVATED'
                                 : isNotStarted
                                 ? 'START QUIZ (LOCKED UNTIL START TIME)'
                                 : isTimeOver
                                 ? 'COMPETITION TIME OVER'
+                                : isNoQuestions
+                                ? 'NO QUESTIONS AVAILABLE'
                                 : 'START QUIZ (HALTED)'}
                             </span>
                           </button>

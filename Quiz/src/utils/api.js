@@ -789,26 +789,20 @@ export async function apiStartQuizAttempt(roundNumber = 1) {
 
   // Competition Access Control Check (PKT Schedule)
   const access = getCompetitionAccessStatusLocal();
-  if (access.state === 'NOT_STARTED') {
+  if (!access.isLive) {
     return {
       success: false,
-      isNotStarted: true,
-      error: 'COMPETITION NOT STARTED. The quiz will unlock automatically at the scheduled start time.',
+      isLocked: true,
+      error: access.lockReason || access.message || 'Competition is currently not accessible.',
+      state: access.state,
+      isNotStarted: access.state === 'NOT_STARTED',
+      isTimeOver: access.state === 'TIME_OVER',
+      isStopped: access.state === 'STOPPED',
+      isNotPublished: access.state === 'NOT_PUBLISHED',
+      isNotActivated: access.state === 'NOT_ACTIVATED',
+      isNoQuestions: access.state === 'NO_QUESTIONS',
       startMs: access.startMs,
-    };
-  }
-  if (access.state === 'TIME_OVER') {
-    return {
-      success: false,
-      isTimeOver: true,
-      error: 'COMPETITION TIME OVER. The scheduled competition has ended. New quiz attempts are no longer allowed.',
-    };
-  }
-  if (access.state === 'STOPPED') {
-    return {
-      success: false,
-      isStopped: true,
-      error: 'Competition has been halted by the administrator.',
+      endMs: access.endMs,
     };
   }
 
@@ -2579,6 +2573,14 @@ export async function apiSaveCompetitionSchedule({ startDate, startTime, endDate
   }
 
   const prev = getStoredSchedule() || {};
+  const now = Date.now();
+  let currentStatus = "scheduled";
+  if (prev.status === "live") {
+    currentStatus = now < endParsed.timestamp ? "live" : "ended";
+  } else if (prev.status !== "stopped") {
+    currentStatus = (now >= startParsed.timestamp && now < endParsed.timestamp) ? "live" : "scheduled";
+  }
+
   const updatedSchedule = {
     ...prev,
     startDate: startDate.trim(),
@@ -2590,7 +2592,7 @@ export async function apiSaveCompetitionSchedule({ startDate, startTime, endDate
     startMs: startParsed.timestamp,
     endMs: endParsed.timestamp,
     timezone: "Asia/Karachi",
-    status: "scheduled",
+    status: currentStatus,
     lastUpdated: new Date().toISOString(),
   };
 
@@ -2615,9 +2617,14 @@ export async function apiActivateCompetition() {
     });
     const data = await safeJson(res);
     if (res.ok && data.success) {
-      const schedule = getStoredSchedule();
-      schedule.status = 'live';
-      saveStoredSchedule(schedule);
+      if (data.access?.schedule) {
+        saveStoredSchedule(data.access.schedule);
+      } else {
+        const schedule = getStoredSchedule();
+        schedule.status = 'live';
+        schedule.isPublished = true;
+        saveStoredSchedule(schedule);
+      }
       window.dispatchEvent(new Event('storage'));
       return data;
     }
@@ -2625,6 +2632,24 @@ export async function apiActivateCompetition() {
 
   const schedule = getStoredSchedule();
   schedule.status = 'live';
+  schedule.isPublished = true;
+
+  const now = Date.now();
+  if (!schedule.endMs || schedule.endMs <= now || (schedule.startMs && schedule.startMs > now)) {
+    const nowInPkt = new Date(now + 5 * 3600 * 1000);
+    const day = String(nowInPkt.getUTCDate()).padStart(2, '0');
+    const month = String(nowInPkt.getUTCMonth() + 1).padStart(2, '0');
+    const year = nowInPkt.getUTCFullYear();
+    schedule.startDate = `${day}/${month}/${year}`;
+    schedule.startTime = "10:00 AM";
+    schedule.endDate = `${day}/${month}/${year}`;
+    schedule.endTime = "11:59 PM";
+    const stP = parsePKTDateTime(schedule.startDate, schedule.startTime);
+    const enP = parsePKTDateTime(schedule.endDate, schedule.endTime);
+    schedule.startMs = stP?.timestamp;
+    schedule.endMs = enP?.timestamp;
+  }
+
   saveStoredSchedule(schedule);
   window.dispatchEvent(new Event('storage'));
 

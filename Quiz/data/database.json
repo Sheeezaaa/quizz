@@ -18231,16 +18231,16 @@
     }
   ],
   "schedule": {
-    "startDate": "10/12/2026",
+    "startDate": "28/11/2026",
     "startTime": "10:00 AM",
-    "endDate": "10/12/2026",
-    "endTime": "11:00 AM",
-    "startIso": "2026-12-10T10:00:00+05:00",
-    "endIso": "2026-12-10T11:00:00+05:00",
-    "startMs": 1796878800000,
-    "endMs": 1796882400000,
+    "endDate": "28/11/2026",
+    "endTime": "11:59 PM",
+    "startIso": "2026-11-28T10:00:00+05:00",
+    "endIso": "2026-11-28T23:59:59+05:00",
+    "startMs": 1795842000000,
+    "endMs": 1795892399000,
     "timezone": "Asia/Karachi",
-    "status": "scheduled",
+    "status": "live",
     "isPublished": true,
     "publishedQuestionCount": 14,
     "publishedQuestionIds": [
@@ -18268,7 +18268,7 @@
       "se": 2,
       "os": 2
     },
-    "lastUpdated": "2026-11-27T08:00:00.000Z"
+    "lastUpdated": "2026-11-28T10:36:34.867Z"
   },
   "publishedQuestions": [
     {
