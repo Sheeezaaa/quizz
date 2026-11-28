@@ -103,7 +103,9 @@ import {
   apiAcknowledgeProctorAlert,
   apiDismissAllProctorAlerts,
   apiUploadEncryptedDocument,
-  apiGetScheduleStatus
+  apiGetScheduleStatus,
+  apiGetLiveStudentLogins,
+  apiDismissStudentLoginEvent
 } from '../utils/api';
 import { playAntiCheatBuzzer, playDisqualificationSiren } from '../utils/soundEffects';
 import RegistrationManager from './admin/RegistrationManager';
@@ -183,6 +185,99 @@ export default function AdminPanel({
   const unackViolators = useMemo(() => {
     return activeViolatorsByStudent.filter(v => v.unacknowledgedCount > 0);
   }, [activeViolatorsByStudent]);
+
+  // Real-Time Student Login Monitoring States
+  const [liveStudentLogins, setLiveStudentLogins] = useState([]);
+  const [onlineStudents, setOnlineStudents] = useState([]);
+  const [recentLoginToast, setRecentLoginToast] = useState(null);
+  const [seenLoginEventIds, setSeenLoginEventIds] = useState(new Set());
+
+  // Web Audio API Soft Chime for Student Login
+  const playStudentLoginChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(783.99, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+    } catch {}
+  };
+
+  // Real-Time Student Login Poller & Cross-Tab Broadcast Listener
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleStorageEvent = (e) => {
+      if (e.key === 'bob_live_student_login_event' && e.newValue) {
+        try {
+          const evt = JSON.parse(e.newValue);
+          setRecentLoginToast(evt);
+          playStudentLoginChime();
+          setLiveStudentLogins((prev) => [evt, ...prev.filter((x) => x.studentId !== evt.studentId)].slice(0, 30));
+          setOnlineStudents((prev) => {
+            if (prev.some((s) => s.studentId === evt.studentId)) return prev;
+            return [{ ...evt, isOnline: true }, ...prev];
+          });
+        } catch {}
+      }
+    };
+
+    const handleCustomLogin = (e) => {
+      if (e.detail) {
+        setRecentLoginToast(e.detail);
+        playStudentLoginChime();
+        setLiveStudentLogins((prev) => [e.detail, ...prev.filter((x) => x.studentId !== e.detail.studentId)].slice(0, 30));
+        setOnlineStudents((prev) => {
+          if (prev.some((s) => s.studentId === e.detail.studentId)) return prev;
+          return [{ ...e.detail, isOnline: true }, ...prev];
+        });
+      }
+    };
+
+    window.addEventListener('storage', handleStorageEvent);
+    window.addEventListener('bob_student_login_detected', handleCustomLogin);
+
+    const checkLogins = async () => {
+      try {
+        const res = await apiGetLiveStudentLogins();
+        if (res && res.success) {
+          if (Array.isArray(res.onlineStudents)) {
+            setOnlineStudents(res.onlineStudents);
+          }
+          if (Array.isArray(res.events) && res.events.length > 0) {
+            setLiveStudentLogins(res.events);
+            const unseen = res.events.find(
+              (ev) => !ev.seenByAdmin && !seenLoginEventIds.has(ev.eventId)
+            );
+            if (unseen) {
+              setSeenLoginEventIds((prev) => new Set([...prev, unseen.eventId]));
+              setRecentLoginToast(unseen);
+              playStudentLoginChime();
+              apiDismissStudentLoginEvent(unseen.eventId).catch(() => {});
+            }
+          }
+        }
+      } catch {}
+    };
+
+    checkLogins();
+    const interval = setInterval(checkLogins, 2500);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageEvent);
+      window.removeEventListener('bob_student_login_detected', handleCustomLogin);
+      clearInterval(interval);
+    };
+  }, [isAuthenticated]);
 
   // Security password change states
   const [currentPassInput, setCurrentPassInput] = useState('');
@@ -1642,6 +1737,79 @@ export default function AdminPanel({
                           );
                         })}
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* LIVE STUDENT LOGINS & ACTIVE SESSIONS FEED */}
+              <div className={`p-6 rounded-3xl border-2 space-y-4 shadow-sm ${
+                isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200/90 text-slate-900 shadow-sm'
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <h3 className="text-base font-heading font-black flex items-center gap-2">
+                      <span>🟢 Real-Time Student Logins & Active Sessions</span>
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                      {onlineStudents.length} Students Online Right Now
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('registrations')}
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>All Candidates</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {liveStudentLogins.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-slate-500">
+                    No student logins recorded in this session yet. As soon as a student logs in, their live profile, department, and time will appear here immediately.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {liveStudentLogins.slice(0, 6).map((log, idx) => (
+                      <div 
+                        key={log.eventId || idx}
+                        className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+                          isDark 
+                            ? 'bg-slate-950/80 border-slate-800 hover:border-emerald-500/40' 
+                            : 'bg-slate-50 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/20 shadow-xs'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                            <strong className="text-xs font-heading font-black truncate block">
+                              {log.fullName}
+                            </strong>
+                          </div>
+                          <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
+                            {log.studentId}
+                          </div>
+                          <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                            {log.department || 'Computer Science'} • {log.campus || 'Main Campus'}
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="text-[10px] font-mono text-slate-400 block">
+                            {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : 'Just now'}
+                          </span>
+                          <span className="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                            ONLINE
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -3597,6 +3765,65 @@ export default function AdminPanel({
       {/* =========================================================================
           NON-INTRUSIVE FLOATING TOAST NOTIFICATION: ALL OFFENDING STUDENT IDs
           ========================================================================= */}
+      {/* REAL-TIME STUDENT LOGIN FLOATING TOAST NOTIFICATION */}
+      {recentLoginToast && (
+        <aside
+          role="status"
+          aria-live="polite"
+          className="fixed top-20 right-4 sm:right-6 z-[85] w-[94vw] sm:w-[460px] bg-slate-950/95 backdrop-blur-xl border-2 border-emerald-500 rounded-2xl p-4 shadow-2xl shadow-emerald-950/70 animate-in slide-in-from-top-4 duration-300"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0 text-emerald-400">
+              <UserCheck className="w-5 h-5 animate-pulse" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+                  🟢 Candidate Just Logged In!
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRecentLoginToast(null)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mt-1 flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-lg bg-emerald-600 text-white font-mono font-black text-xs shrink-0 shadow-sm select-all">
+                  {recentLoginToast.studentId}
+                </span>
+                <span className="text-sm text-white font-heading font-black truncate">
+                  {recentLoginToast.fullName}
+                </span>
+              </div>
+
+              <div className="text-[11px] text-slate-300 mt-1 truncate">
+                {recentLoginToast.department || 'Computer Science'} • {recentLoginToast.campus || 'Main Campus'}
+              </div>
+
+              <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-white/10 text-[11px]">
+                <span className="text-slate-400 font-mono">
+                  Online Now • {new Date(recentLoginToast.timestamp || Date.now()).toLocaleTimeString()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('registrations');
+                    setRecentLoginToast(null);
+                  }}
+                  className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-xs transition cursor-pointer"
+                >
+                  View Candidate
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      )}
+
       {unackViolators.length > 0 && showProctorToast && (
         <aside
           role="status"

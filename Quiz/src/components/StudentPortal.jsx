@@ -81,7 +81,9 @@ import {
   getStudentAuthToken,
   apiGetQuestions,
   apiCheckRetakePermission,
-  apiGetScheduleStatus
+  apiGetScheduleStatus,
+  apiSendStudentHeartbeat,
+  apiStudentLogout
 } from '../utils/api';
 import { 
   getLoggedInStudent, 
@@ -397,7 +399,9 @@ export default function StudentPortal({
         apiGetNotifications(),
         apiGetLeaderboard(),
         apiGetQuestions(),
-        apiGetScheduleStatus().catch(() => null),
+        apiGetScheduleStatus,
+  apiSendStudentHeartbeat,
+  apiStudentLogout().catch(() => null),
       ]);
 
       if (statusData) setStudentStatus(statusData);
@@ -613,6 +617,11 @@ export default function StudentPortal({
   };
 
   const handleLogout = () => {
+    if (currentUser?.studentId) {
+      try {
+        apiStudentLogout(currentUser.studentId);
+      } catch {}
+    }
     setCurrentUser(null);
     setLoggedInStudent(null);
     setStudentAuthToken('');

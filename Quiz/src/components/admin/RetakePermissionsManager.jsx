@@ -15,13 +15,13 @@ import {
   RefreshCw, 
   Users, 
   Award, 
-  Zap, 
   FileText, 
   Check, 
   X,
   History,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  BookOpen
 } from 'lucide-react';
 import { 
   apiGetRetakePermissions, 
@@ -33,14 +33,12 @@ export default function RetakePermissionsManager({ isDark }) {
   const [data, setData] = useState({ students: [], permissions: [], stats: {} });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [roundFilter, setRoundFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Completed' | 'PermissionGranted' | 'Pending'
   const [actionFeedback, setActionFeedback] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modal / Grant Dialog State
   const [selectedStudentForGrant, setSelectedStudentForGrant] = useState(null);
-  const [grantRound, setGrantRound] = useState(1);
   const [grantReason, setGrantReason] = useState('Special exam retake authorized by administrator');
 
   const fetchPermissionsData = async () => {
@@ -61,61 +59,57 @@ export default function RetakePermissionsManager({ isDark }) {
     fetchPermissionsData();
   }, []);
 
-  // Listen to storage sync for live multi-tab updates
-  useEffect(() => {
-    const handleStorageUpdate = (e) => {
-      if (e.key === 'bob_retake_permissions' || e.key?.startsWith('bob_student_results_')) {
-        fetchPermissionsData();
-      }
-    };
-    window.addEventListener('storage', handleStorageUpdate);
-    return () => window.removeEventListener('storage', handleStorageUpdate);
-  }, []);
-
-  const handleGrantSubmit = async (e) => {
+  // Handle Grant Retake Permission
+  const handleGrant = async (e) => {
     e?.preventDefault();
     if (!selectedStudentForGrant) return;
 
     setIsSubmitting(true);
+    setActionFeedback(null);
     try {
       const res = await apiGrantRetakeAccess(
         selectedStudentForGrant.studentId,
-        Number(grantRound),
-        grantReason
+        1, // Single Combined Championship Round
+        grantReason || 'Special retake authorized by administrator'
       );
 
       if (res && res.success) {
         setActionFeedback({
           type: 'success',
-          message: `Retake access granted for ${selectedStudentForGrant.fullName} (Round 0${grantRound}).`
+          message: `Retake access successfully GRANTED for ${selectedStudentForGrant.fullName}. One additional attempt is now permitted.`,
         });
         setSelectedStudentForGrant(null);
         await fetchPermissionsData();
       } else {
         setActionFeedback({
           type: 'error',
-          message: res?.error || 'Failed to grant retake permission.'
+          message: res?.error || 'Failed to grant retake permission.',
         });
       }
     } catch (err) {
-      setActionFeedback({ type: 'error', message: 'Network or server error granting retake access.' });
+      setActionFeedback({
+        type: 'error',
+        message: 'Network or server error while granting retake permission.',
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleRevoke = async (permissionId, studentId, roundNum, studentName) => {
-    if (!window.confirm(`Are you sure you want to revoke retake access for ${studentName || studentId} (Round 0${roundNum})?`)) {
+  // Handle Revoke Permission
+  const handleRevoke = async (permissionId, studentId, studentName) => {
+    if (!window.confirm(`Are you sure you want to revoke retake access for ${studentName || studentId}? The candidate will remain locked.`)) {
       return;
     }
 
     setIsSubmitting(true);
+    setActionFeedback(null);
     try {
-      const res = await apiRevokeRetakeAccess(permissionId, studentId, roundNum);
+      const res = await apiRevokeRetakeAccess(permissionId, studentId, 1);
       if (res && res.success) {
         setActionFeedback({
           type: 'success',
-          message: `Retake access successfully revoked for ${studentName || studentId} (Round 0${roundNum}).`
+          message: `Retake access successfully revoked for ${studentName || studentId}.`,
         });
         await fetchPermissionsData();
       } else {
@@ -140,26 +134,21 @@ export default function RetakePermissionsManager({ isDark }) {
 
       if (!matchesSearch) return false;
 
-      if (roundFilter !== 'All') {
-        const rNum = Number(roundFilter);
-        const rData = s.rounds?.[rNum];
-        if (!rData || !rData.isCompleted) return false;
-      }
+      const r1 = s.rounds?.[1] || {};
+      const isDone = r1.isCompleted;
+      const hasPerm = r1.hasRetakePermission;
 
       if (statusFilter === 'Completed') {
-        const hasAnyCompleted = Object.values(s.rounds || {}).some((r) => r.isCompleted);
-        if (!hasAnyCompleted) return false;
+        if (!isDone) return false;
       } else if (statusFilter === 'PermissionGranted') {
-        const hasAnyPerm = Object.values(s.rounds || {}).some((r) => r.hasRetakePermission);
-        if (!hasAnyPerm) return false;
+        if (!hasPerm) return false;
       } else if (statusFilter === 'Pending') {
-        const allCompleted = Object.values(s.rounds || {}).every((r) => r.isCompleted);
-        if (allCompleted) return false;
+        if (isDone) return false;
       }
 
       return true;
     });
-  }, [data.students, search, roundFilter, statusFilter]);
+  }, [data.students, search, statusFilter]);
 
   const stats = data.stats || {};
 
@@ -167,7 +156,7 @@ export default function RetakePermissionsManager({ isDark }) {
     <div className="space-y-6 animate-fadeIn text-slate-900">
       
       {/* Top Banner / Header Card */}
-      <div className={`p-6 sm:p-8 rounded-3xl border transition-all ${
+      <div className={`p-6 sm:p-8 rounded-3xl border-2 transition-all ${
         isDark 
           ? 'bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border-slate-800 text-white' 
           : 'bg-gradient-to-r from-blue-50 via-sky-50 to-white border-blue-200 text-slate-900 shadow-sm'
@@ -178,157 +167,150 @@ export default function RetakePermissionsManager({ isDark }) {
               <KeyRound className="w-3.5 h-3.5" />
               <span>Strict One-Attempt Security System</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-heading font-black tracking-tight flex items-center gap-2.5">
-              <span>Manage Retake Permissions</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl font-medium">
-              By default, all candidates can take each competition round only once. Once submitted, the round is strictly locked. Administrators can grant one-time retake access for specific rounds.
+            <h1 className="text-2xl sm:text-3xl font-heading font-black tracking-tight">
+              Manage Retake Permissions
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl font-medium">
+              By default, candidates are restricted to strictly <strong>one official attempt</strong>. Once submitted, their exam locks automatically. Administrators can grant isolated single-retake authorization to specific candidates.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <button
-              type="button"
               onClick={fetchPermissionsData}
               disabled={loading}
-              className={`px-4 py-2.5 rounded-xl font-heading font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-sm ${
+              className={`p-3 rounded-2xl border transition-all flex items-center justify-center cursor-pointer shadow-sm ${
                 isDark 
-                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700' 
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' 
+                  : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
               }`}
+              title="Refresh Permissions Roster"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh Status</span>
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-500' : ''}`} />
             </button>
           </div>
         </div>
 
-        {/* Action Feedback Notification */}
-        {actionFeedback && (
-          <div className={`mt-4 p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between gap-2 animate-fadeIn ${
-            actionFeedback.type === 'success' 
-              ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
-              : 'bg-rose-100 text-rose-900 border border-rose-300'
-          }`}>
-            <div className="flex items-center gap-2">
-              {actionFeedback.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-rose-600" />}
-              <span>{actionFeedback.message}</span>
+        {/* 4 Metric Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6">
+          <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-blue-100 shadow-xs'}`}>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+              Total Candidates
+            </span>
+            <div className="text-2xl sm:text-3xl font-heading font-black mt-1 text-blue-600 dark:text-blue-400">
+              {stats.totalCandidates || (data.students || []).length}
             </div>
-            <button onClick={() => setActionFeedback(null)} className="p-1 hover:opacity-75 cursor-pointer">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Metric Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-          <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-blue-100 shadow-sm'}`}>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Registered Candidates</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black font-heading text-blue-600">{stats.totalStudents || (data.students || []).length}</span>
-              <span className="text-xs text-slate-500">Students</span>
-            </div>
+            <span className="text-[11px] text-slate-400">Enrolled Contestants</span>
           </div>
 
-          <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-blue-100 shadow-sm'}`}>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Active Unlocked Retakes</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black font-heading text-emerald-600">{stats.activeGrantedCount || 0}</span>
-              <span className="text-xs text-emerald-700 font-semibold">Granted & Ready</span>
+          <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-blue-100 shadow-xs'}`}>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+              Completed & Locked
+            </span>
+            <div className="text-2xl sm:text-3xl font-heading font-black mt-1 text-amber-600 dark:text-amber-400">
+              {(data.students || []).filter(s => s.rounds?.[1]?.isCompleted).length}
             </div>
+            <span className="text-[11px] text-amber-600/80 dark:text-amber-400/80 font-medium">Attempt Submitted</span>
           </div>
 
-          <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-blue-100 shadow-sm'}`}>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Retakes Consumed</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black font-heading text-sky-600">{stats.usedCount || 0}</span>
-              <span className="text-xs text-slate-500">Used Attempts</span>
+          <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-blue-100 shadow-xs'}`}>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+              Retakes Authorized
+            </span>
+            <div className="text-2xl sm:text-3xl font-heading font-black mt-1 text-emerald-600 dark:text-emerald-400">
+              {stats.activeGrantedCount || (data.permissions || []).filter(p => p.status === 'GRANTED').length}
             </div>
+            <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 font-medium">Active Pass Tokens</span>
           </div>
 
-          <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-blue-100 shadow-sm'}`}>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Revoked Access</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black font-heading text-rose-600">{stats.revokedCount || 0}</span>
-              <span className="text-xs text-slate-500">Cancelled</span>
+          <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-blue-100 shadow-xs'}`}>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+              Championship Stage
+            </span>
+            <div className="text-lg sm:text-xl font-heading font-black mt-2 text-indigo-600 dark:text-indigo-400 truncate">
+              Single Round
             </div>
+            <span className="text-[11px] text-indigo-500 font-medium">7 CS Subjects</span>
           </div>
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 ${
-        isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-      }`}>
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search candidate by name, student ID, department or email..."
-            className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-xs font-medium border outline-none transition-all ${
-              isDark 
-                ? 'bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-blue-500' 
-                : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600'
-            }`}
-          />
+      {/* Action Feedback Banner */}
+      {actionFeedback && (
+        <div className={`p-4 rounded-2xl border text-xs sm:text-sm flex items-center justify-between gap-3 animate-slideDown ${
+          actionFeedback.type === 'success'
+            ? 'bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/60 dark:border-emerald-700 dark:text-emerald-200'
+            : 'bg-rose-50 border-rose-300 text-rose-900 dark:bg-rose-950/60 dark:border-rose-700 dark:text-rose-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            {actionFeedback.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            )}
+            <span className="font-semibold">{actionFeedback.message}</span>
+          </div>
+          <button 
+            onClick={() => setActionFeedback(null)}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
+      )}
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Round Filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-500">Round:</span>
-            <select
-              value={roundFilter}
-              onChange={(e) => setRoundFilter(e.target.value)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold border outline-none cursor-pointer ${
-                isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+      {/* Filters and Search Bar */}
+      <div className={`p-4 sm:p-5 rounded-2xl border-2 space-y-4 ${
+        isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90 shadow-sm'
+      }`}>
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search candidate by Student ID, name, email or department..."
+              className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs font-medium focus:outline-none transition-all ${
+                isDark 
+                  ? 'bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-blue-500' 
+                  : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 shadow-sm'
               }`}
-            >
-              <option value="All">All Rounds</option>
-              <option value="1">Round 01: Screening</option>
-              <option value="2">Round 02: Speed Test</option>
-              <option value="3">Round 03: Rapid Fire</option>
-              <option value="4">Round 04: Buzzer Final</option>
-            </select>
+            />
+            {search && (
+              <button 
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+              >
+                Clear
+              </button>
+            )}
           </div>
 
           {/* Status Filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-500">Status:</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <Filter className="w-3.5 h-3.5" />
+              <span>Status:</span>
+            </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold border outline-none cursor-pointer ${
-                isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+              className={`px-3 py-2.5 rounded-xl border text-xs font-semibold focus:outline-none ${
+                isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900 shadow-sm'
               }`}
             >
-              <option value="All">All Statuses</option>
-              <option value="Completed">Has Completed Round(s)</option>
-              <option value="PermissionGranted">Retake Granted (Unlocked)</option>
-              <option value="Pending">Pending Attempts</option>
+              <option value="All">All Candidates</option>
+              <option value="Completed">Attempt Completed – Locked</option>
+              <option value="PermissionGranted">Retake Access Granted</option>
+              <option value="Pending">Pending First Attempt</option>
             </select>
           </div>
         </div>
-      </div>
 
-      {/* Main Candidates Roster Table */}
-      <div className={`rounded-3xl border overflow-hidden shadow-sm ${
-        isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-      }`}>
-        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-600" />
-            <h3 className="font-heading font-black text-sm sm:text-base text-slate-900 dark:text-white">
-              Registered Contestants Round Attempts & Lock Status ({filteredStudents.length} Students)
-            </h3>
-          </div>
-          <span className="text-xs text-slate-500 font-mono">
-            One-Attempt Rule Active
-          </span>
-        </div>
-
+        {/* Active Candidate Roster Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
@@ -336,22 +318,27 @@ export default function RetakePermissionsManager({ isDark }) {
                 isDark ? 'bg-slate-950/70 text-slate-400 border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-200'
               }`}>
                 <th className="py-3 px-4">Student ID / Name</th>
-                <th className="py-3 px-3">Round 01</th>
-                <th className="py-3 px-3">Round 02</th>
-                <th className="py-3 px-3">Round 03</th>
-                <th className="py-3 px-3">Round 04</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-3">Department & Campus</th>
+                <th className="py-3 px-3">Single Round Quiz Status</th>
+                <th className="py-3 px-3">Official Attempts</th>
+                <th className="py-3 px-4 text-right">Admin Retake Control</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="py-10 text-center text-slate-500 font-medium">
+                  <td colSpan="5" className="py-10 text-center text-slate-500 font-medium">
                     No matching candidates found matching your filter criteria.
                   </td>
                 </tr>
               ) : (
                 filteredStudents.map((student) => {
+                  const rInfo = student.rounds?.[1] || {};
+                  const isDone = Boolean(rInfo.isCompleted);
+                  const hasPerm = Boolean(rInfo.hasRetakePermission);
+                  const score = rInfo.score ?? 0;
+                  const totalQuestions = rInfo.totalQuestions || 14;
+
                   return (
                     <tr 
                       key={student.studentId}
@@ -373,72 +360,102 @@ export default function RetakePermissionsManager({ isDark }) {
                               </span>
                             </div>
                             <div className="text-[11px] text-slate-500">
-                              {student.department} • {student.campus}
+                              {student.email || 'student@comsats.edu.pk'}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* Rounds 1 to 4 Status Badges */}
-                      {[1, 2, 3, 4].map((rNum) => {
-                        const rInfo = student.rounds?.[rNum];
-                        const isDone = rInfo?.isCompleted;
-                        const hasPerm = rInfo?.hasRetakePermission;
+                      {/* Department & Campus */}
+                      <td className="py-3.5 px-3">
+                        <div className="font-medium text-slate-700 dark:text-slate-300">
+                          {student.department || 'Computer Science'}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          {student.campus || 'Main Campus'}
+                        </div>
+                      </td>
 
-                        return (
-                          <td key={rNum} className="py-3.5 px-3">
-                            {hasPerm ? (
-                              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold font-mono">
-                                <Unlock className="w-3 h-3 text-emerald-600 shrink-0" />
-                                <span>RETAKE UNLOCKED</span>
-                              </div>
-                            ) : isDone ? (
-                              <div className="inline-flex items-center gap-1 px-2 py-0.8 rounded-lg bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold font-mono">
-                                <Lock className="w-3 h-3 text-amber-600 shrink-0" />
-                                <span>LOCKED ({rInfo.score ?? 0} pts)</span>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] text-slate-400 font-mono">
-                                Not Attempted
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
+                      {/* Single Round Status Badge */}
+                      <td className="py-3.5 px-3">
+                        {hasPerm ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold font-mono">
+                            <Unlock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>RETAKE ACCESS GRANTED</span>
+                          </div>
+                        ) : isDone ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-800 font-bold font-mono">
+                            <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>ATTEMPT COMPLETED – LOCKED</span>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-medium font-mono">
+                            <Clock className="w-3 h-3" />
+                            <span>Pending First Attempt</span>
+                          </span>
+                        )}
+                      </td>
 
-                      {/* Action: Grant Retake Access */}
+                      {/* Official Attempts and Score */}
+                      <td className="py-3.5 px-3">
+                        {isDone ? (
+                          <div className="font-mono">
+                            <span className="font-black text-slate-900 dark:text-white">
+                              {score} / {totalQuestions} pts
+                            </span>
+                            <span className="text-[10px] text-slate-400 block">
+                              1 Official Attempt
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-mono text-[11px]">
+                            0 Attempts
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Action: Grant / Revoke Retake Access */}
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* If any round has an active granted permission, allow revoke */}
-                          {Object.values(student.rounds || {}).some(r => r.hasRetakePermission) && (
+                        <div className="flex items-center justify-end gap-2">
+                          {hasPerm ? (
                             <button
                               type="button"
                               onClick={() => {
-                                const activeR = Object.values(student.rounds).find(r => r.hasRetakePermission);
-                                if (activeR) {
-                                  handleRevoke(activeR.retakePermission?.id, student.studentId, activeR.roundNumber, student.fullName);
-                                }
+                                const activeP = (data.permissions || []).find(
+                                  p => p.studentId === student.studentId && p.status === 'GRANTED'
+                                );
+                                handleRevoke(activeP?.id, student.studentId, student.fullName);
                               }}
-                              className="px-2.5 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1"
+                              className="px-3 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1"
                               title="Revoke active retake access"
                             >
                               <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                              <span>Revoke</span>
+                              <span>REVOKE</span>
+                            </button>
+                          ) : isDone ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStudentForGrant(student);
+                                setGrantReason('Retake permission authorized by administrator');
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-xs shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer flex items-center gap-1.5"
+                            >
+                              <Unlock className="w-3.5 h-3.5" />
+                              <span>GRANT RETAKE ACCESS</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStudentForGrant(student);
+                                setGrantReason('Early retake authorization granted in advance');
+                              }}
+                              className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-[11px] transition cursor-pointer"
+                            >
+                              Authorize
                             </button>
                           )}
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedStudentForGrant(student);
-                              setGrantRound(1);
-                              setGrantReason('Special exam retake authorized by administrator');
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-xs shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer flex items-center gap-1.5"
-                          >
-                            <Unlock className="w-3.5 h-3.5" />
-                            <span>GRANT RETAKE ACCESS</span>
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -453,7 +470,7 @@ export default function RetakePermissionsManager({ isDark }) {
       {/* Grant Retake Access Modal */}
       {selectedStudentForGrant && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-          <div className={`w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6 animate-scaleIn ${
+          <div className={`w-full max-w-lg rounded-3xl border-2 shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6 animate-scaleIn ${
             isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
             <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
@@ -465,75 +482,78 @@ export default function RetakePermissionsManager({ isDark }) {
                   <h3 className="font-heading font-black text-lg">
                     Grant Quiz Retake Permission
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 font-medium">
                     Target Candidate: <strong className="text-slate-900 dark:text-white">{selectedStudentForGrant.fullName}</strong> ({selectedStudentForGrant.studentId})
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
+              <button 
                 onClick={() => setSelectedStudentForGrant(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleGrantSubmit} className="space-y-4">
-              <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-xs text-sky-800 dark:text-sky-300">
-                Granting permission will unlock <strong>only this specific round</strong> for <strong>one additional attempt</strong>. All other rounds and student accounts remain securely locked.
-              </div>
-
+            <form onSubmit={handleGrant} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Select Competition Round:
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Competition Stage
                 </label>
-                <select
-                  value={grantRound}
-                  onChange={(e) => setGrantRound(Number(e.target.value))}
-                  className={`w-full px-4 py-2.5 rounded-xl text-xs font-bold border outline-none cursor-pointer ${
-                    isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                  }`}
-                >
-                  <option value={1}>Round 01: Screening MCQs</option>
-                  <option value={2}>Round 02: Speed Test</option>
-                  <option value={3}>Round 03: Rapid Fire</option>
-                  <option value={4}>Round 04: Buzzer Final</option>
-                </select>
+                <div className={`px-4 py-3 rounded-xl border-2 text-xs font-bold flex items-center gap-2 ${
+                  isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}>
+                  <BookOpen className="w-4 h-4 text-blue-600" />
+                  <span>Battle of Brains – Single Combined Round (All 7 CS Subjects)</span>
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Administrative Reason / Note:
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Administrative Reason / Approval Note
                 </label>
                 <textarea
-                  rows="3"
+                  rows={3}
                   value={grantReason}
                   onChange={(e) => setGrantReason(e.target.value)}
-                  placeholder="e.g., Browser disconnected accidentally, approved by chief examiner..."
-                  className={`w-full p-3.5 rounded-xl text-xs font-medium border outline-none ${
-                    isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  placeholder="e.g. Technical disruption during first attempt, special proctor approval..."
+                  className={`w-full p-3.5 rounded-xl border text-xs focus:outline-none transition-all ${
+                    isDark 
+                      ? 'bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-blue-500' 
+                      : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20'
                   }`}
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3">
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-amber-600" />
+                  <span>Security & Audit Enforcement Notice:</span>
+                </div>
+                <p>
+                  • Granting permission allows <strong>only this student</strong> one additional official attempt.
+                </p>
+                <p>
+                  • Other students remain strictly locked. The round will automatically lock again after the retake is submitted.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setSelectedStudentForGrant(null)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-xs shadow-lg shadow-emerald-600/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>{isSubmitting ? 'Granting...' : 'CONFIRM & GRANT RETAKE ACCESS'}</span>
+                  <Unlock className="w-4 h-4" />
+                  <span>{isSubmitting ? 'Granting...' : 'GRANT RETAKE ACCESS'}</span>
                 </button>
               </div>
             </form>
@@ -541,81 +561,78 @@ export default function RetakePermissionsManager({ isDark }) {
         </div>
       )}
 
-      {/* Retake Audit Logs Table */}
-      <div className={`rounded-3xl border overflow-hidden shadow-sm ${
-        isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+      {/* Retake History Audit Trail Card */}
+      <div className={`p-6 rounded-3xl border-2 space-y-4 ${
+        isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-sm'
       }`}>
-        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <History className="w-5 h-5 text-indigo-600" />
-            <h3 className="font-heading font-black text-sm sm:text-base text-slate-900 dark:text-white">
-              Retake Permissions Audit History ({data.permissions?.length || 0} Records)
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <History className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h3 className="font-heading font-black text-base">
+              Retake Permissions History & Audit Trail
             </h3>
           </div>
-          <span className="text-xs text-slate-500">Immutable Log</span>
+          <span className="text-xs font-mono font-bold text-slate-500">
+            {(data.permissions || []).length} Logged Approvals
+          </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${
-                isDark ? 'bg-slate-950/70 text-slate-400 border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-200'
-              }`}>
-                <th className="py-3 px-4">Permission ID</th>
-                <th className="py-3 px-4">Candidate</th>
-                <th className="py-3 px-3">Round</th>
-                <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-4">Granted At / By</th>
-                <th className="py-3 px-4">Reason / Notes</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {(!data.permissions || data.permissions.length === 0) ? (
-                <tr>
-                  <td colSpan="6" className="py-8 text-center text-slate-500 font-medium">
-                    No retake permission actions recorded yet. All rounds are strictly locked on first submission.
-                  </td>
-                </tr>
-              ) : (
-                data.permissions.map((perm) => (
-                  <tr key={perm.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                    <td className="py-3 px-4 font-mono font-bold text-slate-600 dark:text-slate-400">
-                      {perm.id}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-slate-900 dark:text-white">
-                      <strong>{perm.studentName}</strong> ({perm.studentId})
-                    </td>
-                    <td className="py-3 px-3 font-mono font-bold">
-                      Round 0{perm.roundNumber}
-                    </td>
-                    <td className="py-3 px-3">
-                      {perm.status === 'GRANTED' ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300">
-                          Active Unlocked
-                        </span>
-                      ) : perm.status === 'USED' ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300">
-                          Attempt Used
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300">
-                          Revoked
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-slate-500 text-[11px]">
-                      <div>{perm.grantedAt ? new Date(perm.grantedAt).toLocaleString() : 'N/A'}</div>
-                      <div className="font-mono text-[10px] text-slate-400">By: {perm.grantedBy || 'ADMIN'}</div>
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-300 text-[11px] max-w-xs truncate">
-                      {perm.reason || 'No reason provided'}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {(data.permissions || []).length === 0 ? (
+          <div className="py-8 text-center text-xs text-slate-500">
+            No retake permissions have been issued yet. All attempts remain in their default single-attempt state.
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {(data.permissions || []).map((perm) => (
+              <div 
+                key={perm.id} 
+                className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+                  isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+                }`}
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-heading font-black text-slate-900 dark:text-white">
+                      {perm.studentName}
+                    </span>
+                    <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400 font-bold">
+                      {perm.studentId}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                      perm.status === 'GRANTED'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                        : perm.status === 'USED'
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                    }`}>
+                      {perm.status}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    Reason: <span className="text-slate-700 dark:text-slate-300 font-medium">{perm.reason || 'Admin authorized retake'}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 text-right">
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    <div>By: {perm.grantedBy || 'ADMIN'}</div>
+                    <div>{perm.grantedAt ? new Date(perm.grantedAt).toLocaleString() : 'Recent'}</div>
+                  </div>
+
+                  {perm.status === 'GRANTED' && (
+                    <button
+                      type="button"
+                      onClick={() => handleRevoke(perm.id, perm.studentId, perm.studentName)}
+                      className="px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold text-[11px] transition cursor-pointer"
+                    >
+                      Revoke
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
     </div>

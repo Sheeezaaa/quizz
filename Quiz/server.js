@@ -1408,6 +1408,43 @@ app.post('/api/auth/student-login', (req, res) => {
     { expiresIn: '7d' }
   );
 
+  // Record Real-Time Student Login for Instant Admin Visibility
+  const nowIso = new Date().toISOString();
+  student.lastLoginAt = nowIso;
+  student.lastActiveAt = nowIso;
+  student.isOnline = true;
+
+  const pIndex = participants.findIndex((p) => p.studentId === student.studentId || p.id === student.id);
+  if (pIndex >= 0) {
+    participants[pIndex].lastLoginAt = nowIso;
+    participants[pIndex].lastActiveAt = nowIso;
+    participants[pIndex].isOnline = true;
+  }
+  db.participants = participants;
+
+  if (!Array.isArray(db.liveLoginEvents)) db.liveLoginEvents = [];
+  const loginEvent = {
+    id: `LOGIN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    studentId: student.studentId,
+    fullName: student.fullName,
+    email: student.email,
+    department: student.department || student.degreeProgram || 'Computer Science',
+    campus: student.campus || 'Main Campus',
+    semester: student.semester || '4th Semester',
+    loginTime: nowIso,
+    seenByAdmin: false,
+  };
+  db.liveLoginEvents.unshift(loginEvent);
+  if (db.liveLoginEvents.length > 50) db.liveLoginEvents = db.liveLoginEvents.slice(0, 50);
+
+  writeDB(db);
+
+  addAuditLog(student.studentId, 'STUDENT_LOGGED_IN', 'auth', student.studentId, {
+    fullName: student.fullName,
+    department: student.department,
+    loginTime: nowIso
+  });
+
   const safeStudent = { ...student };
   delete safeStudent.passwordHash;
 
@@ -1415,7 +1452,85 @@ app.post('/api/auth/student-login', (req, res) => {
     success: true,
     token,
     user: safeStudent,
+    loginEvent,
   });
+});
+
+// Admin Live Student Logins & Active Online Sessions (GET /api/admin/live-logins)
+app.get('/api/admin/live-logins', requireAdmin, (req, res) => {
+  const db = readDB();
+  const events = db.liveLoginEvents || [];
+  const participants = db.participants || [];
+  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+
+  const onlineStudents = participants.filter((p) => {
+    if (p.isOnline) return true;
+    if (p.lastActiveAt && new Date(p.lastActiveAt).getTime() > fiveMinutesAgo) return true;
+    if (p.lastLoginAt && new Date(p.lastLoginAt).getTime() > fiveMinutesAgo) return true;
+    return false;
+  });
+
+  res.json({
+    success: true,
+    events,
+    onlineCount: onlineStudents.length,
+    onlineStudents: onlineStudents.map((p) => ({
+      id: p.id,
+      studentId: p.studentId,
+      fullName: p.fullName,
+      email: p.email,
+      department: p.department || p.degreeProgram || 'Computer Science',
+      campus: p.campus || 'Main Campus',
+      semester: p.semester || '4th Semester',
+      lastLoginAt: p.lastLoginAt || p.lastActiveAt,
+      isOnline: true,
+    })),
+  });
+});
+
+// Admin Dismiss Live Login Alert (POST /api/admin/dismiss-login-event)
+app.post('/api/admin/dismiss-login-event', requireAdmin, (req, res) => {
+  const { eventId, dismissAll } = req.body;
+  const db = readDB();
+  if (!Array.isArray(db.liveLoginEvents)) db.liveLoginEvents = [];
+
+  if (dismissAll) {
+    db.liveLoginEvents.forEach((e) => (e.seenByAdmin = true));
+  } else if (eventId) {
+    const target = db.liveLoginEvents.find((e) => e.id === eventId);
+    if (target) target.seenByAdmin = true;
+  }
+
+  writeDB(db);
+  res.json({ success: true, message: 'Login event dismissed.' });
+});
+
+// Student Active Heartbeat (POST /api/auth/student-heartbeat)
+app.post('/api/auth/student-heartbeat', requireParticipant, (req, res) => {
+  const studentId = req.user.studentId;
+  const db = readDB();
+  const participants = db.participants || [];
+  const student = participants.find((p) => p.studentId === studentId);
+  if (student) {
+    const nowIso = new Date().toISOString();
+    student.lastActiveAt = nowIso;
+    student.isOnline = true;
+    writeDB(db);
+  }
+  res.json({ success: true, timestamp: new Date().toISOString() });
+});
+
+// Student Logout (POST /api/auth/student-logout)
+app.post('/api/auth/student-logout', requireParticipant, (req, res) => {
+  const studentId = req.user.studentId;
+  const db = readDB();
+  const participants = db.participants || [];
+  const student = participants.find((p) => p.studentId === studentId);
+  if (student) {
+    student.isOnline = false;
+    writeDB(db);
+  }
+  res.json({ success: true, message: 'Logged out successfully.' });
 });
 
 // Student Forgot Password / Reset (POST /api/auth/reset-password)

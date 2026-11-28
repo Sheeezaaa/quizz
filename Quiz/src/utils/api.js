@@ -258,6 +258,24 @@ export async function apiStudentLogin(identifier, password) {
       if (data.token) {
         setStudentAuthToken(data.token);
       }
+      try {
+        const loginEvt = {
+          eventId: 'live_evt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          studentId: data.user.studentId,
+          fullName: data.user.fullName,
+          email: data.user.email,
+          department: data.user.department || 'Computer Science',
+          campus: data.user.campus || 'Islamabad Campus',
+          timestamp: new Date().toISOString(),
+          isOnline: true
+        };
+        localStorage.setItem('bob_live_student_login_event', JSON.stringify(loginEvt));
+        const historyRaw = localStorage.getItem('bob_live_student_logins_history');
+        const history = historyRaw ? JSON.parse(historyRaw) : [];
+        history.unshift(loginEvt);
+        localStorage.setItem('bob_live_student_logins_history', JSON.stringify(history.slice(0, 50)));
+        window.dispatchEvent(new CustomEvent('bob_student_login_detected', { detail: loginEvt }));
+      } catch {}
       return { success: true, user: data.user, token: data.token };
     }
 
@@ -326,6 +344,24 @@ export async function apiStudentLogin(identifier, password) {
     const mockToken = 'local_jwt_' + Date.now();
     setStudentAuthToken(mockToken);
     setLoggedInStudent(found);
+    try {
+      const loginEvt = {
+        eventId: 'live_evt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        studentId: found.studentId,
+        fullName: found.fullName,
+        email: found.email,
+        department: found.department || 'Computer Science',
+        campus: found.campus || 'Islamabad Campus',
+        timestamp: new Date().toISOString(),
+        isOnline: true
+      };
+      localStorage.setItem('bob_live_student_login_event', JSON.stringify(loginEvt));
+      const historyRaw = localStorage.getItem('bob_live_student_logins_history');
+      const history = historyRaw ? JSON.parse(historyRaw) : [];
+      history.unshift(loginEvt);
+      localStorage.setItem('bob_live_student_logins_history', JSON.stringify(history.slice(0, 50)));
+      window.dispatchEvent(new CustomEvent('bob_student_login_detected', { detail: loginEvt }));
+    } catch {}
     return { success: true, user: found, token: mockToken };
   } catch (err) {
     return { success: false, error: err.message };
@@ -2665,4 +2701,83 @@ export async function apiPreviewDistribution(totalQuestionsCount) {
     success: true,
     ...calculateSubjectDistributionLocal(count, allStored),
   };
+}
+
+
+/* =========================================================================
+   REAL-TIME STUDENT LOGIN MONITORING & HEARTBEAT API
+   ========================================================================= */
+
+export async function apiGetLiveStudentLogins() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/live-logins`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+    });
+    const data = await safeJson(res);
+    if (res.ok && data) {
+      return data;
+    }
+  } catch (err) {}
+
+  // Fallback to localStorage events for local/offline demo
+  try {
+    const raw = localStorage.getItem('bob_live_student_logins_history');
+    const events = raw ? JSON.parse(raw) : [];
+    const participants = getStoredParticipants() || [];
+    const online = participants.filter(p => p.isOnline);
+    return {
+      success: true,
+      events: events.slice(0, 30),
+      onlineStudents: online,
+      onlineCount: online.length,
+      unseenCount: events.filter(e => !e.seenByAdmin).length
+    };
+  } catch {
+    return { success: true, events: [], onlineStudents: [], onlineCount: 0, unseenCount: 0 };
+  }
+}
+
+export async function apiDismissStudentLoginEvent(eventId, dismissAll = false) {
+  try {
+    const res = await fetch(`${API_BASE}/admin/dismiss-login-event`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAdminAuthToken()}`,
+      },
+      body: JSON.stringify({ eventId, dismissAll }),
+    });
+    return await safeJson(res);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function apiSendStudentHeartbeat(studentId) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/student-heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId }),
+    });
+    return await safeJson(res);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function apiStudentLogout(studentId) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/student-logout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId }),
+    });
+    return await safeJson(res);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 }

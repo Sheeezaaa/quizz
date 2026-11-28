@@ -219,16 +219,16 @@ export default function QuizScheduleAccessControl({ isDark = true }) {
 
   // Theme-adaptive classes
   const cardTheme = isDark
-    ? 'bg-slate-900/90 border-slate-800 text-slate-100 shadow-xl'
-    : 'bg-white border-slate-200 text-slate-900 shadow-sm';
+    ? 'bg-slate-900 border-2 border-slate-800 text-slate-100 shadow-xl'
+    : 'bg-white border-2 border-slate-200/90 text-slate-900 shadow-sm';
 
-  const headingColor = isDark ? 'text-white' : 'text-slate-900';
-  const subtextColor = isDark ? 'text-slate-400' : 'text-slate-600';
-  const labelColor = isDark ? 'text-slate-300 font-bold' : 'text-slate-700 font-bold';
+  const headingColor = isDark ? 'text-white font-black' : 'text-slate-900 font-black';
+  const subtextColor = isDark ? 'text-slate-300 font-medium' : 'text-slate-700 font-medium';
+  const labelColor = isDark ? 'text-slate-200 font-extrabold' : 'text-slate-900 font-extrabold';
 
   const inputTheme = isDark
-    ? 'bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-blue-500 focus:bg-slate-900'
-    : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-500/15 shadow-sm';
+    ? 'bg-slate-950 border-2 border-slate-700 text-white placeholder-slate-500 font-bold focus:border-blue-500 focus:bg-slate-900 shadow-inner'
+    : 'bg-white border-2 border-slate-300 text-slate-900 placeholder-slate-400 font-bold focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-500/10 shadow-sm';
 
   return (
     <div className="space-y-6">
@@ -402,17 +402,17 @@ export default function QuizScheduleAccessControl({ isDark = true }) {
           </div>
 
           {/* Automatic Access Rules Callout (High Contrast in both Dark and Light) */}
-          <div className={`p-4 rounded-xl border text-xs space-y-1.5 leading-relaxed ${
+          <div className={`p-4 sm:p-5 rounded-xl border-2 text-xs space-y-2 leading-relaxed ${
             isDark 
-              ? 'bg-slate-800/60 border-slate-700/80 text-slate-300' 
-              : 'bg-slate-50 border-slate-200 text-slate-800'
+              ? 'bg-slate-950 border-slate-800 text-slate-200 shadow-md' 
+              : 'bg-blue-50/90 border-blue-200 text-slate-900 shadow-sm'
           }`}>
-            <p className={`flex items-center gap-1.5 font-bold text-xs ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
-              <Info className="w-4 h-4 shrink-0" /> Automatic Access Rules:
+            <p className={`flex items-center gap-1.5 font-extrabold text-xs uppercase tracking-wide ${isDark ? 'text-blue-400' : 'text-blue-900'}`}>
+              <Info className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" /> Automatic Access Rules:
             </p>
-            <p>• <strong className={isDark ? 'text-white' : 'text-slate-900 font-bold'}>Before Start Time:</strong> Students can log in 24/7; quiz arena displays live countdown; Start Quiz button is disabled.</p>
-            <p>• <strong className={isDark ? 'text-white' : 'text-slate-900 font-bold'}>During Window:</strong> Eligible students can take the quiz with 30s per question timer.</p>
-            <p>• <strong className={isDark ? 'text-white' : 'text-slate-900 font-bold'}>After End Time:</strong> Access strictly blocks all new attempts and rejects answers submitted after cutoff.</p>
+            <p className="font-medium">• <strong className={isDark ? 'text-white font-bold' : 'text-slate-950 font-black'}>Before Start Time:</strong> Students can log in 24/7; quiz arena displays live countdown; Start Quiz button is disabled.</p>
+            <p className="font-medium">• <strong className={isDark ? 'text-white font-bold' : 'text-slate-950 font-black'}>During Window:</strong> Eligible students can take the quiz with 30s per question timer.</p>
+            <p className="font-medium">• <strong className={isDark ? 'text-white font-bold' : 'text-slate-950 font-black'}>After End Time:</strong> Access strictly blocks all new attempts and rejects answers submitted after cutoff.</p>
           </div>
 
           {/* Action: SAVE SCHEDULE button */}
@@ -509,10 +509,10 @@ export default function QuizScheduleAccessControl({ isDark = true }) {
                   return (
                     <div 
                       key={subjId} 
-                      className={`p-2.5 rounded-lg border text-xs transition-all ${
+                      className={`p-3 rounded-xl border-2 text-xs transition-all ${
                         isDark 
-                          ? 'bg-slate-900/80 border-slate-700' 
-                          : 'bg-white border-slate-200 shadow-sm'
+                          ? 'bg-slate-950 border-slate-800 text-white shadow-sm' 
+                          : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-emerald-400'
                       }`}
                     >
                       <div className={`font-heading font-bold truncate ${headingColor}`} title={subMeta?.name || subjId}>
@@ -609,10 +609,10 @@ export default function QuizScheduleAccessControl({ isDark = true }) {
           ].map((subj, idx) => (
             <div
               key={subj.id}
-              className={`p-4 rounded-xl border flex items-start gap-3 transition-all ${
+              className={`p-4.5 rounded-2xl border-2 flex items-start gap-3.5 transition-all ${
                 isDark 
-                  ? 'bg-slate-800/40 border-slate-700/80 hover:border-slate-600' 
-                  : 'bg-slate-50 border-slate-200/90 shadow-sm hover:border-blue-300 hover:bg-white'
+                  ? 'bg-slate-950/90 border-slate-800 text-white hover:border-slate-700 shadow-md' 
+                  : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-blue-500 hover:shadow-md'
               }`}
             >
               <span className={`w-8 h-8 rounded-lg font-mono font-black text-xs flex items-center justify-center shrink-0 ${

@@ -732,6 +732,16 @@ export default function RegistrationManager({ isDark }) {
                                   <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                                     • {s.email}
                                   </span>
+                                  {Boolean(s.isOnline || (s.lastLoginAt && (new Date() - new Date(s.lastLoginAt)) < 5 * 60 * 1000)) ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 animate-pulse">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                                      Online Now
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-slate-400">
+                                      {s.lastLoginAt ? `Last active: ${new Date(s.lastLoginAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Offline'}
+                                    </span>
+                                  )}
                                 </div>
                               </td>
                               <td className="p-4">
