@@ -7,6 +7,12 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import {
+  connectMongoDB,
+  isMongoDBConnected,
+  syncDbToMongoDB,
+  loadDbFromMongoDB,
+} from './models/mongodb.js';
+import {
   generateAIPracticeQuestion,
   getNextPracticeQuestionForStudent,
   submitPracticeAnswer,
@@ -25,6 +31,28 @@ const JWT_SECRET = process.env.JWT_SECRET || 'bob_super_secure_jwt_secret_2026';
 
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
+
+// Initial MongoDB connect attempt
+connectMongoDB().then(async (connected) => {
+  if (connected) {
+    const mongoData = await loadDbFromMongoDB();
+    if (mongoData) {
+      cachedDB = mongoData;
+    } else if (cachedDB) {
+      syncDbToMongoDB(cachedDB);
+    }
+  }
+}).catch(() => {});
+
+// Ensure MongoDB is connected for incoming API requests
+app.use(async (req, res, next) => {
+  if (process.env.MONGODB_URI && !isMongoDBConnected()) {
+    try {
+      await connectMongoDB();
+    } catch {}
+  }
+  next();
+});
 
 // Database storage file path
 const DB_PATH = path.join(__dirname, 'data', 'database.json');
@@ -905,8 +933,11 @@ function readDB() {
 }
 
 function writeDB(data) {
+  cachedDB = data;
+  if (isMongoDBConnected()) {
+    syncDbToMongoDB(data).catch(() => {});
+  }
   try {
-    cachedDB = data;
     fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
     const tempPath = `${DB_PATH}.${Date.now()}.${Math.floor(Math.random() * 10000)}.tmp`;
     fs.writeFileSync(tempPath, JSON.stringify(cachedDB, null, 2), 'utf8');
@@ -918,8 +949,10 @@ function writeDB(data) {
     }
     return true;
   } catch (err) {
-    console.error('Error writing DB:', err);
-    return false;
+    if (!isMongoDBConnected()) {
+      console.error('Error writing DB to disk:', err.message);
+    }
+    return isMongoDBConnected();
   }
 }
 
@@ -5703,11 +5736,13 @@ if (fs.existsSync(distPath)) {
 // SERVER START
 // ====================================================================
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Battle of Brains 2026 Authoritative Central API Server`);
-  console.log(`📡 Local:   http://localhost:${PORT}`);
-  console.log(`🌐 Network: http://0.0.0.0:${PORT}`);
-  console.log(`🛡️  RBAC & Server Scoring: ACTIVE`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Battle of Brains 2026 Authoritative Central API Server`);
+    console.log(`📡 Local:   http://localhost:${PORT}`);
+    console.log(`🌐 Network: http://0.0.0.0:${PORT}`);
+    console.log(`🛡️  RBAC & Server Scoring: ACTIVE`);
+  });
+}
 
 export default app;

@@ -1,6 +1,7 @@
 {
   "name": "battle-of-brains-workspace",
   "version": "1.0.1",
+  "type": "module",
   "private": true,
   "scripts": {
     "postinstall": "npm --prefix Quiz install",
