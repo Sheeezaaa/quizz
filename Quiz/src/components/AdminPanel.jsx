@@ -413,24 +413,34 @@ export default function AdminPanel({
   }, [isOpen]);
 
   useEffect(() => {
-    setParticipants(competitionData.participants);
-  }, [competitionData.participants]);
+    if (competitionData && competitionData.participants) {
+      setParticipants(competitionData.participants);
+    }
+  }, [competitionData?.participants]);
 
   useEffect(() => {
-    setDetails(competitionData.details);
-  }, [competitionData.details]);
+    if (competitionData && competitionData.details) {
+      setDetails(competitionData.details);
+    }
+  }, [competitionData?.details]);
 
   useEffect(() => {
-    setSubjects(competitionData.subjects);
-  }, [competitionData.subjects]);
+    if (competitionData && competitionData.subjects) {
+      setSubjects(competitionData.subjects);
+    }
+  }, [competitionData?.subjects]);
 
   useEffect(() => {
-    setRounds(competitionData.rounds);
-  }, [competitionData.rounds]);
+    if (competitionData && competitionData.rounds) {
+      setRounds(competitionData.rounds);
+    }
+  }, [competitionData?.rounds]);
 
   useEffect(() => {
-    setRules(competitionData.rules);
-  }, [competitionData.rules]);
+    if (competitionData && competitionData.rules) {
+      setRules(competitionData.rules);
+    }
+  }, [competitionData?.rules]);
 
   // Manage body class for admin isolation
   useEffect(() => {
@@ -2083,29 +2093,29 @@ export default function AdminPanel({
                   <div className="space-y-3 text-xs">
                     <div>
                       <span className="text-slate-500 block mb-0.5 font-medium">Main Event Title</span>
-                      <strong className={`text-sm font-heading font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{details.title}</strong>
+                      <strong className={`text-sm font-heading font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{details?.title || 'Battle of Brains 2026'}</strong>
                     </div>
 
                     <div>
                       <span className="text-slate-500 block mb-0.5 font-medium">Oval Campus Pill Badge</span>
                       <span className="inline-block px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-600 font-mono font-bold text-xs">
-                        {details.campusBadge}
+                        {details?.campusBadge || 'COMSATS Islamabad'}
                       </span>
                     </div>
 
                     <div>
                       <span className="text-slate-500 block mb-0.5 font-medium">Tagline</span>
-                      <p className={`italic ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{details.tagline}</p>
+                      <p className={`italic ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{details?.tagline || 'Single Round Championship'}</p>
                     </div>
 
                     <div className={`grid grid-cols-2 gap-3 pt-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
                       <div>
                         <span className="text-slate-500 block mb-0.5 font-medium">Host Department</span>
-                        <span className={`font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{details.organizer}</span>
+                        <span className={`font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{details?.organizer || 'Department of CS'}</span>
                       </div>
                       <div>
                         <span className="text-slate-500 block mb-0.5 font-medium">Venue Location</span>
-                        <span className={`font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{details.venue}</span>
+                        <span className={`font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{details?.venue || 'CS Lab Block'}</span>
                       </div>
                     </div>
                   </div>
@@ -2326,7 +2336,7 @@ export default function AdminPanel({
                     </label>
                     <input
                       type="datetime-local"
-                      value={details.defaultEventDate.slice(0, 16)}
+                      value={details?.defaultEventDate ? String(details.defaultEventDate).slice(0, 16) : ''}
                       onChange={(e) => setDetails({ ...details, defaultEventDate: new Date(e.target.value).toISOString() })}
                       className={`w-full px-4 py-2.5 rounded-xl border text-sm font-mono focus:outline-none transition-all ${inputTheme}`}
                     />
@@ -2535,7 +2545,7 @@ export default function AdminPanel({
                         
                         {/* Topic Tags Preview */}
                         <div className="flex flex-wrap gap-1.5 mt-2">
-                          {(Array.isArray(s.topics) ? s.topics : s.topics.split(',')).map((tag, tIdx) => (
+                          {(Array.isArray(s.topics) ? s.topics : (typeof s.topics === 'string' ? s.topics.split(',') : [])).map((tag, tIdx) => (
                             <span key={tIdx} className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${
                               isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'
                             }`}>
@@ -3122,7 +3132,7 @@ export default function AdminPanel({
               </div>
 
               <div className="space-y-4">
-                {rules.generalRules.map((gr, idx) => (
+                {(rules?.generalRules || []).map((gr, idx) => (
                   <div key={idx} className={`p-5 rounded-2xl border space-y-3 relative group ${cardTheme}`}>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono font-bold text-purple-600">Rule #{idx + 1}</span>

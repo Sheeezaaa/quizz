@@ -26,6 +26,53 @@ import {
 import { apiGetCompetition, apiGetParticipants, apiGetQuestions } from './utils/api';
 import { ShieldCheck } from 'lucide-react';
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('Portal ErrorBoundary caught error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/95 backdrop-blur-md text-white font-sans animate-fadeIn">
+          <div className="max-w-md w-full p-8 rounded-3xl bg-slate-900 border-2 border-rose-500/40 text-center space-y-4 shadow-2xl">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto text-2xl font-bold">
+              ⚠️
+            </div>
+            <h2 className="text-xl font-heading font-black text-white">Portal Reload Required</h2>
+            <p className="text-xs text-slate-300 font-medium leading-relaxed">
+              {this.state.error?.message || 'An unexpected rendering error occurred while loading this section.'}
+            </p>
+            <div className="flex gap-3 justify-center pt-3">
+              <button
+                type="button"
+                onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer transition shadow-lg"
+              >
+                Reload Page
+              </button>
+              <button
+                type="button"
+                onClick={() => { this.setState({ hasError: false }); window.location.hash = ''; }}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer transition border border-slate-700"
+              >
+                Return to Website
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(() => window.location.hash === '#admin');
   const [isStudentPortalOpen, setIsStudentPortalOpen] = useState(() => window.location.hash === '#student');
@@ -244,29 +291,33 @@ export default function App() {
       />
 
       {/* Student Contestant Dashboard Modal */}
-      <StudentPortal 
-        isOpen={isStudentPortalOpen} 
-        onClose={handleCloseStudentPortal} 
-        onOpenRegister={handleOpenRegister} 
-        currentTheme={theme}
-        onToggleTheme={handleToggleTheme}
-      />
+      <ErrorBoundary>
+        <StudentPortal 
+          isOpen={isStudentPortalOpen} 
+          onClose={handleCloseStudentPortal} 
+          onOpenRegister={handleOpenRegister} 
+          currentTheme={theme}
+          onToggleTheme={handleToggleTheme}
+        />
+      </ErrorBoundary>
 
       {/* Full Admin Control Center Modal */}
-      <AdminPanel 
-        isOpen={isAdminOpen} 
-        onClose={handleCloseAdmin}
-        competitionData={{
-          details,
-          subjects,
-          rounds,
-          rules,
-          participants,
-        }}
-        onDataUpdated={handleDataUpdated}
-        currentTheme={theme}
-        onToggleTheme={handleToggleTheme}
-      />
+      <ErrorBoundary>
+        <AdminPanel 
+          isOpen={isAdminOpen} 
+          onClose={handleCloseAdmin}
+          competitionData={{
+            details,
+            subjects,
+            rounds,
+            rules,
+            participants,
+          }}
+          onDataUpdated={handleDataUpdated}
+          currentTheme={theme}
+          onToggleTheme={handleToggleTheme}
+        />
+      </ErrorBoundary>
 
       {/* Floating Shortcut Button (Bottom-Right) - Student Portal Only */}
       <div className="fixed bottom-5 right-5 z-40 flex flex-col gap-2.5 items-end">
